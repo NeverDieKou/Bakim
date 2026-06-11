@@ -347,11 +347,11 @@ var SEED={
     {id:'WO-006',eqId:'EQ-007',type:'kalibrasyon',title:'HPLC 6 Aylık Kalibrasyon',desc:'Detektör, pompa, enjektör kalibrasyonu ISO 17025 prosedürüne göre tamamlandı.',sev:'bilgi',status:'bekliyor',date:'2026-06-10',due:'2026-06-10',techId:'T05',gmp:true,root:'',steps:[{t:'Detektör kalibrasyonu',d:true},{t:'Pompa kalibrasyonu',d:true},{t:'Enjektör kalibrasyonu',d:true},{t:'Sertifika oluşturma',d:true}],docs:['HPLC_Kalibrasyon_Sertifika_2026.pdf'],comments:[{user:'Murat Aydın',text:'Tamamlandı, onay için gönderildi.',date:'2026-06-10 15:45'}],by:'U03',approvedBy:'',closedAt:'',lh:5,pc:320},
   ],
   schedule:[
-    {id:'MS-001',eqId:'EQ-001',type:'onleyici',title:'Tablet Pres — 6 Aylık PM',interval:'6 ay',next:'2026-11-15',techId:'T01',estH:8,notes:'Zımba, matriks, yağlama, kalibrasyon'},
-    {id:'MS-002',eqId:'EQ-004',type:'onleyici',title:'Steril Hat — Aylık Sterilizasyon',interval:'1 ay',next:'2026-07-01',techId:'T04',estH:4,notes:'Otoklav F0>=8, BI testi'},
-    {id:'MS-003',eqId:'EQ-006',type:'onleyici',title:'HVAC — HEPA Filtre Değişimi',interval:'3 ay',next:'2026-06-12',techId:'T03',estH:3,notes:'H14 filtre, DP testi, ortam kalif.'},
-    {id:'MS-004',eqId:'EQ-007',type:'kalibrasyon',title:'HPLC — 6 Aylık Kalibrasyon',interval:'6 ay',next:'2026-07-20',techId:'T05',estH:5,notes:'ISO 17025 prosedürü'},
-    {id:'MS-005',eqId:'EQ-005',type:'onleyici',title:'Liyofilizatör — Kondenser Temizliği',interval:'3 ay',next:'2026-06-25',techId:'T04',estH:3,notes:'Soğutucu gaz basınç kontrolü'},
+    {id:'MS-001',eqId:'EQ-001',type:'onleyici',title:'Tablet Pres — 6 Aylık PM',interval:'6 ay',next:'2026-11-15',techId:'T01',estH:8,notes:'Zımba, matriks, yağlama, kalibrasyon',tasks:['Tüm zımbaları muayene et','Aşınan zımbaları değiştir','Punch wear log güncelle','Yağlama noktalarını yağla','Kalibrasyon kontrol et','Temizlik yap']},
+    {id:'MS-002',eqId:'EQ-004',type:'onleyici',title:'Steril Hat — Aylık Sterilizasyon',interval:'1 ay',next:'2026-07-01',techId:'T04',estH:4,notes:'Otoklav F0>=8, BI testi',tasks:['Otoklav döngüsünü başlat','F0 değerini doğrula (≥8)','BI testini uygula','Sonuçları kaydet']},
+    {id:'MS-003',eqId:'EQ-006',type:'onleyici',title:'HVAC — HEPA Filtre Değişimi',interval:'3 ay',next:'2026-06-12',techId:'T03',estH:3,notes:'H14 filtre, DP testi, ortam kalif.',tasks:['Eski filtreyi sökmek','Yeni H14 filtre montajı','DP testini yap (<250 Pa)','Ortam kalifikasyonu']},
+    {id:'MS-004',eqId:'EQ-007',type:'kalibrasyon',title:'HPLC — 6 Aylık Kalibrasyon',interval:'6 ay',next:'2026-07-20',techId:'T05',estH:5,notes:'ISO 17025 prosedürü',tasks:['Dedektör kalibrasyonu','Pompa kalibrasyonu','Enjektör kalibrasyonu','Kalibrasyon sertifikası düzenle']},
+    {id:'MS-005',eqId:'EQ-005',type:'onleyici',title:'Liyofilizatör — Kondenser Temizliği',interval:'3 ay',next:'2026-06-25',techId:'T04',estH:3,notes:'Soğutucu gaz basınç kontrolü',tasks:['Kondenseri temizle','Soğutucu gaz basıncını kontrol et','Sızdırmazlık testi']},
   ],
 };
 
@@ -397,6 +397,7 @@ function renderModals(){
   if(MODAL.tech)r.innerHTML+=tplTechForm();
   if(MODAL.user)r.innerHTML+=tplUserForm();
   if(MODAL.qr)r.innerHTML+=tplQRModal();
+  if(MODAL.schedule)r.innerHTML+=tplScheduleForm();
   bindModals();
   if(MODAL.qr&&QEID)setTimeout(function(){drawQR(QEID);},80);
 }
@@ -517,17 +518,83 @@ function pgEq(){
 function pgSched(){
   var scheds=DB.schedule||[];
   var upcoming=[].concat(DB.equipment).filter(function(e){return e.nextMaint;}).sort(function(a,b){return new Date(a.nextMaint)-new Date(b.nextMaint);});
+
   var upH=upcoming.map(function(eq){
-    var d=daysLeft(eq.nextMaint);var c=d<0?'var(--rdl)':d<=3?'var(--rdl)':d<=14?'var(--orl)':'var(--gnl)';
+    var d=daysLeft(eq.nextMaint);
+    var col=d<0?'var(--rdl)':d<=3?'var(--rdl)':d<=14?'var(--orl)':'var(--gnl)';
     var pct=Math.min(100,Math.max(0,((new Date(eq.nextMaint)-new Date())/86400000/90)*100));
-    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="width:180px;flex-shrink:0"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(eq.name)+'</div><div style="font-size:10px;color:var(--mt)">'+esc(eq.area)+'</div></div><div style="flex:1;height:22px;background:var(--bg3);border-radius:4px;position:relative;overflow:hidden;border:1px solid var(--bd)"><div style="position:absolute;left:'+pct+'%;top:0;bottom:0;width:3px;background:'+c+';box-shadow:0 0 6px '+c+'"></div><div style="position:absolute;inset:0;display:flex;align-items:center;padding-left:8px;font-size:10px;color:var(--mt)">'+esc(eq.nextMaint)+'</div></div><div style="width:90px;text-align:right;font-size:12px;font-weight:700;color:'+c+';white-space:nowrap">'+(d<0?Math.abs(d)+' gün GEÇ':d===0?'BUGÜN':d+' gün')+'</div></div>';
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+      +'<div style="width:180px;flex-shrink:0"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(eq.name)+'</div><div style="font-size:10px;color:var(--mt)">'+esc(eq.area)+'</div></div>'
+      +'<div style="flex:1;height:22px;background:var(--bg3);border-radius:4px;position:relative;overflow:hidden;border:1px solid var(--bd)">'
+      +'<div style="position:absolute;left:'+pct+'%;top:0;bottom:0;width:3px;background:'+col+';box-shadow:0 0 6px '+col+'"></div>'
+      +'<div style="position:absolute;inset:0;display:flex;align-items:center;padding-left:8px;font-size:10px;color:var(--mt)">'+esc(eq.nextMaint)+'</div>'
+      +'</div>'
+      +'<div style="width:90px;text-align:right;font-size:12px;font-weight:700;color:'+col+';white-space:nowrap">'+(d<0?Math.abs(d)+' gün GEÇ':d===0?'BUGÜN':d+' gün')+'</div>'
+      +'</div>';
   }).join('');
-  var msH=scheds.length===0?emptyHTML('Plan tanımlanmamış'):scheds.map(function(ms){
-    var eq=DB.equipment.find(function(e){return e.id===ms.eqId;});var tc=DB.technicians.find(function(t){return t.id===ms.techId;});
-    var d=ms.next?daysLeft(ms.next):null;var dc=d===null?'var(--mt)':d<0?'var(--rdl)':d<=7?'var(--orl)':'var(--gnl)';var wt=WTYPES[ms.type]||{ico:'🔧'};
-    return '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:12px 14px;margin-bottom:9px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px"><div style="font-size:13px;font-weight:700">'+wt.ico+' '+esc(ms.title)+'</div><span style="font-size:11px;font-weight:700;color:'+dc+'">'+(d===null?'—':d<0?Math.abs(d)+' gün GEÇ':d+' gün')+'</span></div><div style="font-size:11px;color:var(--mt)">'+esc((eq&&eq.name)||'—')+' · '+esc((tc&&tc.name)||'—')+' · Periyot: '+esc(ms.interval)+' · '+ms.estH+'s</div>'+(ms.notes?'<div style="font-size:11px;color:var(--sub);margin-top:4px">'+esc(ms.notes)+'</div>':"")+'</div>';
+
+  var msH=scheds.length===0?emptyHTML('Henüz bakım planı yok — aşağıdan ekleyin'):scheds.map(function(ms){
+    var eq=DB.equipment.find(function(e){return e.id===ms.eqId;});
+    var tc=DB.technicians.find(function(t){return t.id===ms.techId;});
+    var d=ms.next?daysLeft(ms.next):null;
+    var dc=d===null?'var(--mt)':d<0?'var(--rdl)':d<=7?'var(--orl)':'var(--gnl)';
+    var wt=WTYPES[ms.type]||{ico:'🔧'};
+    var tasks=ms.tasks||[];
+    var tasksId='tasks-'+ms.id;
+    return '<div style="background:var(--bg2);border:1px solid var(--bdl);border-radius:10px;padding:14px;margin-bottom:10px">'
+      // Başlık satırı
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'
+      +'<div style="display:flex;align-items:center;gap:8px;flex:1">'
+      +'<span style="font-size:18px">'+wt.ico+'</span>'
+      +'<div><div style="font-size:13px;font-weight:700">'+esc(ms.title)+'</div>'
+      +'<div style="font-size:11px;color:var(--mt)">'+esc((eq&&eq.name)||'—')+' · '+esc(ms.interval)+' · '+esc((tc&&tc.name)||'—')+' · '+ms.estH+' saat</div>'
+      +'</div></div>'
+      +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
+      +'<span style="font-size:12px;font-weight:700;color:'+dc+'">'+(d===null?'—':d<0?Math.abs(d)+' gün GEÇ':d===0?'BUGÜN':d+' gün')+'</span>'
+      // Görev listesi toggle
+      +(tasks.length>0?'<button onclick="toggleTasks(\''+tasksId+'\')\" style="background:var(--bg3);border:1px solid var(--bd);border-radius:5px;color:var(--sub);font-size:11px;cursor:pointer;padding:2px 8px">📋 '+tasks.length+' görev</button>':'')
+      // Düzenle / Sil
+      +(can('w')?'<button class="btn bout bxs" onclick="openScheduleForm(\''+ms.id+'\')">Düzenle</button>':'')
+      +(can('d')?'<button class="btn bdng bxs" onclick="deleteSchedule(\''+ms.id+'\')">Sil</button>':'')
+      +'</div></div>'
+      // Notlar
+      +(ms.notes?'<div style="font-size:11px;color:var(--sub);margin-bottom:6px">📝 '+esc(ms.notes)+'</div>':'')
+      // Sonraki tarih
+      +'<div style="font-size:11px;color:var(--mt)">📅 Sonraki: <strong style="color:var(--tx)">'+esc(ms.next||'—')+'</strong></div>'
+      // Görev listesi (gizli başlar)
+      +(tasks.length>0
+        ?'<div id="'+tasksId+'" style="display:none;margin-top:10px;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid var(--bd)">'
+          +'<div style="font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Yapılacak İşler</div>'
+          +tasks.map(function(t,i){return'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;border-bottom:1px solid var(--bd)"><span style="color:var(--teal2);font-size:14px">✓</span>'+esc(t)+'</div>';}).join('')
+          +'</div>'
+        :'')
+      +'</div>';
   }).join('');
-  return '<div style="font-size:20px;font-weight:800;margin-bottom:20px;letter-spacing:-.3px">Bakım Planlaması</div><div class="alert" style="background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.25);margin-bottom:16px"><span style="font-size:20px;flex-shrink:0">ℹ</span><div style="font-size:12px;color:var(--sub)">Bakım takvimi 90 gün ileriye yönelik gösterilmektedir. Kırmızı = acil, turuncu = 0-14 gün, yeşil = zamanında.</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:18px"><div class="card"><div class="cardt">Sonraki Bakım Takvimi</div><div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">'+[['Gecikmiş','var(--rdl)'],['0-14 gün','var(--orl)'],['15-90 gün','var(--gnl)']].map(function(x){return'<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mt)"><div style="width:9px;height:9px;border-radius:2px;background:'+x[1]+'"></div>'+x[0]+'</div>';}).join('')+'</div>'+upH+'</div><div class="card"><div class="cardt">Periyodik Bakım Planları</div>'+msH+'</div></div>';
+
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'
+    +'<div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Bakım Planlaması</div>'
+    +(can('w')?'<button class="btn bpri bsm" onclick="openScheduleForm(null)">+ Bakım Planı Ekle</button>':'')
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">'
+    +'<div class="card"><div class="cardt">Sonraki Bakım Takvimi (90 Gün)</div>'
+    +'<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">'
+    +[['Gecikmiş','var(--rdl)'],['0-14 gün','var(--orl)'],['15-90 gün','var(--gnl)']].map(function(x){return'<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mt)"><div style="width:9px;height:9px;border-radius:2px;background:'+x[1]+'"></div>'+x[0]+'</div>';}).join('')
+    +'</div>'+upH+'</div>'
+    +'<div class="card"><div class="cardt">Periyodik Bakım Planları <span style="color:var(--mt)">('+scheds.length+')</span></div>'+msH+'</div>'
+    +'</div>';
+}
+
+function toggleTasks(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  el.style.display=el.style.display==='none'?'block':'none';
+}
+
+function deleteSchedule(id){
+  if(!can('d')){toast('Silme yetkiniz yok.','err');return;}
+  if(!confirm('Bu bakım planını silmek istiyor musunuz?'))return;
+  DB.schedule=DB.schedule.filter(function(s){return s.id!==id;});
+  dbSave();toast('Bakım planı silindi','warn');renderPage();
 }
 
 function pgReports(){
@@ -922,7 +989,17 @@ function addListItem(type){var lbl={area:'Bölge adı:',techRole:'Rol adı:'};va
 function rmListItem(type,val){if(type==='area')DB.settings.areas=DB.settings.areas.filter(function(a){return a!==val;});if(type==='techRole')DB.settings.techRoles=DB.settings.techRoles.filter(function(r){return r!==val;});dbSave();renderPage();}
 function exportJSON(){var b=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=DB.settings.company.replace(/\s+/g,'-')+'-yedek-'+today()+'.json';a.click();toast('JSON yedek indirildi');}
 function importJSON(inp){var f=inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){try{var d=JSON.parse(ev.target.result);if(!d.workOrders&&d.records)d.workOrders=d.records;if(!d.workOrders)throw new Error('Geçersiz format');if(!d.eqDocs)d.eqDocs={};DB=d;dbSave();R();toast('Veriler yüklendi');}catch(e){toast('Yükleme hatası: '+e.message,'err');}};r.readAsText(f);}
-function resetAll(){if(!confirm('TÜM VERİLER SİLİNECEK ve örnek veriler yüklenecek.\nBu işlem GERİ ALINAMAZ!\n\nDevam etmek istiyor musunuz?'))return;DB=JSON.parse(JSON.stringify(SEED));dbSave();R();toast('Sistem sıfırlandı','warn');}
+function resetAll(){
+  if(!U||U.role!=='admin'){toast('Bu işlem için Yönetici yetkisi gerekli.','err');return;}
+  var pw=prompt('Güvenlik doğrulaması: Şifrenizi girin');
+  if(pw===null)return;
+  if(pw!==U.pw){toast('Şifre hatalı — sıfırlama iptal edildi.','err');return;}
+  if(!confirm('UYARI: Tüm veriler silinecek!\n\nBu işlem GERİ ALINAMAZ!\n\nEmin misiniz?'))return;
+  DB=JSON.parse(JSON.stringify(SEED));
+  // Firebase'i de temizle
+  if(FB_REF){FB_REF.set(null).catch(function(){});}
+  dbSave();R();toast('Sistem fabrika ayarlarına sıfırlandı','warn');
+}
 function exportExcel(){
   if(typeof XLSX==='undefined'){toast('Excel kütüphanesi yükleniyor...','warn');return;}
   try{
@@ -953,7 +1030,7 @@ function bindModals(){
   var ba=document.getElementById('b-adddoc');if(ba)ba.onclick=function(){var inp=document.getElementById('f-di');if(!inp||!inp.value.trim())return;WDOCS.push(inp.value.trim());inp.value='';var el=document.getElementById('f-docs');if(el){el.innerHTML=renderDocList(WDOCS,true);bindDocRemove();}};
   bindDocRemove();
 }
-function closeM(k){MODAL[k]=false;if(k==='eqDet')DID=null;renderModals();}
+function closeM(k){MODAL[k]=false;if(k==='eqDet')DID=null;if(k==='schedule')ET.schedule=null;renderModals();}
 function bindPage(){
   var fq=document.getElementById('fq');if(fq)fq.oninput=function(){FLT.q=fq.value;renderPage();};
   var ft=document.getElementById('ft');if(ft)ft.onchange=function(){FLT.type=ft.value;renderPage();};
