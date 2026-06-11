@@ -119,8 +119,25 @@ textarea.inp{resize:vertical;min-height:70px}
 .qr-top{background:var(--bg1);border-bottom:1px solid var(--bdl);padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:200}
 .qr-body{flex:1;padding:16px;max-width:600px;margin:0 auto;width:100%;padding-bottom:80px}
 
+
+/* QR Scanner Modal */
+#qr-scanner-ov{position:fixed;inset:0;background:#000;z-index:600;display:flex;flex-direction:column}
+#qr-scanner-bar{background:rgba(0,0,0,.7);padding:14px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+#qr-video-wrap{position:relative;flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#qr-video{width:100%;height:100%;object-fit:cover}
+#qr-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.qr-frame{width:220px;height:220px;position:relative}
+.qr-frame::before,.qr-frame::after{content:'';position:absolute;width:40px;height:40px;border-color:#22d3ee;border-style:solid}
+.qr-frame::before{top:0;left:0;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
+.qr-frame::after{bottom:0;right:0;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
+.qr-corner-tr{position:absolute;top:0;right:0;width:40px;height:40px;border-top:3px solid #22d3ee;border-right:3px solid #22d3ee;border-radius:0 4px 0 0}
+.qr-corner-bl{position:absolute;bottom:0;left:0;width:40px;height:40px;border-bottom:3px solid #22d3ee;border-left:3px solid #22d3ee;border-radius:0 0 0 4px}
+.qr-scan-line{position:absolute;left:10px;right:10px;height:2px;background:linear-gradient(90deg,transparent,#22d3ee,transparent);animation:scan 2s ease-in-out infinite}
+@keyframes scan{0%{top:10px}100%{top:200px}}
+#qr-status{position:absolute;bottom:30px;left:0;right:0;text-align:center;font-size:13px;font-weight:600;color:#fff;background:rgba(0,0,0,.5);padding:8px;margin:0 20px;border-radius:8px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 <body>
 <div id="toast"></div>
@@ -129,6 +146,7 @@ textarea.inp{resize:vertical;min-height:70px}
 <script>
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
+var BASE_URL='https://neverdiekou.github.io/Bakim/';
 
 var ROLES={
   admin:     {lbl:'Yönetici',   col:'#a78bfa',p:{r:1,w:1,d:1,u:1,s:1,ap:1}},
@@ -268,6 +286,7 @@ function bindLogin(){
     var p=(document.getElementById('l-p')||{value:''}).value;
     var f=DB.users.find(function(x){return x.un===u&&x.pw===p&&x.active;});
     if(f){U=f;var h=window.location.hash;R();if(h&&h.startsWith('#qr=')){var eid=h.replace('#qr=','').split(':')[0];window.location.hash='';setTimeout(function(){showQRLanding(eid);},100);}
+      else if(window._pendingQR){var pqr=window._pendingQR;window._pendingQR=null;setTimeout(function(){showQRLanding(pqr);},100);}
     }
     else{var err=document.getElementById('l-err');if(err)err.style.display='block';}
   }
@@ -293,8 +312,8 @@ function tplShell(){
   var mobNav = '<nav id="mob-nav">'
     +'<button class="'+(PAGE==='dashboard'?'on':'')+'" onclick="PAGE=\'dashboard\';R()"><span class="mi">▦</span>Gösterge</button>'
     +'<button class="'+(PAGE==='workorders'?'on':'')+'" onclick="PAGE=\'workorders\';R()"><span class="mi">📋</span>İş Emirleri</button>'
+    +'<button onclick="openQRScanner()"><span class="mi">📷</span>QR Tara</button>'
     +'<button class="'+(PAGE==='equipment'?'on':'')+'" onclick="PAGE=\'equipment\';R()"><span class="mi">⚙</span>Ekipmanlar</button>'
-    +'<button class="'+(PAGE==='schedule'?'on':'')+'" onclick="PAGE=\'schedule\';R()"><span class="mi">📅</span>Planlama</button>'
     +'<button class="'+(PAGE==='reports'?'on':'')+'" onclick="PAGE=\'reports\';R()"><span class="mi">📊</span>Raporlar</button>'
     +'</nav>';
   return '<div id="wrap"><div id="bar"><div style="display:flex;align-items:center;gap:10px;flex-shrink:0"><div style="width:34px;height:34px;background:linear-gradient(135deg,#1a4ab5,#2563eb);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px">⚕</div><div><div style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.3px">'+esc(s.company)+'</div><div style="font-size:9px;color:var(--mt);letter-spacing:1.4px;text-transform:uppercase">'+esc(s.facility)+'</div></div></div><nav id="nav">'+navH+'</nav><div id="tr">'+(urgent.length?'<button class="btn bdng bsm" onclick="PAGE=\'schedule\';R()">⚠ '+urgent.length+' Kritik Bakım</button>':'')+(can('w')?'<button class="btn bpri bsm" onclick="openWOModal(null,null)">+ İş Emri</button>':'')+'<div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--bd)"><span style="font-size:10px;font-weight:700;color:'+rl.col+';padding:2px 6px;border-radius:4px;background:'+rl.col+'18;border:1px solid '+rl.col+'40">'+rl.lbl+'</span><span style="font-size:13px;font-weight:600">'+esc(U.name.split(' ')[0])+'</span><button class="btn bghs bxs" id="b-logout">Çıkış</button></div></div></div><main id="main"></main><div id="modals-root"></div>'+mobNav+'</div>';
@@ -576,11 +595,14 @@ function makeQR(text,cell){
   for(var r=0;r<sz;r++)for(var c=0;c<sz;c++)if(M[r][c]===1)ctx.fillRect((c+q)*cell,(r+q)*cell,cell,cell);
   return cvs;
 }
-function drawQR(eqId){var eq=DB.equipment.find(function(e){return e.id===eqId;});if(!eq)return;var el=document.getElementById('qr-disp');if(!el)return;el.innerHTML='';try{var url=window.location.href.split('#')[0]+'#qr='+eq.id;el.appendChild(makeQR(url,8));}catch(err){el.innerHTML='<div style="color:red;font-size:11px;padding:8px">Hata: '+esc(err.message)+'</div>';}}
+function drawQR(eqId){var eq=DB.equipment.find(function(e){return e.id===eqId;});if(!eq)return;var el=document.getElementById('qr-disp');if(!el)return;el.innerHTML='';try{
+  var payload=BASE_URL+'?eq='+eq.id;
+  el.appendChild(makeQR(payload,8));
+}catch(err){el.innerHTML='<div style="color:red;font-size:11px;padding:8px">Hata: '+esc(err.message)+'</div>';}}
 function selectQR(id){QEID=id;var eq=DB.equipment.find(function(e){return e.id===id;});var info=document.getElementById('qr-info');if(info&&eq)info.innerHTML='<div style="font-size:16px;font-weight:800">'+esc(eq.name)+'</div><div style="font-size:11px;color:var(--mt)">'+esc(eq.id)+' · '+esc(eq.area)+'</div><div style="font-size:10px;color:var(--mt);margin-top:4px">QR okutunca arıza kayıt formu açılır</div>';var disp=document.getElementById('qr-disp');if(disp){disp.innerHTML='';drawQR(id);}document.querySelectorAll('#ov-qr button[onclick^="selectQR"]').forEach(function(b){var sel=b.getAttribute('onclick').indexOf("'"+id+"'")>=0;b.style.background=sel?'var(--bg4)':'transparent';b.style.borderColor=sel?'var(--bl)':'var(--bd)';b.style.color=sel?'var(--bll)':'var(--tx)';});}
 function dlQR(eqId){var el=document.getElementById('qr-disp');var cvs=el&&el.querySelector('canvas');if(!cvs){toast('Önce ekipman seçin','warn');return;}var a=document.createElement('a');a.href=cvs.toDataURL('image/png');a.download='QR-'+eqId+'.png';a.click();}
 function printQR(id,name,area){var el=document.getElementById('qr-disp');var cvs=el&&el.querySelector('canvas');if(!cvs)return;var w=window.open('','_blank');w.document.write('<html><body style="text-align:center;font-family:sans-serif;padding:24px"><img src="'+cvs.toDataURL()+'" style="width:220px;height:220px"/><div style="font-size:15px;font-weight:bold;margin-top:10px">'+name+'</div><div style="font-size:12px;color:#666">'+id+' · '+area+'</div></body></html>');w.document.close();w.print();}
-function printAllQR(){var imgs=DB.equipment.map(function(eq){try{var url=window.location.href.split('#')[0]+'#qr='+eq.id;var cvs=makeQR(url,7);return'<div style="display:inline-block;margin:10px;text-align:center;border:1px solid #ddd;border-radius:10px;padding:14px;width:180px;vertical-align:top"><img src="'+cvs.toDataURL()+'" style="width:154px;height:154px;display:block"/><div style="font-size:12px;font-weight:bold;margin-top:8px">'+esc(eq.name)+'</div><div style="font-size:10px;color:#666">'+esc(eq.id)+' · '+esc(eq.area)+'</div></div>';}catch(e){return '';}}).join('');var w=window.open('','_blank');w.document.write('<html><head><title>QR Kodlar</title><style>@media print{body{margin:0}}</style></head><body style="font-family:sans-serif;padding:20px;background:#fff">'+imgs+'</body></html>');w.document.close();setTimeout(function(){w.print();},400);}
+function printAllQR(){var imgs=DB.equipment.map(function(eq){try{var payload=BASE_URL+'?eq='+eq.id;var cvs=makeQR(payload,7);return'<div style="display:inline-block;margin:10px;text-align:center;border:1px solid #ddd;border-radius:10px;padding:14px;width:180px;vertical-align:top"><img src="'+cvs.toDataURL()+'" style="width:154px;height:154px;display:block"/><div style="font-size:12px;font-weight:bold;margin-top:8px">'+esc(eq.name)+'</div><div style="font-size:10px;color:#666">'+esc(eq.id)+' · '+esc(eq.area)+'</div></div>';}catch(e){return '';}}).join('');var w=window.open('','_blank');w.document.write('<html><head><title>QR Kodlar</title><style>@media print{body{margin:0}}</style></head><body style="font-family:sans-serif;padding:20px;background:#fff">'+imgs+'</body></html>');w.document.close();setTimeout(function(){w.print();},400);}
 
 // SAVE FUNCTIONS
 function saveWO(){
@@ -620,7 +642,7 @@ function saveUser(){
   dbSave();closeM('user');toast(ex?'Kullanıcı güncellendi':'Kullanıcı eklendi');R();
 }
 function saveSettings(){
-  var s=DB.settings;s.company=v('s-co')||s.company;s.facility=v('s-fa')||s.facility;s.address=v('s-ad');s.phone=v('s-ph');s.warnDays=parseInt(v('s-wd'))||7;s.critDays=parseInt(v('s-cd'))||3;s.gmpDef=vb('s-gd');s.reqApproval=vb('s-ap');
+  var s=DB.settings;var newUrl=v('s-url');if(newUrl&&newUrl.trim())BASE_URL=newUrl.trim().endsWith('/')?newUrl.trim():newUrl.trim()+'/';s.company=v('s-co')||s.company;s.facility=v('s-fa')||s.facility;s.address=v('s-ad');s.phone=v('s-ph');s.warnDays=parseInt(v('s-wd'))||7;s.critDays=parseInt(v('s-cd'))||3;s.gmpDef=vb('s-gd');s.reqApproval=vb('s-ap');
   dbSave();toast('Ayarlar kaydedildi');R();
 }
 function addEqDoc(eqId){var name=(document.getElementById('eqd-name')||{value:''}).value.trim();if(!name){toast('Doküman adı zorunludur','err');return;}var note=(document.getElementById('eqd-note')||{value:''}).value.trim();if(!DB.eqDocs)DB.eqDocs={};if(!DB.eqDocs[eqId])DB.eqDocs[eqId]=[];DB.eqDocs[eqId].push({name:name,note:note,date:today(),by:U.name});dbSave();toast('Doküman eklendi');TAB.eq='docs';renderModals();}
@@ -1351,8 +1373,142 @@ function approveWOQR(woId) {
   showQRLanding(QR_EQ_ID);
 }
 
+
+// ═══════════════════════════════════════════════
+// QR KAMERA TARAYICI
+// ═══════════════════════════════════════════════
+var _qrStream = null;
+var _qrAnimId = null;
+var _qrCanvas = null;
+var _qrCtx = null;
+
+function openQRScanner() {
+  // Video+Canvas overlay oluştur
+  var html = '<div id="qr-scanner-ov">'
+    + '<div id="qr-scanner-bar">'
+    + '<button onclick="closeQRScanner()" style="background:none;border:none;color:#fff;font-size:26px;cursor:pointer;line-height:1">←</button>'
+    + '<div style="flex:1"><div style="font-size:15px;font-weight:700;color:#fff">QR Kod Tara</div><div style="font-size:11px;color:rgba(255,255,255,.6)">Kamerayı QR koda gösterin</div></div>'
+    + '</div>'
+    + '<div id="qr-video-wrap">'
+    + '<video id="qr-video" autoplay playsinline muted></video>'
+    + '<div id="qr-overlay"><div class="qr-frame"><div class="qr-corner-tr"></div><div class="qr-corner-bl"></div><div class="qr-scan-line"></div></div></div>'
+    + '<div id="qr-status">QR kodu çerçeve içine alın</div>'
+    + '</div>'
+    + '</div>';
+
+  document.body.insertAdjacentHTML('beforeend', html);
+
+  // Kamera başlat
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    document.getElementById('qr-status').textContent = '❌ Kamera desteklenmiyor';
+    return;
+  }
+
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})
+    .then(function(stream) {
+      _qrStream = stream;
+      var video = document.getElementById('qr-video');
+      if(!video) return;
+      video.srcObject = stream;
+      video.addEventListener('loadedmetadata', function() {
+        video.play();
+        _qrCanvas = document.createElement('canvas');
+        _qrCtx = _qrCanvas.getContext('2d');
+        requestAnimationFrame(scanFrame);
+      });
+    })
+    .catch(function(err) {
+      var msg = err.name === 'NotAllowedError'
+        ? '❌ Kamera izni reddedildi. Tarayıcı ayarlarından izin verin.'
+        : '❌ Kamera açılamadı: ' + err.message;
+      var st = document.getElementById('qr-status');
+      if(st) st.textContent = msg;
+    });
+}
+
+function scanFrame() {
+  var video = document.getElementById('qr-video');
+  if(!video || !_qrCanvas || !_qrCtx || !document.getElementById('qr-scanner-ov')) return;
+
+  if(video.readyState === video.HAVE_ENOUGH_DATA) {
+    _qrCanvas.width  = video.videoWidth;
+    _qrCanvas.height = video.videoHeight;
+    _qrCtx.drawImage(video, 0, 0, _qrCanvas.width, _qrCanvas.height);
+    var imageData = _qrCtx.getImageData(0, 0, _qrCanvas.width, _qrCanvas.height);
+
+    if(typeof jsQR !== 'undefined') {
+      var code = jsQR(imageData.data, imageData.width, imageData.height, {inversionAttempts:'dontInvert'});
+      if(code && code.data) {
+        handleQRResult(code.data);
+        return; // stop scanning
+      }
+    } else {
+      var st = document.getElementById('qr-status');
+      if(st) st.textContent = '⏳ jsQR kütüphanesi yükleniyor...';
+    }
+  }
+
+  _qrAnimId = requestAnimationFrame(scanFrame);
+}
+
+function handleQRResult(data) {
+  closeQRScanner();
+
+  // Desteklenen format: PHARMA_MS:EQ-001
+  var eqId = null;
+  // Format 1: PHARMA_MS:EQ-001 (kısa)
+  if(data.startsWith('PHARMA_MS:')) {
+    eqId = data.replace('PHARMA_MS:','').trim();
+  }
+  // Format 2: https://...?eq=EQ-001 (yeni URL format)
+  if(!eqId) {
+    var qMatch = data.match(/[?&]eq=([A-Z0-9\-]+)/);
+    if(qMatch) eqId = qMatch[1];
+  }
+  // Format 3: URL içinde #qr=EQ-001 (eski format fallback)
+  if(!eqId) {
+    var hashMatch = data.match(/#qr=([A-Z0-9\-]+)/);
+    if(hashMatch) eqId = hashMatch[1];
+  }
+
+  if(!eqId) {
+    toast('Tanınmayan QR kodu: ' + data.slice(0,30), 'warn');
+    return;
+  }
+
+  var eq = DB.equipment.find(function(e){ return e.id === eqId; });
+  if(!eq) {
+    toast('Ekipman bulunamadı: ' + eqId, 'err');
+    return;
+  }
+
+  toast('✓ ' + eq.name + ' — QR okundu', 'ok');
+  QR_EQ_ID = eqId;
+  QR_TAB = 'info';
+  showQRLanding(eqId);
+}
+
+function closeQRScanner() {
+  if(_qrAnimId) { cancelAnimationFrame(_qrAnimId); _qrAnimId = null; }
+  if(_qrStream)  { _qrStream.getTracks().forEach(function(t){t.stop();}); _qrStream = null; }
+  var el = document.getElementById('qr-scanner-ov');
+  if(el) el.remove();
+  _qrCanvas = null; _qrCtx = null;
+}
+
 // BOOT
+// QR link ile gelindiyse (?eq=EQ-001)
+(function(){
+  var qParam = typeof URLSearchParams !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('eq')
+    : null;
+  if(qParam) {
+    // Önce login, sonra QR sayfasına yönlendir
+    window._pendingQR = qParam;
+  }
+})();
 R();
+
 
 </script>
 </body>
