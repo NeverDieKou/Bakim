@@ -268,12 +268,15 @@ function showSyncStatus(status) {
 }
 
 var ROLES={
-  admin:     {lbl:'Yönetici',   col:'#a78bfa',p:{r:1,w:1,d:1,u:1,s:1,ap:1}},
-  supervisor:{lbl:'Süpervizör', col:'#22d3ee',p:{r:1,w:1,d:0,u:0,s:0,ap:1}},
-  teknisyen: {lbl:'Teknisyen',  col:'#4f8ef7',p:{r:1,w:1,d:0,u:0,s:0,ap:0}},
-  gozetmen:  {lbl:'Gözlemci',   col:'#fbbf24',p:{r:1,w:0,d:0,u:0,s:0,ap:0}},
-  readonly:  {lbl:'Salt Okunur',col:'#4d7499',p:{r:1,w:0,d:0,u:0,s:0,ap:0}},
+  admin:     {lbl:'Yönetici',  col:'#a78bfa',p:{r:1,w:1,cl:1,d:1,u:1,s:1,ap:1}},
+  muhendis:  {lbl:'Mühendis',  col:'#22d3ee',p:{r:1,w:1,cl:1,d:0,u:0,s:0,ap:1}},
+  teknisyen: {lbl:'Teknisyen', col:'#4f8ef7',p:{r:1,w:1,cl:0,d:0,u:0,s:0,ap:0}},
+  uretimci:  {lbl:'Üretimci',  col:'#fbbf24',p:{r:1,w:0,cl:0,d:0,u:0,s:0,ap:0}},
+  misafir:   {lbl:'Misafir',   col:'#4d7499',p:{r:1,w:0,cl:0,d:0,u:0,s:0,ap:0}},
 };
+// cl = iş emri kapatma yetkisi (Yönetici + Mühendis)
+// ap = onaylama yetkisi (Yönetici + Mühendis)
+// w  = iş emri oluşturma (Yönetici + Mühendis + Teknisyen)
 var SEVS={kritik:{lbl:'Kritik',col:'#ef4444',bg:'rgba(239,68,68,.12)'},yuksek:{lbl:'Yüksek',col:'#f97316',bg:'rgba(249,115,22,.12)'},orta:{lbl:'Orta',col:'#f59e0b',bg:'rgba(245,158,11,.12)'},dusuk:{lbl:'Düşük',col:'#4f8ef7',bg:'rgba(79,142,247,.12)'},bilgi:{lbl:'Bilgi',col:'#6b7280',bg:'rgba(107,114,128,.12)'}};
 var STATS={acik:{lbl:'Açık',col:'#ef4444',bg:'rgba(239,68,68,.12)'},devam:{lbl:'Devam Ediyor',col:'#f59e0b',bg:'rgba(245,158,11,.12)'},bekliyor:{lbl:'Onay Bekliyor',col:'#a78bfa',bg:'rgba(167,139,250,.12)'},kapali:{lbl:'Kapalı',col:'#10b981',bg:'rgba(16,185,129,.12)'}};
 var EQST={aktif:{lbl:'Aktif',col:'#10b981'},arizali:{lbl:'Arızalı',col:'#ef4444'},bakimda:{lbl:'Bakımda',col:'#f59e0b'},devre_disi:{lbl:'Devre Dışı',col:'#4d7499'}};
@@ -308,10 +311,10 @@ var SEED={
   settings:{company:'PharmaMS',facility:'İlaç Üretim Tesisi A',address:'OSB, İstanbul',phone:'+90 212 000 00 00',warnDays:7,critDays:3,gmpDef:false,reqApproval:true,areas:['Üretim A','Üretim B','Steril Alan','Kalite Kontrol','HVAC/Altyapı','Depo','AR-GE','Teknik Servis'],techRoles:['Mekanik Teknisyen','Elektrik Teknisyen','Enstrümantasyon Uzmanı','HVAC Uzmanı','Steril Alan Uzmanı','Kalibrasyon Uzmanı','Bakım Mühendisi'],eqCats:['Üretim Ekipmanı','Laboratuvar Cihazı','Altyapı Sistemi','Kalibrasyon Aleti','Steril Ekipman']},
   users:[
     {id:'U01',name:'Hüseyin Yönetici',un:'admin',pw:'admin123',role:'admin',dept:'Bakım Yönetimi',email:'admin@firma.com',active:true},
-    {id:'U02',name:'Mehmet Süpervizör',un:'super',pw:'1234',role:'supervisor',dept:'Üretim Bakım',email:'mehmet@firma.com',active:true},
+    {id:'U02',name:'Mehmet Mühendis',un:'muhendis',pw:'1234',role:'muhendis',dept:'Bakım Mühendisliği',email:'mehmet@firma.com',active:true},
     {id:'U03',name:'Ali Teknisyen',un:'ali',pw:'1234',role:'teknisyen',dept:'Üretim Bakım',email:'ali@firma.com',active:true},
-    {id:'U04',name:'Ayşe Gözlemci',un:'ayse',pw:'1234',role:'gozetmen',dept:'Kalite Güvence',email:'ayse@firma.com',active:true},
-    {id:'U05',name:'Veli Salt Okunur',un:'veli',pw:'1234',role:'readonly',dept:'Planlama',email:'veli@firma.com',active:true},
+    {id:'U04',name:'Ayşe Üretimci',un:'uretim',pw:'1234',role:'uretimci',dept:'Üretim',email:'ayse@firma.com',active:true},
+    {id:'U05',name:'Veli Misafir',un:'misafir',pw:'1234',role:'misafir',dept:'Ziyaretçi',email:'veli@firma.com',active:true},
   ],
   technicians:[
     {id:'T01',name:'Ali Kaya',role:'Mekanik Teknisyen',area:'Üretim A',phone:'0532 111 22 33',email:'ali.k@firma.com',active:true,certs:['ISO 9001','GMP Temel']},
@@ -550,7 +553,18 @@ function pgTech(){
 }
 
 function pgUsers(){
-  var roleCards=Object.entries(ROLES).map(function(e){var perms=Object.keys(e[1].p).filter(function(k){return e[1].p[k];}).map(function(k){return({r:'Okuma',w:'Yazma',d:'Silme',u:'Kull.Yön.',s:'Ayarlar',ap:'Onaylama'})[k]||k;}).join(' · ');return'<div style="background:var(--bg2);border:1px solid '+e[1].col+'25;border-radius:11px;padding:16px;border-left:3px solid '+e[1].col+'"><div style="font-weight:700;color:'+e[1].col+';margin-bottom:4px;font-size:14px">'+e[1].lbl+'</div><div style="font-size:11px;color:var(--mt);line-height:1.4">'+perms+'</div><div style="font-size:13px;font-weight:700;margin-top:8px">'+DB.users.filter(function(u){return u.role===e[0];}).length+' kullanıcı</div></div>';}).join('');
+  var permLabels={r:'Görüntüleme',w:'İş Emri Oluşturma',cl:'İş Emri Kapatma',ap:'Onaylama',d:'Silme',u:'Kullanıcı Yönetimi',s:'Sistem Ayarları'};
+  var roleCards=Object.entries(ROLES).map(function(e){
+    var rk=e[0],rv=e[1];
+    var perms=Object.keys(rv.p).filter(function(k){return rv.p[k];}).map(function(k){return permLabels[k]||k;}).join(' · ');
+    var noPerms=Object.keys(rv.p).filter(function(k){return !rv.p[k]&&k!=='d'&&k!=='u'&&k!=='s';}).map(function(k){return permLabels[k]||k;});
+    return'<div style="background:var(--bg2);border:1px solid '+rv.col+'25;border-radius:11px;padding:16px;border-left:3px solid '+rv.col+'">'
+      +'<div style="font-weight:700;color:'+rv.col+';margin-bottom:6px;font-size:14px">'+rv.lbl+'</div>'
+      +'<div style="font-size:11px;color:var(--gnl);line-height:1.6">✓ '+perms+'</div>'
+      +(noPerms.length?'<div style="font-size:11px;color:var(--rdl);line-height:1.6;margin-top:3px">✕ '+noPerms.join(' · ')+'</div>':'')
+      +'<div style="font-size:13px;font-weight:700;margin-top:8px;color:var(--sub)">'+DB.users.filter(function(u){return u.role===rk;}).length+' kullanıcı</div>'
+      +'</div>';
+  }).join('');
   var rows=DB.users.map(function(u){var rl=ROLES[u.role];return'<tr><td style="font-weight:600">'+esc(u.name)+'</td><td style="font-family:monospace;color:var(--bll)">'+esc(u.un)+'</td><td><span class="badge bxsm" style="color:'+(rl&&rl.col||'#888')+';border-color:'+(rl&&rl.col||'#888')+';background:'+(rl&&rl.col||'#888')+'18">'+(rl&&rl.lbl||u.role)+'</span></td><td style="color:var(--mt);font-size:11px">'+esc(u.dept||'—')+'</td><td style="color:var(--mt);font-size:11px">'+esc(u.email||'—')+'</td><td><span style="font-size:11px;font-weight:700;color:'+(u.active?'var(--gnl)':'var(--mt)')+'">'+(u.active?'● Aktif':'○ Pasif')+'</span></td><td><button class="btn bghs bxs" onclick="openUserForm(\''+u.id+'\')">Düzenle</button></td></tr>';}).join('');
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Kullanıcı Yönetimi</div><button class="btn bpri bsm" onclick="openUserForm(null)">+ Kullanıcı Ekle</button></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:22px">'+roleCards+'</div><div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>Ad Soyad</th><th>Kullanıcı Adı</th><th>Rol</th><th>Departman</th><th>E-posta</th><th>Durum</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
@@ -608,7 +622,10 @@ function tplWODet(){
     content=(can('w')?'<div style="margin-bottom:14px"><textarea class="inp isml" id="cmt-inp" rows="2" placeholder="Yorum, not veya güncelleme ekle..."></textarea><div style="display:flex;justify-content:flex-end;margin-top:6px"><button class="btn bpri bxs" onclick="addComment(\''+w.id+'\')">Yorum Ekle</button></div></div>':'')+
     (cmts.length===0?emptyHTML('Henüz yorum yok'):[].concat(cmts).reverse().map(function(c){return'<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:12px 14px;margin-bottom:9px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:12px;font-weight:700;color:var(--bll)">'+esc(c.user)+'</span><span style="font-size:11px;color:var(--mt)">'+esc(c.date)+'</span></div><div style="font-size:13px;line-height:1.5;color:var(--sub)">'+esc(c.text)+'</div></div>';}).join(''));
   }
-  var actBtns=(can('w')?'<button class="btn bout bxs" style="margin-right:6px" onclick="closeM(\'woDet\');openWOModal(\''+w.id+'\',null)">Düzenle</button>':'')+(can('ap')&&w.status==='bekliyor'?'<button class="btn bsuc bxs" onclick="approveWO(\''+w.id+'\')">✓ Onayla</button>':'');
+  var actBtns=''
+    +(can('w')?'<button class="btn bout bxs" style="margin-right:6px" onclick="closeM(\'woDet\');openWOModal(\''+w.id+'\',null)">Düzenle</button>':'')
+    +(can('cl')&&(w.status==='acik'||w.status==='devam')?'<button class="btn bsuc bxs" style="margin-right:6px" onclick="closeWODirect(\''+w.id+'\')">✓ Kapat</button>':'')
+    +(can('ap')&&w.status==='bekliyor'?'<button class="btn bsuc bxs" onclick="approveWO(\''+w.id+'\')">✓ Onayla</button>':'');
   return '<div class="ov" id="ov-wodet"><div class="md mdlg"><div class="mdh" style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">'+wt.ico+'</span><div><div style="font-size:10px;font-family:monospace;color:var(--mt);margin-bottom:2px">'+esc(w.id)+' · '+esc(wt.lbl)+'</div><div class="mdt">'+esc(w.title)+'</div></div></div><button class="mdc" onclick="closeM(\'woDet\')">✕</button></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">'+bdg+'</div><div class="tabs">'+tabH+'<div style="flex:1"></div>'+actBtns+'</div>'+content+'</div></div>';
 }
 
@@ -823,6 +840,10 @@ function saveWO(){
   var eqId=v('f-eqid'),title=v('f-title').trim();
   if(!eqId){toast('Ekipman seçiniz','err');return;}
   if(!title){toast('Başlık zorunludur','err');return;}
+  var statusVal=v('f-status');
+  if((statusVal==='kapali'||statusVal==='bekliyor')&&!can('cl')){
+    toast('İş emri kapatma yetkiniz yok. Mühendis veya Yönetici onayı gerekli.','err');return;
+  }
   var ex=ET.wo&&ET.wo.id?DB.workOrders.find(function(w){return w.id===ET.wo.id;}):null;
   var status=v('f-status');
   var wo={id:ex?ex.id:'WO-'+uid(),eqId:eqId,type:v('f-type'),title:title,desc:v('f-desc'),sev:v('f-sev'),status:status,date:v('f-date')||today(),due:v('f-due'),techId:v('f-tech'),gmp:vb('f-gmp'),root:v('f-root'),lh:parseFloat(v('f-lh'))||0,pc:parseFloat(v('f-pc'))||0,steps:ex?ex.steps:[],docs:[].concat(WDOCS),comments:ex?ex.comments:[],by:ex?ex.by:U.id,approvedBy:ex?ex.approvedBy:'',closedAt:(status==='kapali'&&!(ex&&ex.closedAt))?nowStr():(ex?ex.closedAt||'':'')};
@@ -831,7 +852,29 @@ function saveWO(){
   else DB.workOrders=[wo].concat(DB.workOrders);
   dbSave();WDOCS=[];closeM('wo');toast(ex?'İş emri güncellendi':'İş emri oluşturuldu');R();
 }
-function approveWO(id){DB.workOrders=DB.workOrders.map(function(w){return w.id===id?Object.assign({},w,{status:'kapali',approvedBy:U.id,closedAt:nowStr()}):w;});dbSave();toast('İş emri onaylandı ve kapatıldı');closeM('woDet');R();}
+function closeWODirect(id){
+  if(!can('cl')){toast('Kapatma yetkiniz yok.','err');return;}
+  if(!confirm('Bu iş emrini kapatmak istiyor musunuz?'))return;
+  DB.workOrders=DB.workOrders.map(function(w){
+    return w.id===id?Object.assign({},w,{status:'kapali',closedAt:nowStr()}):w;
+  });
+  // Ekipman durumunu güncelle
+  var wo=DB.workOrders.find(function(w){return w.id===id;});
+  if(wo){
+    var stillOpen=DB.workOrders.filter(function(w){return w.eqId===wo.eqId&&w.status!=='kapali';}).length;
+    if(stillOpen===0){
+      DB.equipment=DB.equipment.map(function(e){
+        return e.id===wo.eqId&&e.status==='arizali'?Object.assign({},e,{status:'aktif',lastMaint:today()}):e;
+      });
+    }
+  }
+  dbSave();toast('İş emri kapatıldı');closeM('woDet');R();
+}
+function approveWO(id){
+  if(!can('ap')){toast('Onaylama yetkiniz yok.','err');return;}
+  DB.workOrders=DB.workOrders.map(function(w){return w.id===id?Object.assign({},w,{status:'kapali',approvedBy:U.id,closedAt:nowStr()}):w;});
+  dbSave();toast('İş emri onaylandı ve kapatıldı');closeM('woDet');R();
+}
 function saveEq(){
   var name=v('eq-n').trim();if(!name){toast('Ekipman adı zorunludur','err');return;}
   var ex=ET.eq;
@@ -1465,7 +1508,10 @@ function renderQRWOForm(editId) {
 
   var tOpts = Object.entries(WTYPES).map(function(e){return'<option value="'+e[0]+'"'+(f.type===e[0]?' selected':'')+'>'+e[1].ico+' '+e[1].lbl+'</option>';}).join('');
   var svOpts = Object.entries(SEVS).map(function(e){return'<option value="'+e[0]+'"'+(f.sev===e[0]?' selected':'')+'>'+e[1].lbl+'</option>';}).join('');
-  var stOpts = Object.entries(STATS).map(function(e){return'<option value="'+e[0]+'"'+(f.status===e[0]?' selected':'')+'>'+e[1].lbl+'</option>';}).join('');
+  var stOpts = Object.entries(STATS).map(function(e){
+    var disabled=(!can('cl')&&(e[0]==='kapali'||e[0]==='bekliyor'))?'disabled style="color:#666"':'';
+    return'<option value="'+e[0]+'"'+(f.status===e[0]?' selected':'')+' '+disabled+'>'+e[1].lbl+(disabled?' (yetki gerekli)':'')+'</option>';
+  }).join('');
   var tcOpts = DB.technicians.filter(function(t){return t.active;}).map(function(t){return'<option value="'+t.id+'"'+(f.techId===t.id?' selected':'')+'>'+esc(t.name)+'</option>';}).join('');
 
   if(ro) return '<div style="text-align:center;padding:32px;color:var(--mt)">Bu hesabın iş emri oluşturma yetkisi yok.</div>';
@@ -1566,6 +1612,7 @@ function saveQRWO(editId) {
 }
 
 function closeWOQR(woId) {
+  if(!can('cl')){toast('İş emri kapatma yetkiniz yok. Mühendis veya Yönetici gerekli.','err');return;}
   if(!confirm('Bu iş emrini kapatmak istiyor musunuz?')) return;
   DB.workOrders = DB.workOrders.map(function(w){
     return w.id===woId ? Object.assign({},w,{status:'kapali',closedAt:nowStr()}) : w;
@@ -1582,6 +1629,7 @@ function closeWOQR(woId) {
 }
 
 function approveWOQR(woId) {
+  if(!can('ap')){toast('Onaylama yetkiniz yok. Mühendis veya Yönetici gerekli.','err');return;}
   if(!confirm('Bu iş emrini onaylayıp kapatmak istiyor musunuz?')) return;
   DB.workOrders = DB.workOrders.map(function(w){
     return w.id===woId ? Object.assign({},w,{status:'kapali',approvedBy:U.id,closedAt:nowStr()}) : w;
