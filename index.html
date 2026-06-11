@@ -238,7 +238,11 @@ function fbSaveNow() {
     workOrders:   DB.workOrders   || [],
     equipment:    DB.equipment    || [],
     technicians:  DB.technicians  || [],
-    users:        DB.users        || [],
+    users: (DB.users||[]).map(function(u){
+      // pw alanını garanti et
+      if(!u.pw&&u.password) u.pw=u.password;
+      return u;
+    }),
     eqDocs:       DB.eqDocs       || {},
     settings:     DB.settings     || {},
     schedule:     DB.schedule     || [],
@@ -365,6 +369,8 @@ function dbLoad(){
     if(!d.schedule)d.schedule=SEED.schedule;
     if(!d.workOrders&&d.records)d.workOrders=d.records;
     if(!d.workOrders)d.workOrders=[];
+    // Migration: eski 'password' alanını 'pw'ye taşı
+    if(d.users){d.users=d.users.map(function(u){if(!u.pw&&u.password)u.pw=u.password;return u;});}
     return d;
   }catch(e){return null;}
 }
@@ -413,7 +419,7 @@ function bindLogin(){
   function doLogin(){
     var u=(document.getElementById('l-u')||{value:''}).value.trim();
     var p=(document.getElementById('l-p')||{value:''}).value;
-    var f=DB.users.find(function(x){return x.un===u&&x.pw===p&&x.active;});
+    var f=DB.users.find(function(x){return x.un===u&&(x.pw===p||x.password===p)&&x.active;});
     if(f){U=f;var h=window.location.hash;R();if(h&&h.startsWith('#qr=')){var eid=h.replace('#qr=','').split(':')[0];window.location.hash='';setTimeout(function(){showQRLanding(eid);},100);}
       else if(window._pendingQR){var pqr=window._pendingQR;window._pendingQR=null;setTimeout(function(){showQRLanding(pqr);},100);}
     }
@@ -634,7 +640,7 @@ function pgUsers(){
       +'<div style="font-size:13px;font-weight:700;margin-top:8px;color:var(--sub)">'+DB.users.filter(function(u){return u.role===rk;}).length+' kullanıcı</div>'
       +'</div>';
   }).join('');
-  var rows=DB.users.map(function(u){var rl=ROLES[u.role];return'<tr><td style="font-weight:600">'+esc(u.name)+'</td><td style="font-family:monospace;color:var(--bll)">'+esc(u.un)+'</td><td><span style="font-family:monospace;font-size:12px;background:var(--bg3);padding:2px 8px;border-radius:4px;border:1px solid var(--bd)">'+esc(u.pw)+'</span></td><td><span class="badge bxsm" style="color:'+(rl&&rl.col||'#888')+';border-color:'+(rl&&rl.col||'#888')+';background:'+(rl&&rl.col||'#888')+'18">'+(rl&&rl.lbl||u.role)+'</span></td><td style="color:var(--mt);font-size:11px">'+esc(u.dept||'—')+'</td><td><span style="font-size:11px;font-weight:700;color:'+(u.active?'var(--gnl)':'var(--mt)')+'">'+(u.active?'● Aktif':'○ Pasif')+'</span></td><td><button class="btn bghs bxs" onclick="openUserForm(\''+u.id+'\')">Düzenle</button></td></tr>';}).join('');
+  var rows=DB.users.map(function(u){var rl=ROLES[u.role];return'<tr><td style="font-weight:600">'+esc(u.name)+'</td><td style="font-family:monospace;color:var(--bll)">'+esc(u.un)+'</td><td><span style="font-family:monospace;font-size:12px;background:var(--bg3);padding:2px 8px;border-radius:4px;border:1px solid var(--bd)">'+(u.pw||u.password||'—')+'</span></td><td><span class="badge bxsm" style="color:'+(rl&&rl.col||'#888')+';border-color:'+(rl&&rl.col||'#888')+';background:'+(rl&&rl.col||'#888')+'18">'+(rl&&rl.lbl||u.role)+'</span></td><td style="color:var(--mt);font-size:11px">'+esc(u.dept||'—')+'</td><td><span style="font-size:11px;font-weight:700;color:'+(u.active?'var(--gnl)':'var(--mt)')+'">'+(u.active?'● Aktif':'○ Pasif')+'</span></td><td><button class="btn bghs bxs" onclick="openUserForm(\''+u.id+'\')">Düzenle</button></td></tr>';}).join('');
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Kullanıcı Yönetimi</div><button class="btn bpri bsm" onclick="openUserForm(null)">+ Kullanıcı Ekle</button></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:22px">'+roleCards+'</div><div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>Ad Soyad</th><th>Kullanıcı Adı</th><th>Şifre</th><th>Rol</th><th>Departman</th><th>Durum</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
@@ -749,7 +755,7 @@ function openUserForm(id){if(!can('u')){toast('Kullanıcı yönetimi sadece Yön
 function tplUserForm(){
   var u=ET.user;
   var f={name:'',un:'',pw:'',role:'readonly',dept:'',email:'',active:true};
-  if(u)Object.keys(f).forEach(function(k){if(u[k]!==undefined)f[k]=u[k];});
+  if(u){Object.keys(f).forEach(function(k){if(u[k]!==undefined)f[k]=u[k];});if(!f.pw&&u.password)f.pw=u.password;}
   var rO=Object.entries(ROLES).map(function(e){return'<option value="'+e[0]+'"'+(f.role===e[0]?' selected':'')+'>'+e[1].lbl+'</option>';}).join('');
   return '<div class="ov" id="ov-user"><div class="md"><div class="mdh"><div class="mdt">'+(u?'Kullanıcı Düzenle':'Yeni Kullanıcı')+'</div><button class="mdc" onclick="closeM(\'user\')">✕</button></div><div class="fr"><label class="lbl">Ad Soyad</label><input class="inp" id="u-n" value="'+esc(f.name)+'"/></div><div class="g2"><div class="fr"><label class="lbl">Kullanıcı Adı</label><input class="inp" id="u-u" value="'+esc(f.un)+'" autocomplete="off"/></div><div class="fr"><label class="lbl">Şifre'+(u?' (değiştirmek için girin)':'')+'</label><input class="inp" type="password" id="u-p" placeholder="'+(u?'••••••••':'')+'"/></div><div class="fr"><label class="lbl">Departman</label><input class="inp" id="u-d" value="'+esc(f.dept||'')+'"/></div><div class="fr"><label class="lbl">E-posta</label><input class="inp" type="email" id="u-e" value="'+esc(f.email||'')+'"/></div></div><div class="fr"><label class="lbl">Rol</label><select class="inp" id="u-r">'+rO+'</select></div><div class="chkr fr"><input type="checkbox" id="u-ac"'+(f.active?' checked':'')+'><label for="u-ac">Aktif</label></div><div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)"><button class="btn bghs" onclick="closeM(\'user\')">İptal</button><button class="btn bsuc" onclick="saveUser()">Kaydet</button></div></div></div>';
 }
