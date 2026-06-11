@@ -138,6 +138,8 @@ textarea.inp{resize:vertical;min-height:70px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
 <div id="toast"></div>
@@ -147,6 +149,112 @@ textarea.inp{resize:vertical;min-height:70px}
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
+
+// ═══════════════════════════════════════════════
+// FIREBASE YAPILANDIRMASI
+// ═══════════════════════════════════════════════
+var FB_CONFIG = {
+  databaseURL: 'https://huseyinbakim-default-rtdb.europe-west1.firebasedatabase.app'
+};
+var FB_APP = null;
+var FB_DB  = null;
+var FB_REF = null;
+var FB_CONNECTED = false;
+var FB_SAVE_TIMER = null;
+
+function fbInit() {
+  try {
+    FB_APP = firebase.initializeApp(FB_CONFIG);
+    FB_DB  = firebase.database();
+    FB_REF = FB_DB.ref('pharma_ms_data');
+
+    // Bağlantı durumunu izle
+    FB_DB.ref('.info/connected').on('value', function(snap) {
+      FB_CONNECTED = snap.val() === true;
+      showSyncStatus(FB_CONNECTED ? 'connected' : 'offline');
+    });
+
+    // Realtime listener — başka cihazdan değişiklik gelince güncelle
+    FB_REF.on('value', function(snap) {
+      var data = snap.val();
+      if(!data) {
+        // Firebase boş — yerel veriyi yükle ve kaydet
+        fbSaveNow();
+        return;
+      }
+      // Gelen veriyi uygula
+      var needRender = false;
+      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule'];
+      keys.forEach(function(k) {
+        if(data[k] !== undefined) {
+          // Array olarak gelenleri düzelt
+          if(k === 'workOrders' || k === 'equipment' || k === 'technicians' || k === 'users' || k === 'schedule') {
+            DB[k] = Array.isArray(data[k]) ? data[k] : Object.values(data[k] || {});
+          } else {
+            DB[k] = data[k];
+          }
+          needRender = true;
+        }
+      });
+      if(needRender && U) {
+        // Sayfayı yeniden render et (modal açıksa dokunma)
+        var hasModal = Object.values(MODAL).some(function(v){return v;});
+        if(!hasModal) renderPage();
+      }
+      // localStorage'a da kaydet (offline fallback)
+      try { localStorage.setItem(SK, JSON.stringify(DB)); } catch(e) {}
+    }, function(err) {
+      console.warn('Firebase okuma hatası:', err.message);
+      showSyncStatus('error');
+    });
+
+  } catch(e) {
+    console.warn('Firebase başlatılamadı:', e.message);
+    FB_CONNECTED = false;
+  }
+}
+
+function fbSave() {
+  // Debounce — 800ms bekle, çok sık kaydetme
+  clearTimeout(FB_SAVE_TIMER);
+  FB_SAVE_TIMER = setTimeout(fbSaveNow, 800);
+}
+
+function fbSaveNow() {
+  if(!FB_REF) return;
+  var payload = {
+    workOrders:   DB.workOrders   || [],
+    equipment:    DB.equipment    || [],
+    technicians:  DB.technicians  || [],
+    users:        DB.users        || [],
+    eqDocs:       DB.eqDocs       || {},
+    settings:     DB.settings     || {},
+    schedule:     DB.schedule     || [],
+    lastUpdated:  new Date().toISOString(),
+    updatedBy:    U ? U.name : 'system'
+  };
+  FB_REF.set(payload).then(function() {
+    showSyncStatus('saved');
+  }).catch(function(err) {
+    console.warn('Firebase kayıt hatası:', err.message);
+    showSyncStatus('error');
+  });
+}
+
+function showSyncStatus(status) {
+  var el = document.getElementById('sync-indicator');
+  if(!el) return;
+  var icons = {
+    connected: {ico:'☁', col:'var(--gnl)', txt:'Senkronize'},
+    saved:     {ico:'✓', col:'var(--gnl)', txt:'Kaydedildi'},
+    offline:   {ico:'⚡', col:'var(--orl)', txt:'Çevrimdışı'},
+    saving:    {ico:'↑', col:'var(--bll)', txt:'Kaydediyor...'},
+    error:     {ico:'⚠', col:'var(--rdl)', txt:'Hata'},
+  };
+  var s = icons[status] || icons.offline;
+  el.style.color = s.col;
+  el.innerHTML = '<span>'+s.ico+'</span><span style="font-size:10px">'+s.txt+'</span>';
+}
 
 var ROLES={
   admin:     {lbl:'Yönetici',   col:'#a78bfa',p:{r:1,w:1,d:1,u:1,s:1,ap:1}},
@@ -245,7 +353,12 @@ function dbLoad(){
     return d;
   }catch(e){return null;}
 }
-function dbSave(){try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){toast('Depolama hatası!','err');}}
+function dbSave(){
+  // Yerel kayıt
+  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  // Firebase kayıt
+  fbSave();
+}
 
 var DB=dbLoad()||JSON.parse(JSON.stringify(SEED));
 var U=null,PAGE='dashboard',TAB={eq:'tl',wo:'info'},MODAL={},ET={},FLT={type:'all',sev:'all',status:'all',q:''},DID=null,QEID=null,WDOCS=[],CHARTS={};
@@ -1497,6 +1610,9 @@ function closeQRScanner() {
 }
 
 // BOOT
+// Firebase başlat
+fbInit();
+
 // QR link ile gelindiyse (?eq=EQ-001)
 (function(){
   var qParam = typeof URLSearchParams !== 'undefined'
