@@ -718,22 +718,27 @@ function makeQR(text,cell){
   for(var r=0;r<sz;r++)for(var c=0;c<sz;c++)if(M[r][c]===1)ctx.fillRect((c+q)*cell,(r+q)*cell,cell,cell);
   return cvs;
 }
-function drawQR(eqId){var eq=DB.equipment.find(function(e){return e.id===eqId;});if(!eq)return;var el=document.getElementById('qr-disp');if(!el)return;el.innerHTML='';
-  // Önce sabit QR_IMAGES'e bak, yoksa dinamik üret
-  if(QR_IMAGES[eq.id]){
-    var img=document.createElement('img');
-    img.src=QR_IMAGES[eq.id];
-    img.style.cssText='width:250px;height:250px;display:block;image-rendering:pixelated';
-    el.appendChild(img);
-  } else {
-    // Yeni eklenen ekipman — dinamik üret
-    try{
-      var payload=BASE_URL+'?eq='+eq.id;
-      var cvs=makeQR(payload,10);
-      cvs.style.cssText='width:250px;height:250px;display:block;image-rendering:pixelated';
-      el.appendChild(cvs);
-    }catch(err){el.innerHTML='<div style="color:red;font-size:11px;padding:8px">Hata: '+esc(err.message)+'</div>';}
-  }}
+function drawQR(eqId){
+  var eq=DB.equipment.find(function(e){return e.id===eqId;});
+  if(!eq)return;
+  var el=document.getElementById('qr-disp');
+  if(!el)return;
+  el.innerHTML='';
+  var payload=BASE_URL+'?eq='+eq.id;
+  // Google Charts API — telefon kamerası %100 okur
+  var googleQR='https://chart.googleapis.com/chart?chs=300x300&cht=qr&choe=UTF-8&chl='+encodeURIComponent(payload);
+  var img=document.createElement('img');
+  img.src=googleQR;
+  img.style.cssText='width:250px;height:250px;display:block';
+  img.alt='QR: '+eq.id;
+  img.onerror=function(){
+    // Google API erişilemezse local QR engine fallback
+    el.innerHTML='';
+    try{var cvs=makeQR(payload,10);cvs.style.cssText='width:250px;height:250px;display:block;image-rendering:pixelated';el.appendChild(cvs);}
+    catch(e){el.innerHTML='<div style="color:red;padding:8px;font-size:11px">QR oluşturulamadı</div>';}
+  };
+  el.appendChild(img);
+}
 function selectQR(id){
   QEID=id;
   var eq=DB.equipment.find(function(e){return e.id===id;});
@@ -755,33 +760,23 @@ function selectQR(id){
   });
 }
 function dlQR(eqId){
-  if(QR_IMAGES[eqId]){var a=document.createElement('a');a.href=QR_IMAGES[eqId];a.download='QR-'+eqId+'.png';a.click();return;}
-  var el=document.getElementById('qr-disp');
-  var cvs=el&&el.querySelector('canvas');
-  var img=el&&el.querySelector('img');
-  if(img){var a=document.createElement('a');a.href=img.src;a.download='QR-'+eqId+'.png';a.click();return;}
-  if(cvs){var a=document.createElement('a');a.href=cvs.toDataURL('image/png');a.download='QR-'+eqId+'.png';a.click();return;}
-  toast('QR bulunamadı','warn');
+  // Önce sabit QR_IMAGES
+  if(QR_IMAGES[eqId]){
+    var a=document.createElement('a');a.href=QR_IMAGES[eqId];a.download='QR-'+eqId+'.png';a.click();return;
+  }
+  // Google Charts URL'ini yeni sekme olarak aç (indir)
+  var payload=BASE_URL+'?eq='+eqId;
+  var googleQR='https://chart.googleapis.com/chart?chs=600x600&cht=qr&choe=UTF-8&chl='+encodeURIComponent(payload);
+  var a=document.createElement('a');a.href=googleQR;a.download='QR-'+eqId+'.png';a.target='_blank';a.click();
 }
 function printQR(id,name,area){
-  var src=QR_IMAGES[id]||'';
-  if(!src){
-    var el=document.getElementById('qr-disp');
-    var cvs=el&&el.querySelector('canvas');
-    var img=el&&el.querySelector('img');
-    if(img)src=img.src;
-    else if(cvs)src=cvs.toDataURL();
-  }
-  if(!src){
-    // Yeni ekipman için anlık üret
-    try{var cvs2=makeQR(BASE_URL+'?eq='+id,10);src=cvs2.toDataURL();}catch(e){}
-  }
-  if(!src)return;
+  var payload=BASE_URL+'?eq='+id;
+  var src=QR_IMAGES[id]||('https://chart.googleapis.com/chart?chs=400x400&cht=qr&choe=UTF-8&chl='+encodeURIComponent(payload));
   var w=window.open('','_blank');
-  w.document.write('<html><body style="text-align:center;font-family:sans-serif;padding:24px"><img src="'+src+'" style="width:240px;height:240px"/><div style="font-size:15px;font-weight:bold;margin-top:10px">'+name+'</div><div style="font-size:12px;color:#666">'+id+' · '+area+'</div><div style="font-size:10px;color:#999;margin-top:4px">'+BASE_URL+'?eq='+id+'</div></body></html>');
-  w.document.close();w.print();
+  w.document.write('<html><head><style>@media print{body{margin:0}}</style></head><body style="text-align:center;font-family:sans-serif;padding:24px"><img src="'+src+'" style="width:240px;height:240px" onload="window.print()"/><div style="font-size:15px;font-weight:bold;margin-top:10px">'+name+'</div><div style="font-size:12px;color:#666">'+id+' · '+area+'</div><div style="font-size:10px;color:#999;margin-top:4px">'+payload+'</div></body></html>');
+  w.document.close();
 }
-function printAllQR(){var imgs=DB.equipment.map(function(eq){var src=QR_IMAGES[eq.id]||'';if(!src){try{src=makeQR(BASE_URL+'?eq='+eq.id,10).toDataURL();}catch(e){return '';}}return'<div style="display:inline-block;margin:10px;text-align:center;border:1px solid #ddd;border-radius:10px;padding:14px;width:190px;vertical-align:top"><img src="'+src+'" style="width:160px;height:160px;display:block;image-rendering:pixelated"/><div style="font-size:12px;font-weight:bold;margin-top:8px">'+esc(eq.name)+'</div><div style="font-size:10px;color:#666">'+esc(eq.id)+' · '+esc(eq.area)+'</div></div>';}).join('');var w=window.open('','_blank');w.document.write('<html><head><title>QR Kodlar</title><style>@media print{body{margin:0}}</style></head><body style="font-family:sans-serif;padding:20px;background:#fff">'+imgs+'</body></html>');w.document.close();setTimeout(function(){w.print();},400);}
+function printAllQR(){var imgs=DB.equipment.map(function(eq){var payload=BASE_URL+'?eq='+eq.id;var src=QR_IMAGES[eq.id]||('https://chart.googleapis.com/chart?chs=300x300&cht=qr&choe=UTF-8&chl='+encodeURIComponent(payload));return'<div style="display:inline-block;margin:10px;text-align:center;border:1px solid #ddd;border-radius:10px;padding:14px;width:190px;vertical-align:top"><img src="'+src+'" style="width:160px;height:160px;display:block"/><div style="font-size:12px;font-weight:bold;margin-top:8px">'+esc(eq.name)+'</div><div style="font-size:10px;color:#666">'+esc(eq.id)+' · '+esc(eq.area)+'</div></div>';}).join('');var w=window.open('','_blank');w.document.write('<html><head><title>QR Kodlar</title><style>@media print{body{margin:0}}</style></head><body style="font-family:sans-serif;padding:20px;background:#fff">'+imgs+'</body></html>');w.document.close();setTimeout(function(){w.print();},400);}
 
 // SAVE FUNCTIONS
 function saveWO(){
@@ -804,15 +799,13 @@ function saveEq(){
   if(ex)DB.equipment=DB.equipment.map(function(e){return e.id===eq.id?eq:e;});
   else{
     DB.equipment=DB.equipment.concat([eq]);
-    // Yeni ekipman — QR'ı hafızaya al (cache)
-    try{
-      var qpayload=BASE_URL+'?eq='+eq.id;
-      var qcvs=makeQR(qpayload,10);
-      QR_IMAGES[eq.id]=qcvs.toDataURL();
-      toast('Ekipman eklendi — QR kodu hazırlandı ✓');
-    }catch(e){toast('Ekipman eklendi','ok');}
+    // Yeni ekipman — Google Charts QR URL'i cache'e ekle
+    var qpayload=BASE_URL+'?eq='+eq.id;
+    QR_IMAGES[eq.id]='https://chart.googleapis.com/chart?chs=400x400&cht=qr&choe=UTF-8&chl='+encodeURIComponent(qpayload);
+    toast('Ekipman eklendi — QR kodu hazır ✓');
+  } else {
+    toast('Ekipman güncellendi');
   }
-  if(ex)toast('Ekipman güncellendi');
   dbSave();closeM('eqForm');R();
 }
 function saveTech(){
