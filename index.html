@@ -796,15 +796,14 @@ function saveEq(){
   var name=v('eq-n').trim();if(!name){toast('Ekipman adı zorunludur','err');return;}
   var ex=ET.eq;
   var eq={id:ex?ex.id:'EQ-'+uid(),name:name,cat:v('eq-cat'),area:v('eq-a'),status:v('eq-st'),mfr:v('eq-m'),model:v('eq-mo'),sn:v('eq-sn'),instDate:v('eq-id'),lastMaint:v('eq-lm'),nextMaint:v('eq-nm'),crit:v('eq-cr'),val:vb('eq-vl'),valDoc:v('eq-vd'),notes:v('eq-no'),techId:ex?ex.techId:''};
-  if(ex)DB.equipment=DB.equipment.map(function(e){return e.id===eq.id?eq:e;});
-  else{
+  if(ex){
+    DB.equipment=DB.equipment.map(function(e){return e.id===eq.id?eq:e;});
+    toast('Ekipman güncellendi');
+  } else {
     DB.equipment=DB.equipment.concat([eq]);
-    // Yeni ekipman — Google Charts QR URL'i cache'e ekle
     var qpayload=BASE_URL+'?eq='+eq.id;
     QR_IMAGES[eq.id]='https://chart.googleapis.com/chart?chs=400x400&cht=qr&choe=UTF-8&chl='+encodeURIComponent(qpayload);
     toast('Ekipman eklendi — QR kodu hazır ✓');
-  } else {
-    toast('Ekipman güncellendi');
   }
   dbSave();closeM('eqForm');R();
 }
