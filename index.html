@@ -138,6 +138,7 @@ textarea.inp{resize:vertical;min-height:70px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
@@ -724,20 +725,22 @@ function drawQR(eqId){
   var el=document.getElementById('qr-disp');
   if(!el)return;
   el.innerHTML='';
-  var payload=BASE_URL+'?eq='+eq.id;
-  // Google Charts API — telefon kamerası %100 okur
-  var googleQR='https://chart.googleapis.com/chart?chs=300x300&cht=qr&choe=UTF-8&chl='+encodeURIComponent(payload);
-  var img=document.createElement('img');
-  img.src=googleQR;
-  img.style.cssText='width:250px;height:250px;display:block';
-  img.alt='QR: '+eq.id;
-  img.onerror=function(){
-    // Google API erişilemezse local QR engine fallback
-    el.innerHTML='';
-    try{var cvs=makeQR(payload,10);cvs.style.cssText='width:250px;height:250px;display:block;image-rendering:pixelated';el.appendChild(cvs);}
-    catch(e){el.innerHTML='<div style="color:red;padding:8px;font-size:11px">QR oluşturulamadı</div>';}
-  };
-  el.appendChild(img);
+  var url=BASE_URL+'?eq='+eq.id;
+  // QRCode.js kütüphanesi — telefon kamerası %100 okur
+  var div=document.createElement('div');
+  el.appendChild(div);
+  try{
+    new QRCode(div,{
+      text:url,
+      width:260,
+      height:260,
+      colorDark:'#000000',
+      colorLight:'#ffffff',
+      correctLevel:QRCode.CorrectLevel.M
+    });
+  }catch(err){
+    el.innerHTML='<div style="color:red;padding:8px;font-size:11px">QR hatası: '+esc(err.message)+'</div>';
+  }
 }
 function selectQR(id){
   QEID=id;
@@ -760,23 +763,60 @@ function selectQR(id){
   });
 }
 function dlQR(eqId){
-  // Önce sabit QR_IMAGES
   if(QR_IMAGES[eqId]){
     var a=document.createElement('a');a.href=QR_IMAGES[eqId];a.download='QR-'+eqId+'.png';a.click();return;
   }
-  // Google Charts URL'ini yeni sekme olarak aç (indir)
-  var payload=BASE_URL+'?eq='+eqId;
-  var googleQR='https://chart.googleapis.com/chart?chs=600x600&cht=qr&choe=UTF-8&chl='+encodeURIComponent(payload);
-  var a=document.createElement('a');a.href=googleQR;a.download='QR-'+eqId+'.png';a.target='_blank';a.click();
+  var el=document.getElementById('qr-disp');
+  var cvs=el&&el.querySelector('canvas');
+  if(cvs){var a=document.createElement('a');a.href=cvs.toDataURL('image/png');a.download='QR-'+eqId+'.png';a.click();return;}
+  var img=el&&el.querySelector('img');
+  if(img){var a=document.createElement('a');a.href=img.src;a.download='QR-'+eqId+'.png';a.target='_blank';a.click();return;}
+  toast('QR bulunamadı','warn');
 }
 function printQR(id,name,area){
-  var payload=BASE_URL+'?eq='+id;
-  var src=QR_IMAGES[id]||('https://chart.googleapis.com/chart?chs=400x400&cht=qr&choe=UTF-8&chl='+encodeURIComponent(payload));
+  var url=BASE_URL+'?eq='+id;
+  // QRCode.js ile yeni pencerede üret ve yazdır
   var w=window.open('','_blank');
-  w.document.write('<html><head><style>@media print{body{margin:0}}</style></head><body style="text-align:center;font-family:sans-serif;padding:24px"><img src="'+src+'" style="width:240px;height:240px" onload="window.print()"/><div style="font-size:15px;font-weight:bold;margin-top:10px">'+name+'</div><div style="font-size:12px;color:#666">'+id+' · '+area+'</div><div style="font-size:10px;color:#999;margin-top:4px">'+payload+'</div></body></html>');
+  w.document.write('<!DOCTYPE html><html><head><script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"><\/script><style>body{text-align:center;font-family:sans-serif;padding:20px}@media print{button{display:none}}<\/style></head><body>'
+    +'<div id="qr" style="display:inline-block;margin-bottom:10px"></div>'
+    +'<div style="font-size:15px;font-weight:bold">'+name+'</div>'
+    +'<div style="font-size:12px;color:#666;margin-top:4px">'+id+' · '+area+'</div>'
+    +'<div style="font-size:10px;color:#999;margin-top:4px">'+url+'</div>'
+    +'<br><button onclick="window.print()">Yazdır</button>'
+    +'<script>new QRCode(document.getElementById("qr"),{text:"'+url+'",width:240,height:240,correctLevel:1});<\/script>'
+    +'</body></html>');
   w.document.close();
 }
-function printAllQR(){var imgs=DB.equipment.map(function(eq){var payload=BASE_URL+'?eq='+eq.id;var src=QR_IMAGES[eq.id]||('https://chart.googleapis.com/chart?chs=300x300&cht=qr&choe=UTF-8&chl='+encodeURIComponent(payload));return'<div style="display:inline-block;margin:10px;text-align:center;border:1px solid #ddd;border-radius:10px;padding:14px;width:190px;vertical-align:top"><img src="'+src+'" style="width:160px;height:160px;display:block"/><div style="font-size:12px;font-weight:bold;margin-top:8px">'+esc(eq.name)+'</div><div style="font-size:10px;color:#666">'+esc(eq.id)+' · '+esc(eq.area)+'</div></div>';}).join('');var w=window.open('','_blank');w.document.write('<html><head><title>QR Kodlar</title><style>@media print{body{margin:0}}</style></head><body style="font-family:sans-serif;padding:20px;background:#fff">'+imgs+'</body></html>');w.document.close();setTimeout(function(){w.print();},400);}
+function printAllQR(){
+  var eqs=DB.equipment;
+  var rows=eqs.map(function(eq){
+    return '<td style="text-align:center;padding:10px;border:1px solid #eee;border-radius:8px">'
+      +'<div id="qr_'+eq.id+'"></div>'
+      +'<div style="font-size:11px;font-weight:bold;margin-top:6px">'+esc(eq.name)+'</div>'
+      +'<div style="font-size:10px;color:#666">'+esc(eq.id)+'</div>'
+      +'</td>';
+  });
+  // 2'li grid
+  var tableRows='';
+  for(var i=0;i<rows.length;i+=2){
+    tableRows+='<tr>'+rows[i]+(rows[i+1]||'<td></td>')+'</tr>';
+  }
+  var qrScripts=eqs.map(function(eq){
+    var url=BASE_URL+'?eq='+eq.id;
+    return 'new QRCode(document.getElementById("qr_'+eq.id+'"),{text:"'+url+'",width:180,height:180,correctLevel:1});';
+  }).join('');
+
+  var w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head>'
+    +'<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"><\/script>'
+    +'<style>body{font-family:sans-serif;padding:20px}table{border-collapse:separate;border-spacing:10px}@media print{button{display:none}}<\/style>'
+    +'</head><body>'
+    +'<button onclick="window.print()" style="margin-bottom:16px;padding:8px 20px;font-size:14px;cursor:pointer">🖨 Yazdır</button>'
+    +'<table>'+tableRows+'</table>'
+    +'<script>'+qrScripts+'<\/script>'
+    +'</body></html>');
+  w.document.close();
+}
 
 // SAVE FUNCTIONS
 function saveWO(){
@@ -802,7 +842,7 @@ function saveEq(){
   } else {
     DB.equipment=DB.equipment.concat([eq]);
     var qpayload=BASE_URL+'?eq='+eq.id;
-    QR_IMAGES[eq.id]='https://chart.googleapis.com/chart?chs=400x400&cht=qr&choe=UTF-8&chl='+encodeURIComponent(qpayload);
+    // QR_IMAGES'e eklemeye gerek yok — drawQR dinamik üretiyor
     toast('Ekipman eklendi — QR kodu hazır ✓');
   }
   dbSave();closeM('eqForm');R();
