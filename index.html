@@ -1026,7 +1026,7 @@ function exportExcel(){
 function renderDocList(docs,canEdit){if(!docs.length)return'<div style="font-size:12px;color:var(--mt);padding:8px 0">Henüz doküman eklenmedi</div>';return docs.map(function(d,i){return'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:7px 10px;background:var(--bg3);border-radius:7px;border:1px solid var(--bd)">📄<span style="flex:1;font-size:12px;font-weight:600;color:var(--bll)">'+esc(d)+'</span>'+(canEdit?'<button data-i="'+i+'" class="rmdoc" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:16px">×</button>':'')+'</div>';}).join('');}
 function bindDocRemove(){document.querySelectorAll('.rmdoc').forEach(function(b){b.onclick=function(){var i=parseInt(b.dataset.i);WDOCS.splice(i,1);var el=document.getElementById('f-docs');if(el){el.innerHTML=renderDocList(WDOCS,true);bindDocRemove();}};});}
 function bindModals(){
-  [['ov-wo','wo'],['ov-wodet','woDet'],['ov-eqdet','eqDet'],['ov-eqform','eqForm'],['ov-tech','tech'],['ov-user','user'],['ov-qr','qr']].forEach(function(p){var el=document.getElementById(p[0]);if(el)el.onclick=function(e){if(e.target===el)closeM(p[1]);};});
+  [['ov-wo','wo'],['ov-wodet','woDet'],['ov-eqdet','eqDet'],['ov-eqform','eqForm'],['ov-tech','tech'],['ov-user','user'],['ov-qr','qr'],['ov-schedule','schedule']].forEach(function(p){var el=document.getElementById(p[0]);if(el)el.onclick=function(e){if(e.target===el)closeM(p[1]);};});
   var ba=document.getElementById('b-adddoc');if(ba)ba.onclick=function(){var inp=document.getElementById('f-di');if(!inp||!inp.value.trim())return;WDOCS.push(inp.value.trim());inp.value='';var el=document.getElementById('f-docs');if(el){el.innerHTML=renderDocList(WDOCS,true);bindDocRemove();}};
   bindDocRemove();
 }
@@ -1841,6 +1841,127 @@ function closeQRScanner() {
   var el = document.getElementById('qr-scanner-ov');
   if(el) el.remove();
   _qrCanvas = null; _qrCtx = null;
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// BAKIM PLANI FORM
+// ══════════════════════════════════════════════════════════════
+function openScheduleForm(id){
+  ET.schedule = id ? (DB.schedule||[]).find(function(s){return s.id===id;}) : null;
+  MODAL.schedule = true;
+  renderModals();
+}
+
+function tplScheduleForm(){
+  var ms = ET.schedule;
+  var f = {eqId:'',type:'onleyici',title:'',interval:'3 ay',next:'',techId:'',estH:1,notes:'',tasks:[]};
+  if(ms) Object.keys(f).forEach(function(k){if(ms[k]!==undefined)f[k]=ms[k];});
+
+  var eqOpts = DB.equipment.map(function(e){
+    return '<option value="'+e.id+'"'+(f.eqId===e.id?' selected':'')+'>'+esc(e.id)+' — '+esc(e.name)+'</option>';
+  }).join('');
+  var typeOpts = Object.entries(WTYPES).map(function(e){
+    return '<option value="'+e[0]+'"'+(f.type===e[0]?' selected':'')+'>'+e[1].ico+' '+e[1].lbl+'</option>';
+  }).join('');
+  var techOpts = DB.technicians.filter(function(t){return t.active;}).map(function(t){
+    return '<option value="'+t.id+'"'+(f.techId===t.id?' selected':'')+'>'+esc(t.name)+'</option>';
+  }).join('');
+  var intervalOpts = ['1 hafta','2 hafta','1 ay','2 ay','3 ay','6 ay','1 yıl','2 yıl'].map(function(i){
+    return '<option value="'+i+'"'+(f.interval===i?' selected':'')+'>'+i+'</option>';
+  }).join('');
+  var tasksHtml = (f.tasks||[]).map(function(t){
+    return '<div style="display:flex;gap:8px;margin-bottom:6px">'
+      +'<input class="inp isml" value="'+esc(t)+'" style="flex:1"/>'
+      +'<button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:20px;flex-shrink:0;line-height:1">×</button>'
+      +'</div>';
+  }).join('');
+
+  return '<div class="ov" id="ov-schedule"><div class="md" style="max-width:640px">'
+    +'<div class="mdh">'
+    +'<div class="mdt">'+(ms?'Bakım Planını Düzenle':'Yeni Bakım Planı')+'</div>'
+    +'<button class="mdc" onclick="closeM(\'schedule\')">✕</button>'
+    +'</div>'
+    +'<div class="g2">'
+    +'<div class="fr"><label class="lbl">Ekipman *</label><select class="inp" id="ms-eq"><option value="">Seçiniz...</option>'+eqOpts+'</select></div>'
+    +'<div class="fr"><label class="lbl">Bakım Tipi</label><select class="inp" id="ms-type">'+typeOpts+'</select></div>'
+    +'</div>'
+    +'<div class="fr"><label class="lbl">Başlık *</label><input class="inp" id="ms-title" value="'+esc(f.title)+'" placeholder="örn: Tablet Pres — 3 Aylık PM"/></div>'
+    +'<div class="g3">'
+    +'<div class="fr"><label class="lbl">Periyot</label><select class="inp" id="ms-interval">'+intervalOpts+'</select></div>'
+    +'<div class="fr"><label class="lbl">Sonraki Tarih</label><input class="inp" type="date" id="ms-next" value="'+esc(f.next||'')+'"/></div>'
+    +'<div class="fr"><label class="lbl">Süre (saat)</label><input class="inp" type="number" min="0.5" step="0.5" id="ms-esth" value="'+String(f.estH||1)+'"/></div>'
+    +'</div>'
+    +'<div class="fr"><label class="lbl">Sorumlu Teknisyen</label><select class="inp" id="ms-tech"><option value="">Seçiniz...</option>'+techOpts+'</select></div>'
+    +'<div class="fr"><label class="lbl">Notlar</label><textarea class="inp" id="ms-notes" rows="2" placeholder="Genel notlar...">'+esc(f.notes||'')+'</textarea></div>'
+    +'<div class="fr">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +'<label class="lbl" style="margin:0">Yapılacak İşler <span style="color:var(--mt);font-weight:400;text-transform:none">(isteğe bağlı)</span></label>'
+    +'<button type="button" class="btn bout bxs" onclick="addSchedTask()">+ Görev Ekle</button>'
+    +'</div>'
+    +'<div id="ms-tasks">'+tasksHtml+'</div>'
+    +'<div style="font-size:11px;color:var(--mt);margin-top:4px">Her satıra bir görev. Planlama sayfasında görünür.</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)">'
+    +'<button class="btn bghs" onclick="closeM(\'schedule\')">İptal</button>'
+    +'<button class="btn bsuc" onclick="saveSchedule()">Kaydet</button>'
+    +'</div>'
+    +'</div></div>';
+}
+
+function addSchedTask(){
+  var container = document.getElementById('ms-tasks');
+  if(!container) return;
+  var div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:8px;margin-bottom:6px';
+  div.innerHTML = '<input class="inp isml" placeholder="Görev açıklaması..." style="flex:1"/>'
+    +'<button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:20px;flex-shrink:0;line-height:1">×</button>';
+  container.appendChild(div);
+  div.querySelector('input').focus();
+}
+
+function saveSchedule(){
+  var eqId  = v('ms-eq');
+  var title = v('ms-title').trim();
+  if(!eqId) { toast('Ekipman seçiniz','err'); return; }
+  if(!title){ toast('Başlık zorunludur','err'); return; }
+  var tasks = [];
+  var container = document.getElementById('ms-tasks');
+  if(container){
+    container.querySelectorAll('input').forEach(function(inp){
+      var val = (inp.value||'').trim();
+      if(val) tasks.push(val);
+    });
+  }
+  var ex = ET.schedule;
+  var ms = {
+    id:       ex ? ex.id : 'MS-'+uid(),
+    eqId:     eqId,
+    type:     v('ms-type') || 'onleyici',
+    title:    title,
+    interval: v('ms-interval') || '3 ay',
+    next:     v('ms-next') || '',
+    techId:   v('ms-tech') || '',
+    estH:     parseFloat(v('ms-esth')) || 1,
+    notes:    v('ms-notes') || '',
+    tasks:    tasks,
+  };
+  if(!DB.schedule) DB.schedule = [];
+  if(ex) DB.schedule = DB.schedule.map(function(s){ return s.id===ms.id ? ms : s; });
+  else   DB.schedule = DB.schedule.concat([ms]);
+  if(ms.next){
+    var eqScheds = DB.schedule.filter(function(s){ return s.eqId===eqId && s.next; });
+    if(eqScheds.length > 0){
+      var nearest = eqScheds.reduce(function(a,b){ return a.next <= b.next ? a : b; });
+      DB.equipment = DB.equipment.map(function(e){
+        return e.id===eqId ? Object.assign({},e,{nextMaint:nearest.next}) : e;
+      });
+    }
+  }
+  dbSave();
+  closeM('schedule');
+  toast(ex ? 'Bakım planı güncellendi' : 'Bakım planı eklendi');
+  renderPage();
 }
 
 // BOOT
