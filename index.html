@@ -441,7 +441,7 @@ function tplShell(){
   var urgent=DB.equipment.filter(function(e){var d=daysLeft(e.nextMaint);return d!==null&&d<=s.critDays&&d>=0;});
   var openN=DB.workOrders.filter(function(w){return w.status==='acik';}).length;
   var pendN=can('ap')?DB.workOrders.filter(function(w){return w.status==='bekliyor';}).length:0;
-  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlama'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Teknisyenler'}];
+  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlama'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Personeller'}];
   if(can('u'))navDefs.push({id:'users',ico:'👥',lbl:'Kullanıcılar'});
   if(can('s'))navDefs.push({id:'settings',ico:'⚙️',lbl:'Ayarlar'});
   var navH=navDefs.map(function(n){
@@ -630,7 +630,7 @@ function pgTech(){
     +(can('s')?'<button class="btn bdng bsm" style="width:100%;justify-content:center;margin-top:6px" onclick="deleteTech(\''+t.id+'\')">🗑 Sil</button>':'')
     +'</div>';
   }).join('');
-  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Teknisyenler</div>'+(can('s')?'<button class="btn bpri bsm" onclick="openTechForm(null)">+ Teknisyen Ekle</button>':'')+'</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">'+h+'</div>';
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Teknisyenler</div>'+(can('s')?'<button class="btn bpri bsm" onclick="openTechForm(null)">+ Personel Ekle</button>':'')+'</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">'+h+'</div>';
 }
 
 function pgUsers(){
@@ -640,15 +640,42 @@ function pgUsers(){
     var rk=e[0],rv=e[1];
     var perms=Object.keys(rv.p).filter(function(k){return rv.p[k];}).map(function(k){return permLabels[k]||k;}).join(' · ');
     var noPerms=Object.keys(rv.p).filter(function(k){return !rv.p[k]&&k!=='d'&&k!=='u'&&k!=='s';}).map(function(k){return permLabels[k]||k;});
-    return'<div style="background:var(--bg2);border:1px solid '+rv.col+'25;border-radius:11px;padding:16px;border-left:3px solid '+rv.col+'">'
+    return '<div style="background:var(--bg2);border:1px solid '+rv.col+'25;border-radius:11px;padding:16px;border-left:3px solid '+rv.col+'">'
       +'<div style="font-weight:700;color:'+rv.col+';margin-bottom:6px;font-size:14px">'+rv.lbl+'</div>'
       +'<div style="font-size:11px;color:var(--gnl);line-height:1.6">✓ '+perms+'</div>'
-      +(noPerms.length?'<div style="font-size:11px;color:var(--rdl);line-height:1.6;margin-top:3px">✕ '+noPerms.join(' · ')+'</div>':'')
+      +(noPerms.length?'<div style="font-size:11px;color:var(--rdl);line-height:1.6;margin-top:3px">✗ '+noPerms.join(' · ')+'</div>':'')
       +'<div style="font-size:13px;font-weight:700;margin-top:8px;color:var(--sub)">'+DB.users.filter(function(u){return u.role===rk;}).length+' kullanıcı</div>'
       +'</div>';
   }).join('');
-  var rows=DB.users.map(function(u){var rl=ROLES[u.role];return'<tr><td style="font-weight:600">'+esc(u.name)+'</td><td style="font-family:monospace;color:var(--bll)">'+esc(u.un)+'</td><td><span style="font-family:monospace;font-size:12px;background:var(--bg3);padding:2px 8px;border-radius:4px;border:1px solid var(--bd)">'+(u.pw||u.password||'—')+'</span></td><td><span class="badge bxsm" style="color:'+(rl&&rl.col||'#888')+';border-color:'+(rl&&rl.col||'#888')+';background:'+(rl&&rl.col||'#888')+'18">'+(rl&&rl.lbl||u.role)+'</span></td><td style="color:var(--mt);font-size:11px">'+esc(u.dept||'—')+'</td><td><span style="font-size:11px;font-weight:700;color:'+(u.active?'var(--gnl)':'var(--mt)')+'">'+(u.active?'● Aktif':'○ Pasif')+'</span></td><td><button class="btn bghs bxs" onclick="openUserForm(\''+u.id+'\')">Düzenle</button></td></tr>';}).join('');
-  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Kullanıcı Yönetimi</div><button class="btn bpri bsm" onclick="openUserForm(null)">+ Kullanıcı Ekle</button></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:22px">'+roleCards+'</div><div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>Ad Soyad</th><th>Kullanıcı Adı</th><th>Şifre</th><th>Rol</th><th>Departman</th><th>Durum</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+
+  var rows=DB.users.map(function(u){
+    var rl=ROLES[u.role];
+    var isSelf=u.id===U.id;
+    return '<tr>'
+      +'<td style="font-weight:600">'+esc(u.name)+'</td>'
+      +'<td style="font-family:monospace;color:var(--bll)">'+esc(u.un)+'</td>'
+      +'<td><span style="font-family:monospace;font-size:12px;background:var(--bg3);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);color:var(--orl)">'+(u.pw||u.password||'—')+'</span></td>'
+      +'<td><span class="badge bxsm" style="color:'+(rl&&rl.col||'#888')+';border-color:'+(rl&&rl.col||'#888')+';background:'+(rl&&rl.col||'#888')+'18">'+(rl&&rl.lbl||u.role)+'</span></td>'
+      +'<td style="color:var(--mt);font-size:11px">'+esc(u.dept||'—')+'</td>'
+      +'<td><span style="font-size:11px;font-weight:700;color:'+(u.active?'var(--gnl)':'var(--mt)')+'">'+(u.active?'● Aktif':'○ Pasif')+'</span></td>'
+      +'<td style="white-space:nowrap">'
+      +(can('s')?'<button class="btn bout bxs" onclick="openUserForm(\''+u.id+'\')">✏ Düzenle</button>':'')
+      +(can('s')&&!isSelf?'<button class="btn bdng bxs" style="margin-left:4px" onclick="deleteUser(\''+u.id+'\')">🗑 Sil</button>':'')
+      +(isSelf?'<span style="font-size:10px;color:var(--mt);margin-left:4px">(Siz)</span>':'')
+      +'</td>'
+      +'</tr>';
+  }).join('');
+
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'
+    +'<div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Kullanıcı Yönetimi</div>'
+    +(can('s')?'<button class="btn bpri bsm" onclick="openUserForm(null)">+ Kullanıcı Ekle</button>':'')
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:22px">'+roleCards+'</div>'
+    +'<div class="card" style="padding:0;overflow:hidden">'
+    +'<table class="tbl"><thead><tr>'
+    +'<th>Ad Soyad</th><th>Kullanıcı Adı</th><th>Şifre</th><th>Rol</th><th>Departman</th><th>Durum</th><th></th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table>'
+    +'</div>';
 }
 
 function pgSettings(){
@@ -766,7 +793,7 @@ function tplTechForm(){
   return '<div class="ov" id="ov-tech"><div class="md"><div class="mdh"><div class="mdt">'+(t?'Teknisyen Düzenle':'Yeni Teknisyen')+'</div><button class="mdc" onclick="closeM(\'tech\')">✕</button></div><div class="fr"><label class="lbl">Ad Soyad</label><input class="inp" id="tc-n" value="'+esc(f.name)+'"/></div><div class="g2"><div class="fr"><label class="lbl">Rol / Uzmanlık</label><select class="inp" id="tc-r"><option value="">Seçiniz...</option>'+rO+'</select></div><div class="fr"><label class="lbl">Bölge</label><select class="inp" id="tc-a"><option value="">Seçiniz...</option>'+aO+'</select></div><div class="fr"><label class="lbl">Telefon</label><input class="inp" id="tc-p" value="'+esc(f.phone||'')+'"/></div><div class="fr"><label class="lbl">E-posta</label><input class="inp" type="email" id="tc-e" value="'+esc(f.email||'')+'"/></div></div><div class="fr"><label class="lbl">Sertifikalar (virgülle ayırın)</label><input class="inp" id="tc-c" value="'+esc((f.certs||[]).join(', '))+'"/></div><div class="chkr fr"><input type="checkbox" id="tc-ac"'+(f.active?' checked':'')+'><label for="tc-ac">Aktif</label></div><div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)"><button class="btn bghs" onclick="closeM(\'tech\')">İptal</button><button class="btn bsuc" onclick="saveTech()">Kaydet</button></div></div></div>';
 }
 
-function openUserForm(id){if(!can('u')){toast('Kullanıcı yönetimi sadece Yönetici yetkisine sahiptir.','err');return;}ET.user=id?DB.users.find(function(u){return u.id===id;}):null;MODAL.user=true;renderModals();}
+function openUserForm(id){if(!can('s')){toast('Kullanıcı yönetimi için Yönetici yetkisi gerekli.','err');return;}ET.user=id?DB.users.find(function(u){return u.id===id;}):null;MODAL.user=true;renderModals();}
 function tplUserForm(){
   var u=ET.user;
   var f={name:'',un:'',pw:'',role:'readonly',dept:'',email:'',active:true};
@@ -1025,6 +1052,23 @@ function saveTech(){
   if(ex)DB.technicians=DB.technicians.map(function(x){return x.id===t.id?t:x;});else DB.technicians=DB.technicians.concat([t]);
   dbSave();closeM('tech');toast(ex?'Teknisyen güncellendi':'Teknisyen eklendi');R();
 }
+function deleteUser(id){
+  if(!can('s')){toast('Bu işlem için Yönetici yetkisi gerekli.','err');return;}
+  if(id===U.id){toast('Kendi hesabınızı silemezsiniz.','err');return;}
+  var u=DB.users.find(function(x){return x.id===id;});
+  if(!u){toast('Kullanıcı bulunamadı','err');return;}
+  // En az 1 admin kalmalı
+  if(u.role==='admin'){
+    var adminCount=DB.users.filter(function(x){return x.role==='admin'&&x.active&&x.id!==id;}).length;
+    if(adminCount===0){toast('Son yönetici silinemez. Önce başka bir yönetici ekleyin.','err');return;}
+  }
+  if(!confirm(u.name+' kullanıcısını silmek istiyor musunuz?\n\nBu işlem geri alınamaz!'))return;
+  DB.users=DB.users.filter(function(x){return x.id!==id;});
+  dbSave();
+  toast(u.name+' silindi','warn');
+  R();
+}
+
 function saveUser(){
   if(!can('u')){toast('Kullanıcı yönetimi için Yönetici yetkisi gerekli.','err');return;}
   var name=v('u-n').trim(),un=v('u-u').trim();
