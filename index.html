@@ -196,7 +196,7 @@ function fbInit() {
       }
       // Gelen veriyi uygula
       var needRender = false;
-      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule'];
+      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData'];
       keys.forEach(function(k) {
         if(data[k] !== undefined) {
           // Array olarak gelenleri düzelt
@@ -246,6 +246,7 @@ function fbSaveNow() {
     eqDocs:       DB.eqDocs       || {},
     settings:     DB.settings     || {},
     schedule:     DB.schedule     || [],
+    kvalData:     DB.kvalData     || {},
     lastUpdated:  new Date().toISOString(),
     updatedBy:    U ? U.name : 'system'
   };
@@ -351,6 +352,7 @@ var SEED={
     {id:'WO-005',eqId:'EQ-004',type:'onleyici',title:'Dolum İğnesi Sterilizasyonu',desc:'Otoklav F0>=8 tamamlandı. BI negatif. Batch dosyasına eklendi.',sev:'bilgi',status:'kapali',date:'2026-06-01',due:'2026-06-01',techId:'T04',gmp:true,root:'',steps:[{t:'Otoklav döngüsü',d:true},{t:'F0 doğrulama',d:true},{t:'BI testi',d:true},{t:'Batch dosyası',d:true}],docs:['Otoclav_Protokol_Jun2026.pdf','BI_Test_Sonucu.pdf'],comments:[],by:'U01',approvedBy:'U02',closedAt:'2026-06-01 14:30',lh:2,pc:85},
     {id:'WO-006',eqId:'EQ-007',type:'kalibrasyon',title:'HPLC 6 Aylık Kalibrasyon',desc:'Detektör, pompa, enjektör kalibrasyonu ISO 17025 prosedürüne göre tamamlandı.',sev:'bilgi',status:'bekliyor',date:'2026-06-10',due:'2026-06-10',techId:'T05',gmp:true,root:'',steps:[{t:'Detektör kalibrasyonu',d:true},{t:'Pompa kalibrasyonu',d:true},{t:'Enjektör kalibrasyonu',d:true},{t:'Sertifika oluşturma',d:true}],docs:['HPLC_Kalibrasyon_Sertifika_2026.pdf'],comments:[{user:'Murat Aydın',text:'Tamamlandı, onay için gönderildi.',date:'2026-06-10 15:45'}],by:'U03',approvedBy:'',closedAt:'',lh:5,pc:320},
   ],
+  kvalData:{},  // {testId: {year: [{area, value, unit, result, notes}]}}
   schedule:[
     {id:'MS-001',eqId:'EQ-001',type:'onleyici',title:'Tablet Pres — 6 Aylık PM',interval:'6 ay',next:'2026-11-15',techId:'T01',estH:8,notes:'Zımba, matriks, yağlama, kalibrasyon',tasks:['Tüm zımbaları muayene et','Aşınan zımbaları değiştir','Punch wear log güncelle','Yağlama noktalarını yağla','Kalibrasyon kontrol et','Temizlik yap']},
     {id:'MS-002',eqId:'EQ-004',type:'onleyici',title:'Steril Hat — Aylık Sterilizasyon',interval:'1 ay',next:'2026-07-01',techId:'T04',estH:4,notes:'Otoklav F0>=8, BI testi',tasks:['Otoklav döngüsünü başlat','F0 değerini doğrula (≥8)','BI testini uygula','Sonuçları kaydet']},
@@ -371,6 +373,7 @@ function dbLoad(){
     if(!d.workOrders)d.workOrders=[];
     // Migration: eski 'password' alanını 'pw'ye taşı
     if(d.users){d.users=d.users.map(function(u){if(!u.pw&&u.password)u.pw=u.password;return u;});}
+    if(!d.kvalData)d.kvalData={};
     return d;
   }catch(e){return null;}
 }
@@ -391,7 +394,7 @@ function R(){
 }
 function renderPage(){
   var el=document.getElementById('main');if(!el)return;
-  var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings};
+  var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,kvalifikasyon:pgKval,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings};
   el.innerHTML=(map[PAGE]||pgDash)();bindPage();
 }
 function renderModals(){
@@ -436,7 +439,7 @@ function tplShell(){
   var urgent=DB.equipment.filter(function(e){var d=daysLeft(e.nextMaint);return d!==null&&d<=s.critDays&&d>=0;});
   var openN=DB.workOrders.filter(function(w){return w.status==='acik';}).length;
   var pendN=can('ap')?DB.workOrders.filter(function(w){return w.status==='bekliyor';}).length:0;
-  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlama'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Teknisyenler'}];
+  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlama'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Teknisyenler'}];
   if(can('u'))navDefs.push({id:'users',ico:'👥',lbl:'Kullanıcılar'});
   if(can('s'))navDefs.push({id:'settings',ico:'⚙️',lbl:'Ayarlar'});
   var navH=navDefs.map(function(n){
@@ -467,7 +470,7 @@ function bindNav(){
 function pgDash(){
   var s=DB.settings,wos=DB.workOrders,eqs=DB.equipment;
   var mon=today().slice(0,7);
-  var urgent=eqs.filter(function(e){var d=daysLeft(e.nextMaint);return d!==null&&d<=s.critDays;});
+  var urgent=eqs.filter(function(e){var d=daysLeft(e.nextMaint);return d!==null&&d<=s.critDays&&d>=0;});
   var warn2=eqs.filter(function(e){var d=daysLeft(e.nextMaint);return d!==null&&d<=s.warnDays&&d>s.critDays;});
   var stats=[
     {lbl:'Açık İş Emirleri',v:wos.filter(function(w){return w.status==='acik';}).length,col:'var(--rdl)'},
@@ -1970,6 +1973,383 @@ function saveSchedule(){
   dbSave();
   closeM('schedule');
   toast(ex ? 'Bakım planı güncellendi' : 'Bakım planı eklendi');
+  renderPage();
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// KALİFİKASYON PANELİ
+// ══════════════════════════════════════════════════════════════
+
+var KVAL_TESTS = {
+  partikul: {
+    ico: '🔬',
+    lbl: 'Partikül Ölçümü',
+    desc: 'ISO 14644-1 standardına göre temiz oda partikül konsantrasyonu ölçümü',
+    unit: 'partikül/m³',
+    limitKey: 'ISO Sınıfı',
+    limits: 'ISO 5: ≤3.520 (≥0.5µm) | ISO 7: ≤352.000 | ISO 8: ≤3.520.000',
+    color: '#4f8ef7',
+    steps: [
+      'Partikül sayacı cihazını açın ve 15 dk ısınmasını bekleyin',
+      'Partikül cihazından oda isimlerini ve ölçüm noktalarını girin',
+      'Partikül cihazı fişini ve kalibrasyon sertifikasını kontrol edin',
+      'Ölçüm yapılacak odaların kapılarını kapatın, HVAC sistemi çalışır durumda olsun',
+      'Her ölçüm noktasında en az 3 okuma alın',
+      'Sonuçları Excel şablonuna girin ve yükleyin',
+    ],
+    cols: ['Oda / Alan', 'Ölçüm Noktası', '≥0.5µm (part/m³)', '≥5.0µm (part/m³)', 'ISO Sınıfı', 'Limit', 'Sonuç', 'Notlar'],
+    exampleData: [['Steril Dolum-1','Merkez','2100','0','ISO 5','≤3.520','UYGUN',''],['Steril Dolum-1','Kenar','3200','0','ISO 5','≤3.520','UYGUN',''],['Hazırlık Odası','Merkez','180000','5','ISO 7','≤352.000','UYGUN','']],
+  },
+  filtre: {
+    ico: '🌬️',
+    lbl: 'Filtre Sızdırmazlık Testi',
+    desc: 'HEPA/ULPA filtre DOP/PAO sızdırmazlık testi (EN 1822)',
+    unit: '% sızıntı',
+    limitKey: 'Sızdırmazlık',
+    limits: 'HEPA H14: ≤0.005% | ULPA U15: ≤0.0005%',
+    color: '#10b981',
+    steps: [
+      'Aerosol jeneratörü ve fotometre cihazlarını hazırlayın',
+      'Test edilecek filtrelerin konumunu ve seri numaralarını kaydedin',
+      'Aerosol konsantrasyonunu ölçüm öncesi stabilize edin (≥10 dk)',
+      'Filtre yüzeyini sistematik tarama yöntemi ile tarayın (2.5 cm/sn)',
+      'Şüpheli noktalarda ikinci ölçüm alın',
+      'Sızdıran filtreler için iş emri açın ve etikete not düşün',
+    ],
+    cols: ['Oda / Alan', 'Filtre No', 'Filtre Tipi', 'Upstream (µg/L)', 'Downstream (µg/L)', 'Sızıntı %', 'Limit', 'Sonuç', 'Notlar'],
+    exampleData: [['Steril Dolum-1','F-001','HEPA H14','80','0.003','0.00375','≤0.005','UYGUN',''],['Steril Dolum-1','F-002','HEPA H14','80','0.002','0.0025','≤0.005','UYGUN','']],
+  },
+  havadegisim: {
+    ico: '💨',
+    lbl: 'Hava Değişim Sayısı',
+    desc: 'Temiz oda saatlik hava değişim sayısı ölçümü (ACH)',
+    unit: 'ACH (h⁻¹)',
+    limitKey: 'ACH',
+    limits: 'ISO 5 (Steril): ≥240 ACH | ISO 7: ≥60 ACH | ISO 8: ≥20 ACH',
+    color: '#22d3ee',
+    steps: [
+      'Balometreyi (hava akış ölçer) kalibrasyonunu kontrol edin',
+      'Ölçüm yapılacak odadaki tüm difüzörleri listeleyin',
+      'Odanın kapıları kapalı, HVAC tam kapasite çalışır durumda olsun',
+      'Her difüzörü ayrı ayrı ölçün, toplamı hesaplayın',
+      'Oda hacmini (m³) önceden hesaplayın',
+      'ACH = Toplam Hava Akışı (m³/h) ÷ Oda Hacmi (m³) formülünü kullanın',
+    ],
+    cols: ['Oda / Alan', 'Oda Hacmi (m³)', 'Difüzör Sayısı', 'Toplam Akış (m³/h)', 'ACH (h⁻¹)', 'Limit', 'Sonuç', 'Notlar'],
+    exampleData: [['Steril Dolum-1','42','6','12600','300','≥240','UYGUN',''],['Hazırlık Odası','85','8','6120','72','≥60','UYGUN','']],
+  },
+  duman: {
+    ico: '🌫️',
+    lbl: 'Duman Akış Yönü',
+    desc: 'Temiz odalar arası basınç farkı ve duman akış yönü doğrulaması',
+    unit: 'Pa (Paskal)',
+    limitKey: 'Basınç Farkı',
+    limits: 'Steril → Hazırlık: ≥15 Pa | Hazırlık → Koridor: ≥10 Pa | Genel: ≥5 Pa',
+    color: '#a78bfa',
+    steps: [
+      'Tüm kapılar kapalı iken ölçüm yapın',
+      'Basınç fark manometrelerini kalibre edilmiş cihazla doğrulayın',
+      'Duman testinde dumanlı tüp veya duman jeneratörü kullanın',
+      'Duman akışını kapı açılırken ve kapanırken gözlemleyin',
+      'Video kaydı alarak dokümante edin',
+      'Her geçiş noktasını (kapı, pass-through) ayrı ayrı test edin',
+    ],
+    cols: ['Geçiş Noktası', 'Yüksek Basınç Odası', 'Düşük Basınç Odası', 'Basınç Farkı (Pa)', 'Limit (Pa)', 'Duman Akışı', 'Sonuç', 'Notlar'],
+    exampleData: [['Kap-001','Steril Dolum-1','Hazırlık','18','≥15','Doğru Yön','UYGUN',''],['Kap-002','Hazırlık','Giriş Koridoru','12','≥10','Doğru Yön','UYGUN','']],
+  },
+  dekont: {
+    ico: '🧪',
+    lbl: 'Dekontaminasyon',
+    desc: 'VHP / H₂O₂ ile oda dekontaminasyon doğrulama testi',
+    unit: 'Log₁₀ azalma',
+    limitKey: 'Biyolojik İndikatör',
+    limits: 'BI: ≥6 log azalma | Spor negatif | SAL: 10⁻⁶',
+    color: '#f59e0b',
+    steps: [
+      'Biyolojik indikatörleri (BI) belirlenen noktalara yerleştirin',
+      'Kimyasal indikatörleri (CI) tüm yüzeylere dağıtın',
+      'VHP/H₂O₂ konsantrasyonunu ve döngü parametrelerini kaydedin',
+      'Dekontaminasyon döngüsü sırasında kapıların sızdırmazlığını kontrol edin',
+      'Döngü sonrası BI\'ları inkübasyona bırakın (55°C, 7 gün)',
+      'İnkübasyon sonuçlarını ve renk değişimini kaydedin',
+    ],
+    cols: ['Oda / Alan', 'BI Noktası', 'BI Türü', 'Başlangıç Konsantrasyon', 'Döngü Süresi (dk)', 'İnkübasyon Sonucu', 'Log Azalma', 'Sonuç', 'Notlar'],
+    exampleData: [['Steril Dolum-1','BI-1','G. stearothermophilus','10⁶','45','Negatif','≥6','UYGUN',''],['Steril Dolum-1','BI-2','G. stearothermophilus','10⁶','45','Negatif','≥6','UYGUN','']],
+  },
+  sicakliknem: {
+    ico: '🌡️',
+    lbl: 'Sıcaklık & Nem',
+    desc: 'Temiz oda sıcaklık ve bağıl nem homojenlik testi',
+    unit: '°C / %RH',
+    limitKey: 'Sıcaklık/Nem Limiti',
+    limits: 'Steril: 18-22°C, %45-65 RH | Genel Üretim: 20-25°C, %40-70 RH',
+    color: '#ef4444',
+    steps: [
+      'Kalibre edilmiş sıcaklık/nem dataloggerlarını hazırlayın',
+      'Dataloggerları odanın farklı noktalarına yerleştirin (min 3 nokta)',
+      'HVAC sistemi stabil çalışır durumda olsun (en az 1 saat)',
+      'Ölçüm süresini belirleyin (min 1 saat, tercihen 24 saat)',
+      'Veri toplama intervalini ayarlayın (5-10 dk)',
+      'Grafik ve ortalama değerleri Excel şablonuna aktarın',
+    ],
+    cols: ['Oda / Alan', 'Ölçüm Noktası', 'Min Sıcaklık (°C)', 'Max Sıcaklık (°C)', 'Ort. Sıcaklık (°C)', 'Min Nem (%RH)', 'Max Nem (%RH)', 'Ort. Nem (%RH)', 'Sonuç', 'Notlar'],
+    exampleData: [['Steril Dolum-1','Merkez','19.2','21.8','20.5','47','63','55','UYGUN',''],['Steril Dolum-1','Kenar','18.8','22.1','20.3','46','64','54','UYGUN','']],
+  },
+};
+
+var KVAL_ACTIVE = 'partikul'; // aktif test
+
+function pgKval(){
+  var test = KVAL_TESTS[KVAL_ACTIVE];
+  var kd = DB.kvalData || {};
+  var testData = kd[KVAL_ACTIVE] || {};
+
+  // Mevcut yıllar
+  var years = Object.keys(testData).sort().reverse();
+
+  // Sol panel — test listesi
+  var testListH = Object.entries(KVAL_TESTS).map(function(e){
+    var tid = e[0], tst = e[1];
+    var hasData = kd[tid] && Object.keys(kd[tid]).length > 0;
+    var isActive = KVAL_ACTIVE === tid;
+    return '<div onclick="KVAL_ACTIVE=\''+tid+'\';renderPage()" style="'
+      +'display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:9px;cursor:pointer;margin-bottom:4px;'
+      +'background:'+(isActive?'rgba(79,142,247,.15)':'transparent')+';'
+      +'border:1px solid '+(isActive?'var(--bl)':'transparent')+';'
+      +'transition:all .15s">'
+      +'<span style="font-size:22px">'+tst.ico+'</span>'
+      +'<div style="flex:1">'
+      +'<div style="font-size:13px;font-weight:'+(isActive?'800':'600')+';color:'+(isActive?'var(--bll)':'var(--tx)')+'">'+tst.lbl+'</div>'
+      +'<div style="font-size:10px;color:var(--mt)">'+(hasData?Object.keys(kd[tid]).length+' yıl verisi':'Veri yok')+'</div>'
+      +'</div>'
+      +(isActive?'<span style="color:var(--bll)">›</span>':'')
+      +'</div>';
+  }).join('');
+
+  // Ön hazırlık adımları
+  var stepsH = '<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:16px;margin-bottom:18px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--orl);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">⚠ Ölçüm Öncesi Hazırlık</div>'
+    +test.steps.map(function(s,i){
+      return '<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start">'
+        +'<span style="background:var(--orl);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">'+(i+1)+'</span>'
+        +'<span style="font-size:13px;color:var(--sub);line-height:1.5">'+esc(s)+'</span>'
+        +'</div>';
+    }).join('')
+    +'</div>';
+
+  // Yıllık veri tablosu
+  var tableH = '';
+  if(years.length === 0){
+    tableH = '<div class="empty"><div style="font-size:36px;margin-bottom:10px">📊</div>'
+      +'<div style="font-size:14px;font-weight:600;color:var(--sub)">Henüz veri yüklenmemiş</div>'
+      +'<div style="font-size:12px;color:var(--mt);margin-top:6px">Excel şablonunu indirin, doldurun ve yükleyin</div></div>';
+  } else {
+    // Tüm alanları topla
+    var allAreas = [];
+    years.forEach(function(yr){
+      (testData[yr]||[]).forEach(function(row){
+        if(row.area && allAreas.indexOf(row.area)<0) allAreas.push(row.area);
+      });
+    });
+
+    // Tablo: satır=alan, sütun=yıl
+    var thead = '<tr><th>Alan / Oda</th><th>Ölçüm Noktası</th>'
+      +years.map(function(yr){return'<th style="text-align:center">'+yr+'</th>';}).join('')
+      +'</tr>';
+
+    // Her alan için satır
+    var tbodyRows = '';
+    allAreas.forEach(function(area){
+      // O alandaki tüm noktaları bul
+      var allPoints = [];
+      years.forEach(function(yr){
+        (testData[yr]||[]).filter(function(r){return r.area===area;}).forEach(function(row){
+          if(row.point && allPoints.indexOf(row.point)<0) allPoints.push(row.point);
+        });
+      });
+      if(allPoints.length===0) allPoints = ['—'];
+
+      allPoints.forEach(function(point){
+        tbodyRows += '<tr>';
+        tbodyRows += '<td style="font-weight:600">'+esc(area)+'</td>';
+        tbodyRows += '<td style="color:var(--mt);font-size:11px">'+esc(point)+'</td>';
+        years.forEach(function(yr){
+          var rows = (testData[yr]||[]).filter(function(r){return r.area===area&&r.point===point;});
+          if(rows.length>0){
+            var row = rows[0];
+            var isOk = row.result && row.result.toUpperCase().indexOf('UYGUN')>=0;
+            var isNotOk = row.result && (row.result.toUpperCase().indexOf('UYGUN DE')>=0 || row.result.toUpperCase().indexOf('FAIL')>=0);
+            tbodyRows += '<td style="text-align:center">'
+              +'<div style="font-weight:700;font-size:12px">'+esc(row.value||'—')+'</div>'
+              +'<div style="font-size:10px;margin-top:2px">'
+              +(isOk?'<span style="color:var(--gnl);font-weight:700">✓ Uygun</span>'
+                :isNotOk?'<span style="color:var(--rdl);font-weight:700">✗ Uygunsuz</span>'
+                :'<span style="color:var(--mt)">'+esc(row.result||'')+'</span>')
+              +'</div>'
+              +'</td>';
+          } else {
+            tbodyRows += '<td style="text-align:center;color:var(--mt)">—</td>';
+          }
+        });
+        tbodyRows += '</tr>';
+      });
+    });
+
+    tableH = '<div style="overflow-x:auto"><table class="tbl">'
+      +'<thead>'+thead+'</thead>'
+      +'<tbody>'+tbodyRows+'</tbody>'
+      +'</table></div>';
+  }
+
+  // Excel işlemleri
+  var excelH = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">'
+    +'<button class="btn bout bsm" onclick="downloadKvalTemplate(\''+KVAL_ACTIVE+'\')">⬇ Excel Şablonu İndir</button>'
+    +(can('w')?'<label style="display:inline-flex;align-items:center;gap:6px" class="btn bsuc bsm">📤 Excel Yükle<input type="file" accept=".xlsx,.xls" style="display:none" onchange="uploadKvalExcel(this,\''+KVAL_ACTIVE+'\')"/></label>':'')
+    +(years.length>0&&can('d')?'<button class="btn bdng bsm" onclick="deleteKvalYear(\''+KVAL_ACTIVE+'\')">🗑 Yıl Sil</button>':'')
+    +'</div>';
+
+  // Limit bilgisi
+  var limitH = '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px">'
+    +'<span style="color:var(--mt);font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-size:10px">Kabul Limitleri: </span>'
+    +'<span style="color:var(--sub)">'+esc(test.limits)+'</span>'
+    +'</div>';
+
+  return '<div style="font-size:20px;font-weight:800;margin-bottom:20px;letter-spacing:-.3px">🔬 Kalifikasyon</div>'
+    +'<div style="display:grid;grid-template-columns:240px 1fr;gap:18px">'
+    // Sol: test listesi
+    +'<div><div style="background:var(--bg2);border:1px solid var(--bdl);border-radius:12px;padding:12px">'+testListH+'</div></div>'
+    // Sağ: içerik
+    +'<div>'
+    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">'
+    +'<span style="font-size:28px">'+test.ico+'</span>'
+    +'<div><div style="font-size:18px;font-weight:800">'+test.lbl+'</div>'
+    +'<div style="font-size:12px;color:var(--mt)">'+esc(test.desc)+'</div></div>'
+    +'</div>'
+    +stepsH
+    +limitH
+    +excelH
+    +'<div class="card" style="padding:0;overflow:hidden">'
+    +'<div style="padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:1.2px">Yıllık Ölçüm Verileri</div>'
+    +(years.length>0?'<span style="font-size:12px;color:var(--mt)">'+years.length+' yıl · '+(function(){var t=0;years.forEach(function(y){t+=(testData[y]||[]).length;});return t;})()+ ' kayıt</span>':'')
+    +'</div>'
+    +'<div style="padding:16px">'+tableH+'</div>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+}
+
+// ── Excel Şablonu İndir ──────────────────────────────────────
+function downloadKvalTemplate(testId){
+  if(typeof XLSX==='undefined'){toast('XLSX kütüphanesi yükleniyor...','warn');return;}
+  var test = KVAL_TESTS[testId];
+  if(!test){return;}
+  var wb = XLSX.utils.book_new();
+  // Talimat sayfası
+  var instrData = [
+    ['NOBEL İLAÇ — KALİFİKASYON VERİ GİRİŞ ŞABLONU'],
+    ['Test Türü: '+test.lbl],
+    [''],
+    ['DOLDURMA TALİMATLARI:'],
+    ['1. "Veri" sekmesine geçin'],
+    ['2. Yıl sütununa ölçüm yılını girin (örn: 2024)'],
+    ['3. Tüm alanları doldurun'],
+    ['4. Sonuç sütununa: UYGUN veya UYGUN DEĞİL yazın'],
+    ['5. Dosyayı kaydedin ve uygulamaya yükleyin'],
+    [''],
+    ['Kabul Limitleri:'],
+    [test.limits],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instrData), 'Talimatlar');
+  // Veri sayfası
+  var headers = ['Yıl'].concat(test.cols);
+  var dataRows = test.exampleData.map(function(row){return ['2024'].concat(row);});
+  var ws = XLSX.utils.aoa_to_sheet([headers].concat(dataRows));
+  // Sütun genişlikleri
+  ws['!cols'] = headers.map(function(h){return {wch:Math.max(h.length+2,14)};});
+  XLSX.utils.book_append_sheet(wb, ws, 'Veri');
+  XLSX.writeFile(wb, 'Kalifikasyon_'+testId+'_Sablonu.xlsx');
+  toast('Şablon indirildi: Kalifikasyon_'+testId+'_Sablonu.xlsx');
+}
+
+// ── Excel Yükle ───────────────────────────────────────────────
+function uploadKvalExcel(inp, testId){
+  var file = inp.files[0];
+  if(!file) return;
+  if(typeof XLSX==='undefined'){toast('XLSX kütüphanesi yükleniyor...','warn');return;}
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var wb = XLSX.read(e.target.result, {type:'array'});
+      // "Veri" sayfasını bul
+      var wsName = wb.SheetNames.find(function(n){return n==='Veri';}) || wb.SheetNames[0];
+      var ws = wb.Sheets[wsName];
+      var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      if(rows.length < 2){toast('Dosyada veri bulunamadı','err');return;}
+      // Başlık satırı
+      var headers = rows[0].map(function(h){return String(h).trim();});
+      var yilIdx    = headers.findIndex(function(h){return h==='Yıl'||h==='YIL'||h==='yil';});
+      var areaIdx   = headers.findIndex(function(h){return h.indexOf('Alan')>=0||h.indexOf('Oda')>=0||h.indexOf('alan')>=0;});
+      var pointIdx  = headers.findIndex(function(h){return h.indexOf('Nokta')>=0||h.indexOf('nokta')>=0||h.indexOf('Point')>=0;});
+      var valueIdx  = headers.findIndex(function(h){return h.indexOf('µm')>=0||h.indexOf('Akış')>=0||h.indexOf('ACH')>=0||h.indexOf('Sıcaklık')>=0||h.indexOf('Basınç')>=0||h.indexOf('Konsantrasyon')>=0||h.indexOf('Downstream')>=0||h.indexOf('İnkübasyon')>=0;});
+      var resultIdx = headers.findIndex(function(h){return h==='Sonuç'||h==='sonuç'||h==='Result';});
+      var notesIdx  = headers.findIndex(function(h){return h==='Notlar'||h==='notlar'||h==='Notes';});
+
+      if(yilIdx<0){toast('Yıl sütunu bulunamadı. Şablonu kullandığınızdan emin olun.','err');return;}
+
+      // Yıl bazlı grupla
+      var byYear = {};
+      for(var i=1;i<rows.length;i++){
+        var row = rows[i];
+        if(!row[yilIdx]) continue;
+        var yr = String(row[yilIdx]).trim();
+        if(!yr||yr==='') continue;
+        if(!byYear[yr]) byYear[yr]=[];
+        // Tüm sütunları kaydet
+        var entry = {
+          area:   areaIdx>=0  ? String(row[areaIdx]||'').trim()  : '—',
+          point:  pointIdx>=0 ? String(row[pointIdx]||'').trim() : '—',
+          value:  valueIdx>=0 ? String(row[valueIdx]||'').trim() : '',
+          result: resultIdx>=0? String(row[resultIdx]||'').trim(): '',
+          notes:  notesIdx>=0 ? String(row[notesIdx]||'').trim() : '',
+          rawRow: row.slice(1).map(function(v){return String(v||'').trim();}), // Yıl hariç tüm sütunlar
+        };
+        byYear[yr].push(entry);
+      }
+
+      var years = Object.keys(byYear);
+      if(years.length===0){toast('Geçerli veri satırı bulunamadı','err');return;}
+
+      if(!DB.kvalData) DB.kvalData={};
+      if(!DB.kvalData[testId]) DB.kvalData[testId]={};
+      // Yeni verileri mevcut verilere ekle (üzerine yaz)
+      years.forEach(function(yr){ DB.kvalData[testId][yr]=byYear[yr]; });
+      dbSave();
+      toast(years.length+' yıl, '+Object.values(byYear).reduce(function(s,r){return s+r.length;},0)+' kayıt yüklendi ✓');
+      renderPage();
+    }catch(err){
+      console.error(err);
+      toast('Excel okuma hatası: '+err.message,'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  inp.value=''; // Reset
+}
+
+// ── Yıl Sil ──────────────────────────────────────────────────
+function deleteKvalYear(testId){
+  var kd = DB.kvalData||{};
+  var years = Object.keys(kd[testId]||{}).sort();
+  if(years.length===0){toast('Silinecek veri yok','warn');return;}
+  var yr = prompt('Hangi yılın verisini silmek istiyorsunuz?\nMevcut yıllar: '+years.join(', '));
+  if(!yr) return;
+  yr = yr.trim();
+  if(!kd[testId]||!kd[testId][yr]){toast(yr+' yılı için veri bulunamadı','err');return;}
+  if(!confirm(yr+' yılına ait '+kd[testId][yr].length+' kayıt silinecek. Emin misiniz?')) return;
+  delete DB.kvalData[testId][yr];
+  dbSave();
+  toast(yr+' yılı verisi silindi','warn');
   renderPage();
 }
 
