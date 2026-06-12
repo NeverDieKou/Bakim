@@ -626,9 +626,11 @@ function pgTech(){
   var h=DB.technicians.map(function(t){
     var as=DB.workOrders.filter(function(w){return w.techId===t.id;});var op=as.filter(function(w){return w.status!=='kapali';});
     var certs=(t.certs||[]).map(function(c){return'<span class="badge bxsm" style="color:var(--sub);border-color:var(--bd)">'+esc(c)+'</span>';}).join(' ');
-    return '<div style="background:var(--bg2);border:1px solid var(--bdl);border-radius:12px;padding:20px"><div style="display:flex;justify-content:space-between;margin-bottom:12px"><div style="width:42px;height:42px;border-radius:50%;background:rgba(37,99,235,.2);border:2px solid rgba(37,99,235,.3);display:flex;align-items:center;justify-content:center;font-size:20px">👷</div><span style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;background:'+(t.active?'rgba(16,185,129,.14)':'rgba(239,68,68,.14)')+';color:'+(t.active?'var(--gnl)':'var(--rdl)')+';border:1px solid '+(t.active?'var(--gnl)':'var(--rdl)')+'">'+(t.active?'Aktif':'Pasif')+'</span></div><div style="font-size:16px;font-weight:800;margin-bottom:2px">'+esc(t.name)+'</div><div style="font-size:12px;color:var(--bll);margin-bottom:3px">'+esc(t.role)+'</div><div style="font-size:11px;color:var(--mt);margin-bottom:'+(t.certs&&t.certs.length?'8px':'12px')+'">📍 '+esc(t.area)+' · '+esc(t.phone||'')+'</div>'+(t.certs&&t.certs.length?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px">'+certs+'</div>':'')+'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">'+[['Toplam','var(--bll)',as.length],['Açık','var(--orl)',op.length],['Kapalı','var(--gnl)',as.length-op.length]].map(function(x){return'<div style="background:var(--bg3);border-radius:7px;padding:6px;text-align:center"><div style="font-size:18px;font-weight:900;color:'+x[1]+'">'+x[2]+'</div><div style="font-size:9px;color:var(--mt);text-transform:uppercase">'+x[0]+'</div></div>';}).join('')+'</div>'+(can('w')?'<button class="btn bghs bsm" style="width:100%;justify-content:center" onclick="openTechForm(\''+t.id+'\')">Düzenle</button>':'')+'</div>';
+    return '<div style="background:var(--bg2);border:1px solid var(--bdl);border-radius:12px;padding:20px"><div style="display:flex;justify-content:space-between;margin-bottom:12px"><div style="width:42px;height:42px;border-radius:50%;background:rgba(37,99,235,.2);border:2px solid rgba(37,99,235,.3);display:flex;align-items:center;justify-content:center;font-size:20px">👷</div><span style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;background:'+(t.active?'rgba(16,185,129,.14)':'rgba(239,68,68,.14)')+';color:'+(t.active?'var(--gnl)':'var(--rdl)')+';border:1px solid '+(t.active?'var(--gnl)':'var(--rdl)')+'">'+(t.active?'Aktif':'Pasif')+'</span></div><div style="font-size:16px;font-weight:800;margin-bottom:2px">'+esc(t.name)+'</div><div style="font-size:12px;color:var(--bll);margin-bottom:3px">'+esc(t.role)+'</div><div style="font-size:11px;color:var(--mt);margin-bottom:'+(t.certs&&t.certs.length?'8px':'12px')+'">📍 '+esc(t.area)+' · '+esc(t.phone||'')+'</div>'+(t.certs&&t.certs.length?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px">'+certs+'</div>':'')+'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">'+[['Toplam','var(--bll)',as.length],['Açık','var(--orl)',op.length],['Kapalı','var(--gnl)',as.length-op.length]].map(function(x){return'<div style="background:var(--bg3);border-radius:7px;padding:6px;text-align:center"><div style="font-size:18px;font-weight:900;color:'+x[1]+'">'+x[2]+'</div><div style="font-size:9px;color:var(--mt);text-transform:uppercase">'+x[0]+'</div></div>';}).join('')+'</div>'+(can('w')?'<button class="btn bout bsm" style="width:100%;justify-content:center" onclick="openTechForm(\''+t.id+'\')">✏ Düzenle</button>':'')
+    +(can('s')?'<button class="btn bdng bsm" style="width:100%;justify-content:center;margin-top:6px" onclick="deleteTech(\''+t.id+'\')">🗑 Sil</button>':'')
+    +'</div>';
   }).join('');
-  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Teknisyenler</div>'+(can('w')?'<button class="btn bpri bsm" onclick="openTechForm(null)">+ Teknisyen Ekle</button>':'')+'</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">'+h+'</div>';
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Teknisyenler</div>'+(can('s')?'<button class="btn bpri bsm" onclick="openTechForm(null)">+ Teknisyen Ekle</button>':'')+'</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">'+h+'</div>';
 }
 
 function pgUsers(){
@@ -730,7 +732,10 @@ function tplEqDet(){
     content=(can('w')?'<div style="display:flex;gap:8px;margin-bottom:16px;align-items:flex-end"><div style="flex:2"><label class="lbl">Doküman Adı</label><input class="inp isml" id="eqd-name" placeholder="örn: SOP-001-v2.pdf"/></div><div style="flex:3"><label class="lbl">Not / Açıklama</label><input class="inp isml" id="eqd-note" placeholder="İsteğe bağlı..."/></div><button class="btn bpri bsm" onclick="addEqDoc(\''+eq.id+'\')">+ Ekle</button></div>':'')+
     (docs.length===0?emptyHTML('Doküman eklenmemiş — SOP, validasyon raporu, kalibrasyon sertifikası ekleyebilirsiniz.'):docs.map(function(d,i){return'<div class="irow" style="margin-bottom:9px;border:1px solid var(--bd)"><span style="font-size:22px">📄</span><div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--bll)">'+esc(d.name)+'</div>'+(d.note?'<div style="font-size:11px;color:var(--sub);margin-top:2px">'+esc(d.note)+'</div>':'')+'<div style="font-size:10px;color:var(--mt);margin-top:3px">📅 '+esc(d.date)+' · 👤 '+esc(d.by||'—')+'</div></div>'+(can('w')?'<button onclick="removeEqDoc(\''+eq.id+'\','+i+')" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:18px;padding:4px">🗑</button>':'')+'</div>';}).join(''));
   }
-  var actBtns='<button class="btn bout bxs" style="margin-right:6px" onclick="closeM(\'eqDet\');openQRSingle(\''+eq.id+'\')">📱 QR</button>'+(can('w')?'<button class="btn bout bxs" style="margin-right:6px" onclick="closeM(\'eqDet\');openEqForm(\''+eq.id+'\')">Düzenle</button><button class="btn bpri bxs" onclick="closeM(\'eqDet\');openWOModal(null,\''+eq.id+'\')">+ İş Emri</button>':'');
+  var actBtns='<button class="btn bout bxs" style="margin-right:6px" onclick="closeM(\'eqDet\');openQRSingle(\''+eq.id+'\')">📱 QR</button>'
+    +(can('w')?'<button class="btn bout bxs" style="margin-right:6px" onclick="closeM(\'eqDet\');openEqForm(\''+eq.id+'\')">✏ Düzenle</button>':'')
+    +(can('s')?'<button class="btn bdng bxs" style="margin-right:6px" onclick="closeM(\'eqDet\');deleteEq(\''+eq.id+'\')">🗑 Sil</button>':'')
+    +(can('w')?'<button class="btn bpri bxs" onclick="closeM(\'eqDet\');openWOModal(null,\''+eq.id+'\')">+ İş Emri</button>':'');
   return '<div class="ov" id="ov-eqdet"><div class="md mdlg"><div class="mdh" style="margin-bottom:14px"><div><div style="font-size:10px;font-family:monospace;color:var(--mt);margin-bottom:2px">'+esc(eq.id)+' · '+esc(eq.cat||'Ekipman')+'</div><div class="mdt">'+esc(eq.name)+'</div></div><button class="mdc" onclick="closeM(\'eqDet\')">✕</button></div>'+hdr+'<div class="tabs">'+tabH+'<div style="flex:1"></div>'+actBtns+'</div>'+content+'</div></div>';
 }
 
@@ -746,7 +751,12 @@ function tplEqForm(){
   return '<div class="ov" id="ov-eqform"><div class="md"><div class="mdh"><div class="mdt">'+(e?'Ekipmanı Düzenle':'Yeni Ekipman')+'</div><button class="mdc" onclick="closeM(\'eqForm\')">✕</button></div><div class="g2"><div class="fr"><label class="lbl">Ekipman Adı</label><input class="inp" id="eq-n" value="'+esc(f.name)+'"/></div><div class="fr"><label class="lbl">Kategori</label><select class="inp" id="eq-cat"><option value="">Seçiniz...</option>'+cO+'</select></div><div class="fr"><label class="lbl">Bölge</label><select class="inp" id="eq-a"><option value="">Seçiniz...</option>'+aO+'</select></div><div class="fr"><label class="lbl">Durum</label><select class="inp" id="eq-st">'+stO+'</select></div><div class="fr"><label class="lbl">Üretici</label><input class="inp" id="eq-m" value="'+esc(f.mfr||'')+'"/></div><div class="fr"><label class="lbl">Model</label><input class="inp" id="eq-mo" value="'+esc(f.model||'')+'"/></div><div class="fr"><label class="lbl">Seri No</label><input class="inp" id="eq-sn" value="'+esc(f.sn||'')+'"/></div><div class="fr"><label class="lbl">Kurulum Tarihi</label><input class="inp" type="date" id="eq-id" value="'+esc(f.instDate||'')+'"/></div><div class="fr"><label class="lbl">Son Bakım</label><input class="inp" type="date" id="eq-lm" value="'+esc(f.lastMaint||'')+'"/></div><div class="fr"><label class="lbl">Sonraki Bakım</label><input class="inp" type="date" id="eq-nm" value="'+esc(f.nextMaint||'')+'"/></div><div class="fr"><label class="lbl">Kritiklik</label><select class="inp" id="eq-cr">'+crO+'</select></div><div class="fr"><label class="lbl">Validasyon Dok. No</label><input class="inp" id="eq-vd" value="'+esc(f.valDoc||'')+'"/></div></div><div class="chkr fr"><input type="checkbox" id="eq-vl"'+(f.val?' checked':'')+'><label for="eq-vl">Validated ekipman (GMP kapsamında)</label></div><div class="fr"><label class="lbl">Notlar</label><textarea class="inp" id="eq-no" rows="2">'+esc(f.notes||'')+'</textarea></div><div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)"><button class="btn bghs" onclick="closeM(\'eqForm\')">İptal</button><button class="btn bsuc" onclick="saveEq()">Kaydet</button></div></div></div>';
 }
 
-function openTechForm(id){ET.tech=id?DB.technicians.find(function(t){return t.id===id;}):null;MODAL.tech=true;renderModals();}
+function openTechForm(id){
+  if(!can('s')){toast('Teknisyen yönetimi için Yönetici yetkisi gerekli.','err');return;}
+  ET.tech=id?DB.technicians.find(function(t){return t.id===id;}):null;
+  MODAL.tech=true;
+  renderModals();
+}
 function tplTechForm(){
   var t=ET.tech,s=DB.settings;
   var f={name:'',role:'',area:'',phone:'',email:'',active:true,certs:[]};
@@ -955,6 +965,27 @@ function approveWO(id){
   DB.workOrders=DB.workOrders.map(function(w){return w.id===id?Object.assign({},w,{status:'kapali',approvedBy:U.id,closedAt:nowStr()}):w;});
   dbSave();toast('İş emri onaylandı ve kapatıldı');closeM('woDet');R();
 }
+function deleteEq(id){
+  if(!can('s')){toast('Bu işlem için Yönetici yetkisi gerekli.','err');return;}
+  var eq=DB.equipment.find(function(e){return e.id===id;});
+  if(!eq){toast('Ekipman bulunamadı','err');return;}
+  var openWOs=DB.workOrders.filter(function(w){return w.eqId===id&&w.status!=='kapali';});
+  if(openWOs.length>0){
+    toast(eq.name+' için '+openWOs.length+' açık iş emri var. Önce kapatınız.','err');return;
+  }
+  if(!confirm(eq.name+' ekipmanını silmek istiyor musunuz?\n\nBu işlem geri alınamaz!')) return;
+  DB.equipment=DB.equipment.filter(function(e){return e.id!==id;});
+  // İlgili iş emirlerini de sil
+  DB.workOrders=DB.workOrders.filter(function(w){return w.eqId!==id;});
+  // İlgili dokümanları sil
+  if(DB.eqDocs&&DB.eqDocs[id])delete DB.eqDocs[id];
+  // İlgili bakım planlarını sil
+  if(DB.schedule)DB.schedule=DB.schedule.filter(function(s){return s.eqId!==id;});
+  dbSave();
+  toast(eq.name+' silindi','warn');
+  R();
+}
+
 function saveEq(){
   var name=v('eq-n').trim();if(!name){toast('Ekipman adı zorunludur','err');return;}
   var ex=ET.eq;
@@ -970,6 +1001,23 @@ function saveEq(){
   }
   dbSave();closeM('eqForm');R();
 }
+function deleteTech(id){
+  if(!can('s')){toast('Bu işlem için Yönetici yetkisi gerekli.','err');return;}
+  var t=DB.technicians.find(function(x){return x.id===id;});
+  if(!t){toast('Teknisyen bulunamadı','err');return;}
+  var openWOs=DB.workOrders.filter(function(w){return w.techId===id&&w.status!=='kapali';});
+  if(openWOs.length>0){
+    toast(t.name+' üzerinde '+openWOs.length+' açık iş emri var. Önce kapatınız.','err');return;
+  }
+  if(!confirm(t.name+' teknisyenini silmek istiyor musunuz?\n\nBu işlem geri alınamaz!'))return;
+  DB.technicians=DB.technicians.filter(function(x){return x.id!==id;});
+  // İlgili bakım planlarındaki techId'yi temizle
+  if(DB.schedule)DB.schedule=DB.schedule.map(function(s){return s.techId===id?Object.assign({},s,{techId:''}):s;});
+  dbSave();
+  toast(t.name+' silindi','warn');
+  R();
+}
+
 function saveTech(){
   var name=v('tc-n').trim();if(!name){toast('Ad zorunludur','err');return;}
   var ex=ET.tech;
