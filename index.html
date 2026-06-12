@@ -2000,7 +2000,7 @@ var KVAL_TESTS = {
       'Her ölçüm noktasında en az 3 okuma alın',
       'Sonuçları Excel şablonuna girin ve yükleyin',
     ],
-    cols: ['Oda / Alan', 'Ölçüm Noktası', '≥0.5µm (part/m³)', '≥5.0µm (part/m³)', 'ISO Sınıfı', 'Limit', 'Sonuç', 'Notlar'],
+    cols: ['Oda / Alan', 'Oda Adı', '≥0.5µm (part/m³)', '≥5.0µm (part/m³)', 'ISO Sınıfı', 'Limit', 'Sonuç', 'Notlar'],
     exampleData: [['Steril Dolum-1','Merkez','2100','0','ISO 5','≤3.520','UYGUN',''],['Steril Dolum-1','Kenar','3200','0','ISO 5','≤3.520','UYGUN',''],['Hazırlık Odası','Merkez','180000','5','ISO 7','≤352.000','UYGUN','']],
   },
   filtre: {
@@ -2019,7 +2019,7 @@ var KVAL_TESTS = {
       'Şüpheli noktalarda ikinci ölçüm alın',
       'Sızdıran filtreler için iş emri açın ve etikete not düşün',
     ],
-    cols: ['Oda / Alan', 'Filtre No', 'Filtre Tipi', 'Upstream (µg/L)', 'Downstream (µg/L)', 'Sızıntı %', 'Limit', 'Sonuç', 'Notlar'],
+    cols: ['Oda / Alan', 'Oda Adı', 'Filtre No', 'Filtre Tipi', 'Upstream (µg/L)', 'Downstream (µg/L)', 'Sızıntı %', 'Limit', 'Sonuç', 'Notlar'],
     exampleData: [['Steril Dolum-1','F-001','HEPA H14','80','0.003','0.00375','≤0.005','UYGUN',''],['Steril Dolum-1','F-002','HEPA H14','80','0.002','0.0025','≤0.005','UYGUN','']],
   },
   havadegisim: {
@@ -2038,7 +2038,7 @@ var KVAL_TESTS = {
       'Oda hacmini (m³) önceden hesaplayın',
       'ACH = Toplam Hava Akışı (m³/h) ÷ Oda Hacmi (m³) formülünü kullanın',
     ],
-    cols: ['Oda / Alan', 'Oda Hacmi (m³)', 'Difüzör Sayısı', 'Toplam Akış (m³/h)', 'ACH (h⁻¹)', 'Limit', 'Sonuç', 'Notlar'],
+    cols: ['Oda / Alan', 'Oda Adı', 'Oda Hacmi (m³)', 'Difüzör Sayısı', 'Toplam Akış (m³/h)', 'ACH (h⁻¹)', 'Limit', 'Sonuç', 'Notlar'],
     exampleData: [['Steril Dolum-1','42','6','12600','300','≥240','UYGUN',''],['Hazırlık Odası','85','8','6120','72','≥60','UYGUN','']],
   },
   duman: {
@@ -2057,7 +2057,7 @@ var KVAL_TESTS = {
       'Video kaydı alarak dokümante edin',
       'Her geçiş noktasını (kapı, pass-through) ayrı ayrı test edin',
     ],
-    cols: ['Geçiş Noktası', 'Yüksek Basınç Odası', 'Düşük Basınç Odası', 'Basınç Farkı (Pa)', 'Limit (Pa)', 'Duman Akışı', 'Sonuç', 'Notlar'],
+    cols: ['Geçiş Noktası', 'Oda Adı', 'Yüksek Basınç Odası', 'Düşük Basınç Odası', 'Basınç Farkı (Pa)', 'Limit (Pa)', 'Duman Akışı', 'Sonuç', 'Notlar'],
     exampleData: [['Kap-001','Steril Dolum-1','Hazırlık','18','≥15','Doğru Yön','UYGUN',''],['Kap-002','Hazırlık','Giriş Koridoru','12','≥10','Doğru Yön','UYGUN','']],
   },
   dekont: {
@@ -2076,7 +2076,7 @@ var KVAL_TESTS = {
       'Döngü sonrası BI\'ları inkübasyona bırakın (55°C, 7 gün)',
       'İnkübasyon sonuçlarını ve renk değişimini kaydedin',
     ],
-    cols: ['Oda / Alan', 'BI Noktası', 'BI Türü', 'Başlangıç Konsantrasyon', 'Döngü Süresi (dk)', 'İnkübasyon Sonucu', 'Log Azalma', 'Sonuç', 'Notlar'],
+    cols: ['Oda / Alan', 'Oda Adı', 'BI Noktası', 'BI Türü', 'Başlangıç Konsantrasyon', 'Döngü Süresi (dk)', 'İnkübasyon Sonucu', 'Log Azalma', 'Sonuç', 'Notlar'],
     exampleData: [['Steril Dolum-1','BI-1','G. stearothermophilus','10⁶','45','Negatif','≥6','UYGUN',''],['Steril Dolum-1','BI-2','G. stearothermophilus','10⁶','45','Negatif','≥6','UYGUN','']],
   },
   sicakliknem: {
@@ -2095,7 +2095,7 @@ var KVAL_TESTS = {
       'Veri toplama intervalini ayarlayın (5-10 dk)',
       'Grafik ve ortalama değerleri Excel şablonuna aktarın',
     ],
-    cols: ['Oda / Alan', 'Ölçüm Noktası', 'Min Sıcaklık (°C)', 'Max Sıcaklık (°C)', 'Ort. Sıcaklık (°C)', 'Min Nem (%RH)', 'Max Nem (%RH)', 'Ort. Nem (%RH)', 'Sonuç', 'Notlar'],
+    cols: ['Oda / Alan', 'Oda Adı', 'Min Sıcaklık (°C)', 'Max Sıcaklık (°C)', 'Ort. Sıcaklık (°C)', 'Min Nem (%RH)', 'Max Nem (%RH)', 'Ort. Nem (%RH)', 'Sonuç', 'Notlar'],
     exampleData: [['Steril Dolum-1','Merkez','19.2','21.8','20.5','47','63','55','UYGUN',''],['Steril Dolum-1','Kenar','18.8','22.1','20.3','46','64','54','UYGUN','']],
   },
 };
@@ -2196,7 +2196,7 @@ function pgKval(){
 
     var thead = '<tr>'
       +'<th>Alan / Oda</th>'
-      +'<th>Ölçüm Noktası</th>'
+      +'<th>Oda Adı</th>'
       +valueCols.map(function(col){return'<th style="text-align:center">'+esc(col.label)+'</th>';}).join('')
       +'<th style="text-align:center">Sonuç</th>'
       +years.map(function(yr){return'';}).join('') // yıllar başlıkta değil, satırda
@@ -2213,10 +2213,27 @@ function pgKval(){
         var isNotOk=row.result&&(row.result.toUpperCase().indexOf('DEĞİL')>=0||row.result.toUpperCase().indexOf('FAIL')>=0);
         tbodyRows+='<tr>'
           +'<td style="font-weight:600">'+esc(ak.area)+'</td>'
-          +'<td style="font-size:11px;color:var(--mt)">'+esc(ak.point)+'</td>'
+          +'<td style="font-size:11px;color:var(--mt)">'+esc(ak.area2||ak.point)+'</td>'
           +valueCols.map(function(col){
             var val=row.rawRow&&row.rawRow[col.rawIdx]!==undefined?row.rawRow[col.rawIdx]:(col.rawIdx<0?row.value:'—');
-            return'<td style="text-align:center;font-weight:600;font-size:12px">'+esc(String(val||'—'))+'</td>';
+            // Sayısal değerleri tam sayıya çevir
+            var dispVal='—';
+            if(val!==undefined&&val!==null&&val!==''){
+              var num=parseFloat(String(val).replace(',','.'));
+              if(!isNaN(num)){
+                // Yüzde değerleri küçük olabilir — 2 ondalık basamak göster
+                if(String(col.label).indexOf('%')>=0||String(col.label).indexOf('Sızıntı')>=0){
+                  dispVal=num.toFixed(4).replace(/\.?0+$/,'');
+                } else if(num>0&&num<1){
+                  dispVal=num.toFixed(2);
+                } else {
+                  dispVal=Math.round(num).toLocaleString('tr-TR');
+                }
+              } else {
+                dispVal=String(val);
+              }
+            }
+            return'<td style="text-align:center;font-weight:600;font-size:12px">'+esc(dispVal)+'</td>';
           }).join('')
           +'<td style="text-align:center">'
           +(isOk?'<span style="background:rgba(16,185,129,.15);color:var(--gnl);font-weight:700;padding:3px 10px;border-radius:12px;font-size:11px">✓ Uygun</span>'
@@ -2393,7 +2410,7 @@ function uploadKvalExcel(inp, testId){
       var headers = rows[0].map(function(h){return String(h).trim();});
       var yilIdx    = headers.findIndex(function(h){return h==='Yıl'||h==='YIL'||h==='yil';});
       var areaIdx   = headers.findIndex(function(h){return h.indexOf('Alan')>=0||h.indexOf('Oda')>=0||h.indexOf('alan')>=0;});
-      var pointIdx  = headers.findIndex(function(h){return h.indexOf('Nokta')>=0||h.indexOf('nokta')>=0||h.indexOf('Point')>=0;});
+      var pointIdx  = headers.findIndex(function(h){return h.indexOf('Oda Ad')>=0||h.indexOf('oda ad')>=0||h.indexOf('Nokta')>=0||h.indexOf('nokta')>=0||h.indexOf('Point')>=0;});
       var valueIdx  = headers.findIndex(function(h){return h.indexOf('µm')>=0||h.indexOf('Akış')>=0||h.indexOf('ACH')>=0||h.indexOf('Sıcaklık')>=0||h.indexOf('Basınç')>=0||h.indexOf('Konsantrasyon')>=0||h.indexOf('Downstream')>=0||h.indexOf('İnkübasyon')>=0;});
       var resultIdx = headers.findIndex(function(h){return h==='Sonuç'||h==='sonuç'||h==='Result';});
       var notesIdx  = headers.findIndex(function(h){return h==='Notlar'||h==='notlar'||h==='Notes';});
