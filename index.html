@@ -2708,73 +2708,76 @@ var SP_UNITS = ['Adet','Kutu','Paket','Metre','Litre','Kg','Gram','Rulo','Çift'
 // SP_CATS artık DB.spareCats'ten gelir — yönetici düzenleyebilir
 
 function pgSpareParts(){
-  var parts = DB.spareParts || [];
+  var parts    = DB.spareParts || [];
+  var SP_Q_VAL = SP_Q || '';
+  var SP_C_VAL = SP_CAT || 'all';
 
   // Filtrele
   var filtered = parts.filter(function(p){
-    if(SP_CAT !== 'all' && p.cat !== SP_CAT) return false;
-    if(SP_Q){
-      var q = SP_Q.toLowerCase();
-      if((p.name||'').toLowerCase().indexOf(q)<0 &&
-         (p.code||'').toLowerCase().indexOf(q)<0 &&
-         (p.location||'').toLowerCase().indexOf(q)<0) return false;
+    if(SP_C_VAL !== 'all' && p.cat !== SP_C_VAL) return false;
+    if(SP_Q_VAL){
+      var q = SP_Q_VAL.toLowerCase();
+      if((p.name||'').toLowerCase().indexOf(q)<0
+       &&(p.code||'').toLowerCase().indexOf(q)<0
+       &&(p.location||'').toLowerCase().indexOf(q)<0) return false;
     }
     return true;
   });
 
   // İstatistikler
-  var kritikStok = parts.filter(function(p){return p.stock<=p.minStock;}).length;
-  var sifirStok  = parts.filter(function(p){return p.stock<=0;}).length;
-  var toplamCesit= parts.length;
+  var kritikStok  = parts.filter(function(p){return p.stock>0&&p.stock<=p.minStock;}).length;
+  var sifirStok   = parts.filter(function(p){return p.stock<=0;}).length;
+  var toplamCesit = parts.length;
 
   var statsH = [
-    {lbl:'Toplam Çeşit',  v:toplamCesit,  col:'var(--bll)'},
-    {lbl:'Kritik Stok',   v:kritikStok,   col:'var(--rdl)'},
-    {lbl:'Sıfır Stok',    v:sifirStok,    col:'var(--rdl)'},
+    {lbl:'Toplam Çeşit', v:toplamCesit, col:'var(--bll)'},
+    {lbl:'Kritik Stok',  v:kritikStok,  col:'var(--orl)'},
+    {lbl:'Sıfır Stok',   v:sifirStok,   col:'var(--rdl)'},
   ].map(function(s){
     return '<div class="sc" style="border-color:'+s.col+'25"><div class="sa" style="background:'+s.col+'"></div>'
       +'<div class="sv" style="color:'+s.col+'">'+s.v+'</div><div class="sl">'+s.lbl+'</div></div>';
   }).join('');
 
   // Kategori filtreleri
-  var cats = ['all'].concat([...new Set(parts.map(function(p){return p.cat||'Diğer';}))].sort());
+  var cats = ['all'].concat([].concat.apply([],[(DB.spareCats||[])]).filter(function(v,i,a){return a.indexOf(v)===i;}).sort());
   var catH = cats.map(function(cat){
     var cnt = cat==='all' ? parts.length : parts.filter(function(p){return p.cat===cat;}).length;
-    var active = SP_CAT===cat;
-    return '<button onclick="SP_CAT=\''+cat+'\';renderPage()" style="background:'+(active?'var(--bl)':'var(--bg3)')+';color:'+(active?'#fff':'var(--sub)')+';border:1px solid '+(active?'var(--bl)':'var(--bd)')+';border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">'+esc(cat==='all'?'Tümü':cat)+' <span style="opacity:.7">('+cnt+')</span></button>';
+    var active = SP_C_VAL===cat;
+    return '<button onclick="SP_CAT=\''+cat+'\';renderPage()" style="'
+      +'background:'+(active?'var(--bl)':'var(--bg3)')+';'
+      +'color:'+(active?'#fff':'var(--sub)')+';'
+      +'border:1px solid '+(active?'var(--bl)':'var(--bd)')+';'
+      +'border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">'
+      +esc(cat==='all'?'Tümü':cat)+' <span style="opacity:.7">('+cnt+')</span></button>';
   }).join('');
 
   // Kart listesi
   var cardsH = filtered.length===0
     ? emptyHTML('Parça bulunamadı')
     : filtered.map(function(p){
-        var isKritik = p.stock <= p.minStock;
-        var isSifir  = p.stock <= 0;
+        var isKritik = p.stock>0 && p.stock<=p.minStock;
+        var isSifir  = p.stock<=0;
         var stockCol = isSifir?'var(--rdl)':isKritik?'var(--orl)':'var(--gnl)';
         var pct = p.minStock>0 ? Math.min(100,Math.round((p.stock/p.minStock)*100)) : 100;
-        // Son 3 hareket
-        var hareketler = (DB.spareMovements||[]).filter(function(m){return m.partId===p.id;}).slice(0,3);
-        return '<div style="background:var(--bg2);border:1px solid '+(isKritik?'rgba(239,68,68,.4)':'var(--bdl)')+';border-radius:12px;padding:16px">'
-          // Başlık
+        return '<div style="background:var(--bg2);border:1px solid '+(isSifir?'rgba(239,68,68,.4)':isKritik?'rgba(245,158,11,.4)':'var(--bdl)')+';border-radius:12px;padding:16px">'
           +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'
-          +'<div style="flex:1"><div style="font-size:10px;font-family:monospace;color:var(--mt);margin-bottom:3px">'+esc(p.code||p.id)+'</div>'
+          +'<div style="flex:1">'
+          +'<div style="font-size:10px;font-family:monospace;color:var(--mt);margin-bottom:3px">'+esc(p.code||p.id)+'</div>'
           +'<div style="font-size:14px;font-weight:800">'+esc(p.name)+'</div>'
-          +'<div style="font-size:11px;color:var(--mt);margin-top:2px">'+esc(p.cat||'—')+' · 📍 '+esc(p.location||'—')+'</div></div>'
+          +'<div style="font-size:11px;color:var(--mt);margin-top:2px">'+esc(p.cat||'—')+' · 📍 '+esc(p.location||'—')+'</div>'
+          +'</div>'
           +'<div style="text-align:right;flex-shrink:0;margin-left:10px">'
           +'<div style="font-size:28px;font-weight:900;color:'+stockCol+'">'+p.stock+'</div>'
           +'<div style="font-size:10px;color:var(--mt)">'+esc(p.unit||'Adet')+'</div>'
           +'</div></div>'
-          // Stok bar
           +'<div style="margin-bottom:10px">'
           +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--mt);margin-bottom:4px">'
-          +'<span>Stok</span><span>Min: '+p.minStock+' '+esc(p.unit||'Adet')+'</span>'
+          +'<span>Stok Durumu</span><span>Min: '+p.minStock+' '+esc(p.unit||'Adet')+'</span>'
           +'</div>'
           +'<div class="pbar"><div class="pfil" style="width:'+pct+'%;background:'+stockCol+'"></div></div>'
           +'</div>'
-          // Uyarı
           +(isSifir?'<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:6px 10px;font-size:11px;font-weight:700;color:var(--rdl);margin-bottom:10px">⚠ STOK TÜKENDİ</div>'
             :isKritik?'<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:6px 10px;font-size:11px;font-weight:700;color:var(--orl);margin-bottom:10px">⚠ KRİTİK STOK</div>':'')
-          // Butonlar
           +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
           +(can('w')?'<button class="btn bsuc bxs" onclick="openSpareMovModal(\''+p.id+'\',\'giris\')">⬆ Giriş</button>':'')
           +(can('w')?'<button class="btn bout bxs" onclick="openSpareMovModal(\''+p.id+'\',\'cikis\')">⬇ Çıkış</button>':'')
@@ -2785,18 +2788,42 @@ function pgSpareParts(){
           +'</div>';
       }).join('');
 
-  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'
-    +'<div style="font-size:20px;font-weight:800;letter-spacing:-.3px">🔩 Yedek Parça & Depo</div>'
-    +(can('s')?'<button class="btn bpri bsm" onclick="openSpareForm(null)">+ Parça Ekle</button>':'')
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">'+statsH+'</div>'
-    +'<div class="card" style="padding:12px;margin-bottom:14px">'
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-    +'<input class="inp isml" id="sp-q" placeholder="Parça adı, kodu veya konum ara..." style="flex:1;min-width:200px" value="'+esc(SP_Q)+'" oninput="SP_Q=this.value;renderPage()"/>'
-    +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+catH+'</div>'
-    +'</div></div>'
-    +(kritikStok>0?'<div class="alert" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);margin-bottom:16px"><span style="font-size:20px">⚠</span><div><strong style="color:var(--rdl)">'+kritikStok+' parça kritik stok seviyesinde!</strong> Sipariş verilmesi önerilir.</div></div>':'')
-    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">'+cardsH+'</div>';
+  // ── HTML ──────────────────────────────────────────────────
+  var html = '';
+
+  // Başlık + Butonlar
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">';
+  html += '<div style="font-size:20px;font-weight:800;letter-spacing:-.3px">🔩 Yedek Parça & Depo</div>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  if(can('s')) html += '<button class="btn bghs bsm" onclick="openSpareCatMgr()">🏷 Kategoriler</button>';
+  if(can('s')) html += '<button class="btn bout bsm" onclick="downloadSpareTemplate()">⬇ Excel Şablonu</button>';
+  if(can('s')) html += '<label class="btn bsuc bsm" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">📤 Excel Yükle<input type="file" accept=".xlsx,.xls" style="display:none" onchange="uploadSpareExcel(this)"/></label>';
+  if(can('s')) html += '<button class="btn bpri bsm" onclick="openSpareForm(null)">+ Parça Ekle</button>';
+  html += '</div></div>';
+
+  // İstatistikler
+  html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">'+statsH+'</div>';
+
+  // Arama + Kategori
+  html += '<div class="card" style="padding:12px;margin-bottom:14px">';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">';
+  html += '<input class="inp isml" id="sp-q" placeholder="Parça adı, kodu veya konum ara..." style="flex:1;min-width:200px" value="'+esc(SP_Q_VAL)+'" oninput="SP_Q=this.value;renderPage()"/>';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap">'+catH+'</div>';
+  html += '</div></div>';
+
+  // Kritik uyarı banner
+  if(kritikStok>0||sifirStok>0){
+    html += '<div class="alert" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);margin-bottom:16px">'
+      +'<span style="font-size:20px">⚠</span>'
+      +'<div>'+(sifirStok>0?'<strong style="color:var(--rdl)">'+sifirStok+' parça tükenmiş!</strong> ':'')
+      +(kritikStok>0?'<strong style="color:var(--orl)">'+kritikStok+' parça kritik stok seviyesinde.</strong>':'')
+      +' Sipariş verilmesi önerilir.</div></div>';
+  }
+
+  // Kart grid
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">'+cardsH+'</div>';
+
+  return html;
 }
 
 // ── Parça Formu ───────────────────────────────────────────────
@@ -3032,7 +3059,7 @@ function downloadSpareTemplate(){
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instrData), 'Talimatlar');
 
   // Parçalar sayfası
-  var headers = ['Parça Adı *','Stok Kodu *','Kategori','Birim','Mevcut Stok *','Minimum Stok','Raf / Konum'];
+  var headers = ['Parça Adı *','Stok Kodu *','Kategori','Birim','Mevcut Stok Adedi *','Minimum Stok Adedi','Raf / Konum'];
   var exampleRows = [
     ['HEPA Filtre H14 592x592x75','FLT-001','HVAC Filtresi','Adet','4','2','Depo A-Raf1'],
     ['Rulman 6205-2RS','MKN-001','Mekanik','Adet','10','3','Depo B-Raf2'],
@@ -3073,15 +3100,21 @@ function uploadSpareExcel(inp){
       var headers = rows[0].map(function(h){return String(h).trim().toLowerCase();});
       // Kolon indexleri bul
       function findCol(keywords){
+        // Tam eşleşmeyi önce dene
+        var exact = headers.findIndex(function(h){
+          return keywords.some(function(k){return h===k;});
+        });
+        if(exact>=0) return exact;
+        // Sonra kısmi eşleşme
         return headers.findIndex(function(h){
           return keywords.some(function(k){return h.indexOf(k)>=0;});
         });
       }
       var idxName  = findCol(['parça adı','parca adi','ad','name']);
-      var idxCode  = findCol(['stok kodu','kod','code']);
+      var idxCode  = findCol(['stok kodu','parca kodu','part code','code','kod']);
       var idxCat   = findCol(['kategori','category','cat']);
       var idxUnit  = findCol(['birim','unit']);
-      var idxStock = findCol(['mevcut stok','stok miktarı','stok','stock','miktar']);
+      var idxStock = findCol(['mevcut stok','stok miktarı','stok adedi','stock qty','miktar','quantity']);
       var idxMin   = findCol(['minimum','min stok','min']);
       var idxLoc   = findCol(['raf','konum','location','loc']);
 
