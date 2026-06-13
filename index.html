@@ -2998,27 +2998,31 @@ function closeSpareMovModal(){
 // ── Yedek Parça QR ───────────────────────────────────────────
 var SPARE_QR_ID = null;
 function openSpareQR(id){
-  SPARE_QR_ID = id;
-  var p = (DB.spareParts||[]).find(function(x){return x.id===id;});
+  var p=(DB.spareParts||[]).find(function(x){return x.id===id;});
   if(!p) return;
-  // QR modalını aç
-  var w = window.open('','_blank','width=400,height=550');
   var url = BASE_URL+'?sp='+id;
+  var w = window.open('','_blank');
   w.document.write('<!DOCTYPE html><html><head>'
+    +'<meta name="viewport" content="width=device-width,initial-scale=1"/>'
     +'<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"><\/script>'
-    +'<style>body{font-family:sans-serif;text-align:center;padding:24px;background:#f8fafc}'
-    +'@media print{button{display:none}}<\/style>'
+    +'<style>'
+    +'*{box-sizing:border-box;margin:0;padding:0}'
+    +'body{font-family:sans-serif;background:#f8fafc;padding:20px;text-align:center}'
+    +'@media print{.noprint{display:none}}'
+    +'<\/style>'
     +'</head><body>'
-    +'<div style="background:#1e2761;color:#fff;padding:12px;border-radius:10px;margin-bottom:16px">'
-    +'<div style="font-size:14px;font-weight:800">🔩 Yedek Parça QR</div>'
-    +'<div style="font-size:11px;opacity:.7">PharmaMS</div>'
+    +'<div style="background:#1e2761;color:#fff;padding:14px;border-radius:12px;margin-bottom:18px">'
+    +'<div style="font-size:11px;opacity:.6;letter-spacing:1px;text-transform:uppercase">Nobel İlaç · Yedek Parça</div>'
+    +'<div style="font-size:16px;font-weight:800;margin-top:4px">🔩 '+p.name+'</div>'
+    +'<div style="font-size:12px;opacity:.7;margin-top:3px">'+p.code+' · '+p.location+'</div>'
     +'</div>'
-    +'<div id="qr" style="display:inline-block;padding:10px;background:#fff;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.1)"></div>'
-    +'<div style="font-size:16px;font-weight:800;margin-top:12px">'+p.name+'</div>'
-    +'<div style="font-size:12px;color:#64748b;margin-top:4px">'+p.code+' · '+p.location+'</div>'
-    +'<div style="font-size:11px;color:#94a3b8;margin-top:4px">'+url+'</div>'
-    +'<br><button onclick="window.print()" style="padding:8px 20px;background:#1e2761;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨 Yazdır</button>'
-    +'<script>new QRCode(document.getElementById("qr"),{text:"'+url+'",width:220,height:220,correctLevel:1});<\/script>'
+    +'<div id="qr" style="display:inline-block;padding:14px;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12)"></div>'
+    +'<div style="margin-top:14px;font-size:11px;color:#94a3b8">QR okutunca stok giriş/çıkış yapılır</div>'
+    +'<div style="margin-top:6px;font-size:10px;color:#cbd5e1">'+url+'</div>'
+    +'<div style="margin-top:18px" class="noprint">'
+    +'<button onclick="window.print()" style="padding:10px 24px;background:#1e2761;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600">🖨 Yazdır / Kaydet</button>'
+    +'</div>'
+    +'<script>new QRCode(document.getElementById("qr"),{text:"'+url+'",width:240,height:240,correctLevel:1,colorDark:"#000",colorLight:"#fff"});<\/script>'
     +'</body></html>');
   w.document.close();
 }
@@ -3026,13 +3030,166 @@ function openSpareQR(id){
 // QR ile gelen ?sp= parametresini işle
 function handleSpareQR(spId){
   var p=(DB.spareParts||[]).find(function(x){return x.id===spId;});
-  if(!p){toast('Parça bulunamadı: '+spId,'err');return;}
-  PAGE='spareparts';
-  renderPage();
-  // Giriş/Çıkış seçimi sor
-  setTimeout(function(){
-    openSpareMovModal(spId, 'cikis');
-  },300);
+  if(!p){
+    // Giriş yapılmamışsa login sonrası tekrar dene
+    if(!U){window._pendingSP=spId;R();return;}
+    toast('Parça bulunamadı: '+spId,'err');return;
+  }
+  // QR landing sayfasını göster
+  showSpareQRLanding(spId);
+}
+
+function showSpareQRLanding(spId){
+  var p=(DB.spareParts||[]).find(function(x){return x.id===spId;});
+  if(!p){toast('Parça bulunamadı','err');return;}
+
+  var isKritik = p.stock>0&&p.stock<=p.minStock;
+  var isSifir  = p.stock<=0;
+  var stockCol = isSifir?'var(--rdl)':isKritik?'var(--orl)':'var(--gnl)';
+  var pct = p.minStock>0?Math.min(100,Math.round(p.stock/p.minStock*100)):100;
+
+  // Son hareketler
+  var movs = (DB.spareMovements||[]).filter(function(m){return m.partId===spId;}).slice(0,5);
+  var movsH = movs.length===0
+    ? '<div style="color:var(--mt);font-size:12px;padding:8px 0">Hareket kaydı yok</div>'
+    : movs.map(function(m){
+        var isG = m.type==='giris';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)">'
+          +'<div><div style="font-size:12px;font-weight:600;color:'+(isG?'var(--gnl)':'var(--orl)')+'">'
+          +(isG?'⬆ Giriş':'⬇ Çıkış')+' · '+m.qty+' '+esc(p.unit||'Adet')+'</div>'
+          +'<div style="font-size:11px;color:var(--mt)">'+esc(m.reason||'')+'</div>'
+          +'</div>'
+          +'<div style="text-align:right;flex-shrink:0">'
+          +'<div style="font-size:10px;color:var(--mt)">'+esc(m.user||'')+'</div>'
+          +'<div style="font-size:10px;color:var(--mt)">'+esc(m.ts||'')+'</div>'
+          +'</div></div>';
+      }).join('');
+
+  var app = document.getElementById('app');
+  app.innerHTML = '<div id="qr-landing">'
+    // Top bar
+    +'<div class="qr-top">'
+    +'<button onclick="R()" style="background:none;border:none;color:var(--mt);font-size:22px;cursor:pointer;padding:0 6px 0 0">←</button>'
+    +'<div style="flex:1">'
+    +'<div style="font-size:14px;font-weight:800">'+esc(p.name)+'</div>'
+    +'<div style="font-size:10px;color:var(--mt)">'+esc(p.code||p.id)+' · '+esc(p.cat||'')+'</div>'
+    +'</div>'
+    +'</div>'
+    // Body
+    +'<div class="qr-body">'
+    // Stok kartı
+    +'<div style="background:var(--bg2);border:1px solid '+(isSifir?'rgba(239,68,68,.4)':isKritik?'rgba(245,158,11,.4)':'var(--bdl)')+';border-radius:12px;padding:18px;margin-bottom:14px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+    +'<div>'
+    +'<div style="font-size:11px;color:var(--mt);text-transform:uppercase;letter-spacing:.8px">Mevcut Stok</div>'
+    +'<div style="font-size:42px;font-weight:900;color:'+stockCol+';line-height:1.1">'+p.stock+'</div>'
+    +'<div style="font-size:13px;color:var(--mt)">'+esc(p.unit||'Adet')+'</div>'
+    +'</div>'
+    +'<div style="text-align:right">'
+    +'<div style="font-size:11px;color:var(--mt)">📍 '+esc(p.location||'—')+'</div>'
+    +'<div style="font-size:11px;color:var(--mt);margin-top:4px">Min: '+p.minStock+' '+esc(p.unit||'Adet')+'</div>'
+    +'</div>'
+    +'</div>'
+    // Stok bar
+    +'<div class="pbar" style="height:8px"><div class="pfil" style="width:'+pct+'%;background:'+stockCol+'"></div></div>'
+    +(isSifir?'<div style="color:var(--rdl);font-weight:700;font-size:12px;margin-top:8px">⚠ STOK TÜKENDİ</div>'
+      :isKritik?'<div style="color:var(--orl);font-weight:700;font-size:12px;margin-top:8px">⚠ KRİTİK STOK</div>':'')
+    +'</div>'
+    // Giriş / Çıkış butonları — büyük, mobil dostu
+    +(can('w')?
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px">'
+      +'<button onclick="showSpareMovForm(\''+spId+'\',\'giris\')" style="background:linear-gradient(135deg,#047857,var(--gnl));color:#fff;border:none;border-radius:12px;padding:20px;font-size:16px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:28px">⬆</span>STOK GİRİŞİ</button>'
+      +'<button onclick="showSpareMovForm(\''+spId+'\',\'cikis\')" style="background:linear-gradient(135deg,#92400e,var(--orl));color:#fff;border:none;border-radius:12px;padding:20px;font-size:16px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:28px">⬇</span>STOK ÇIKIŞI</button>'
+      +'</div>'
+      :'<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:14px;margin-bottom:18px;font-size:13px;color:var(--rdl);text-align:center">Bu hesabın stok hareketi oluşturma yetkisi yok.</div>')
+    // Son hareketler
+    +'<div style="background:var(--bg2);border:1px solid var(--bdl);border-radius:12px;padding:14px">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Son Hareketler</div>'
+    +movsH
+    +'</div>'
+    +'</div>'
+    // Alt nav
+    +'<nav id="mob-nav">'
+    +'<button onclick="R()"><span class="mi">←</span>Ana Sayfa</button>'
+    +'<button onclick="PAGE=\'spareparts\';R()"><span class="mi">🔩</span>Tüm Parçalar</button>'
+    +(can('w')?'<button onclick="showSpareMovForm(\''+spId+'\',\'giris\')"><span class="mi">⬆</span>Giriş</button>':'')
+    +(can('w')?'<button onclick="showSpareMovForm(\''+spId+'\',\'cikis\')"><span class="mi">⬇</span>Çıkış</button>':'')
+    +'</nav>'
+    +'</div>';
+}
+
+function showSpareMovForm(spId, type){
+  var p=(DB.spareParts||[]).find(function(x){return x.id===spId;});
+  if(!p){toast('Parça bulunamadı','err');return;}
+  if(!can('w')){toast('Bu işlem için yetkiniz yok','err');return;}
+
+  var isGiris = type==='giris';
+  var wos = DB.workOrders.filter(function(w){return w.status!=='kapali';});
+  var woOpts = '<option value="">— Bağlı iş emri yok —</option>'
+    +wos.map(function(w){return'<option value="'+w.id+'">'+esc(w.id+' — '+w.title.slice(0,25))+'</option>';}).join('');
+
+  var app = document.getElementById('app');
+  app.innerHTML = '<div id="qr-landing">'
+    +'<div class="qr-top">'
+    +'<button onclick="showSpareQRLanding(\''+spId+'\')" style="background:none;border:none;color:var(--mt);font-size:22px;cursor:pointer;padding:0 6px 0 0">←</button>'
+    +'<div style="flex:1">'
+    +'<div style="font-size:14px;font-weight:800">'+(isGiris?'⬆ Stok Girişi':'⬇ Stok Çıkışı')+'</div>'
+    +'<div style="font-size:10px;color:var(--mt)">'+esc(p.name)+'</div>'
+    +'</div>'
+    +'</div>'
+    +'<div class="qr-body">'
+    // Parça bilgisi
+    +'<div style="background:var(--bg3);border-radius:10px;padding:12px 14px;margin-bottom:16px;border:1px solid var(--bd)">'
+    +'<div style="font-size:14px;font-weight:800">'+esc(p.name)+'</div>'
+    +'<div style="font-size:12px;color:var(--mt);margin-top:3px">Mevcut stok: <strong style="color:var(--tx);font-size:16px">'+p.stock+'</strong> '+esc(p.unit||'Adet')+'</div>'
+    +'</div>'
+    // Form
+    +'<div style="background:var(--bg2);border:1px solid var(--bdl);border-radius:12px;padding:16px">'
+    +'<div class="fr"><label class="lbl">'+(isGiris?'Giriş Miktarı *':'Çıkış Miktarı *')+'</label>'
+    +'<input class="inp" type="number" min="1" id="qspm-qty" placeholder="0" style="font-size:24px;font-weight:700;text-align:center;height:56px"/></div>'
+    +'<div class="fr"><label class="lbl">Açıklama / Neden *</label>'
+    +'<input class="inp" id="qspm-reason" placeholder="'+(isGiris?'Satın alma, iade, sayım...':'Kullanım, fire, WO-001...')+'"/></div>'
+    +(!isGiris?'<div class="fr"><label class="lbl">Bağlı İş Emri</label><select class="inp" id="qspm-wo">'+woOpts+'</select></div>':'')
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">'
+    +'<button onclick="showSpareQRLanding(\''+spId+'\')" class="btn bghs" style="justify-content:center;padding:14px">İptal</button>'
+    +'<button onclick="submitSpareMovQR(\''+spId+'\',\''+type+'\')" class="btn '+(isGiris?'bsuc':'bwrn')+'" style="justify-content:center;padding:14px;font-size:15px">'
+    +(isGiris?'✓ Girişi Kaydet':'✓ Çıkışı Kaydet')+'</button>'
+    +'</div>'
+    +'</div>'
+    +'</div></div>';
+}
+
+function submitSpareMovQR(spId, type){
+  var p=(DB.spareParts||[]).find(function(x){return x.id===spId;});
+  if(!p){toast('Parça bulunamadı','err');return;}
+  var qtyEl    = document.getElementById('qspm-qty');
+  var reasonEl = document.getElementById('qspm-reason');
+  var woEl     = document.getElementById('qspm-wo');
+  var qty    = parseInt(qtyEl?qtyEl.value:0)||0;
+  var reason = reasonEl?reasonEl.value.trim():'';
+  var woId   = woEl?woEl.value:'';
+  var isGiris = type==='giris';
+  if(qty<=0){toast('Miktar 0\'dan büyük olmalı','err');return;}
+  if(!reason){toast('Açıklama zorunludur','err');return;}
+  if(!isGiris&&p.stock<qty){toast('Yetersiz stok! Mevcut: '+p.stock+' '+p.unit,'err');return;}
+  var oldStock = p.stock;
+  var newStock = isGiris?p.stock+qty:p.stock-qty;
+  DB.spareParts=DB.spareParts.map(function(x){
+    return x.id===spId?Object.assign({},x,{stock:newStock}):x;
+  });
+  if(!DB.spareMovements)DB.spareMovements=[];
+  DB.spareMovements.unshift({
+    id:'MOV-'+uid(), partId:spId,
+    type:type, qty:qty, reason:reason,
+    woId:woId, user:U?U.name:'—', ts:nowStr(),
+  });
+  addLog('Stok Hareketi ('+(isGiris?'Giriş':'Çıkış')+')',
+    p.name+' — '+qty+' '+p.unit+(woId?' ['+woId+']':''),
+    oldStock+' '+p.unit, newStock+' '+p.unit);
+  dbSave();
+  toast((isGiris?'✓ Giriş':'✓ Çıkış')+' kaydedildi: '+qty+' '+p.unit+' → Yeni stok: '+newStock);
+  // Başarı sonrası landing'e dön
+  setTimeout(function(){showSpareQRLanding(spId);},300);
 }
 
 
