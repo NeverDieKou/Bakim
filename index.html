@@ -148,6 +148,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 <script>
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -196,7 +197,7 @@ function fbInit() {
       }
       // Gelen veriyi uygula
       var needRender = false;
-      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','spareCats'];
+      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats'];
       keys.forEach(function(k) {
         if(data[k] !== undefined) {
           // Array olarak gelenleri düzelt
@@ -272,6 +273,7 @@ function fbSaveNow() {
     logs:         (DB.logs||[]).slice(-500), // Son 500 log sakla
     spareParts:   DB.spareParts   || [],
     spareMovements: DB.spareMovements || [],
+    eqPartHistory: DB.eqPartHistory || {},
     spareCats:    DB.spareCats    || [],
     lastUpdated:  new Date().toISOString(),
     updatedBy:    U ? U.name : 'system'
@@ -417,6 +419,7 @@ function dbLoad(){
     if(!d.logs)d.logs=[];
     if(!d.spareParts)d.spareParts=[];
     if(!d.spareMovements)d.spareMovements=[];
+    if(!d.eqPartHistory)d.eqPartHistory={};
     if(!d.spareCats)d.spareCats=['Mekanik','Elektrik','Enstrümantasyon','HVAC Filtresi','Kimyasal','Yağlama','Conta/Sızdırmazlık','Elektronik','Genel'];
     return d;
   }catch(e){return null;}
@@ -800,7 +803,16 @@ function tplWODet(){
   }else if(t==='comments'){
     var cmts=w.comments||[];
     content=(can('w')?'<div style="margin-bottom:14px"><textarea class="inp isml" id="cmt-inp" rows="2" placeholder="Yorum, not veya güncelleme ekle..."></textarea><div style="display:flex;justify-content:flex-end;margin-top:6px"><button class="btn bpri bxs" onclick="addComment(\''+w.id+'\')">Yorum Ekle</button></div></div>':'')+
-    (cmts.length===0?emptyHTML('Henüz yorum yok'):[].concat(cmts).reverse().map(function(c){return'<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:12px 14px;margin-bottom:9px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:12px;font-weight:700;color:var(--bll)">'+esc(c.user)+'</span><span style="font-size:11px;color:var(--mt)">'+esc(c.date)+'</span></div><div style="font-size:13px;line-height:1.5;color:var(--sub)">'+esc(c.text)+'</div></div>';}).join(''));
+    (cmts.length===0?emptyHTML('Henüz yorum yok'):[].concat(cmts).reverse().map(function(cmt){
+      var isSP=cmt.type==='spare_part';
+      return '<div style="background:'+(isSP?'rgba(245,158,11,.08)':'var(--bg3)')+';border:1px solid '+(isSP?'rgba(245,158,11,.3)':'var(--bd)')+';border-radius:9px;padding:12px 14px;margin-bottom:9px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+        +'<span style="font-size:12px;font-weight:700;color:'+(isSP?'var(--orl)':'var(--bll)')+'">'+esc(cmt.user)+(isSP?' 🔩':'')+'</span>'
+        +'<span style="font-size:11px;color:var(--mt)">'+esc(cmt.date)+'</span>'
+        +'</div>'
+        +'<div style="font-size:13px;line-height:1.5;color:var(--sub)">'+esc(cmt.text)+'</div>'
+        +'</div>';
+    }).join(''));
   }
   var actBtns=''
     +(can('w')?'<button class="btn bout bxs" style="margin-right:6px" onclick="closeM(\'woDet\');openWOModal(\''+w.id+'\',null)">Düzenle</button>':'')
@@ -817,7 +829,8 @@ function tplEqDet(){
   var d=eq.nextMaint?daysLeft(eq.nextMaint):null;
   var dc=d===null?'var(--mt)':d<0?'var(--rdl)':d<=7?'var(--orl)':'var(--gnl)';
   var t=TAB.eq||'tl';
-  var tabH=[['tl','📋 İş Emri Geçmişi'],['info','⚙ Teknik Bilgiler'],['docs','📎 Dokümanlar ('+docs.length+')']].map(function(tb){return'<button class="tabb'+(t===tb[0]?' on':'')+'" onclick="TAB.eq=\''+tb[0]+'\';renderModals()">'+tb[1]+'</button>';}).join('');
+  var partHist=(DB.eqPartHistory&&DB.eqPartHistory[eq.id])||[];
+  var tabH=[['tl','📋 İş Emri Geçmişi'],['info','⚙ Teknik Bilgiler'],['docs','📎 Dokümanlar ('+docs.length+')'],['parts','🔩 Parça Geçmişi ('+partHist.length+')']].map(function(tb){return'<button class="tabb'+(t===tb[0]?' on':'')+'" onclick="TAB.eq=\''+tb[0]+'\';renderModals()">'+tb[1]+'</button>';}).join('');
   var hdr='<div style="background:var(--bg3);border-radius:10px;padding:14px 18px;margin-bottom:18px;border:1px solid var(--bd)"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px"><div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">'+eqLed(eq.status)+' '+critBadge(eq.crit)+(eq.val?'<span class="badge bxsm" style="color:var(--gnl);border-color:var(--gnl);background:rgba(16,185,129,.1)">✓ Val. '+esc(eq.valDoc||'')+'</span>':'')+'</div><div style="font-size:12px;color:var(--mt)">📍 '+esc(eq.area)+' · '+esc(eq.mfr||'—')+(eq.model?' · '+esc(eq.model):'')+'</div><div style="font-size:11px;color:var(--mt);margin-top:3px">S/N: '+esc(eq.sn||'—')+' · Kurulum: '+esc(eq.instDate||'—')+'</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:10px;color:var(--mt);margin-bottom:3px">SONRAKİ BAKIM</div><div style="font-size:22px;font-weight:900;color:'+dc+'">'+(d===null?'—':d<0?Math.abs(d)+' gün GEÇ':d===0?'BUGÜN':d+' gün')+(eq.nextMaint?'<div style="font-size:11px;color:var(--mt);font-weight:400">'+esc(eq.nextMaint)+'</div>':'')+'</div></div></div>'+(eq.notes?'<div style="margin-top:10px;font-size:12px;color:var(--sub);padding-top:10px;border-top:1px solid var(--bd)">📝 '+esc(eq.notes)+'</div>':'')+'</div>';
   var content='';
   if(t==='tl'){
@@ -829,6 +842,24 @@ function tplEqDet(){
   }else if(t==='docs'){
     content=(can('w')?'<div style="display:flex;gap:8px;margin-bottom:16px;align-items:flex-end"><div style="flex:2"><label class="lbl">Doküman Adı</label><input class="inp isml" id="eqd-name" placeholder="örn: SOP-001-v2.pdf"/></div><div style="flex:3"><label class="lbl">Not / Açıklama</label><input class="inp isml" id="eqd-note" placeholder="İsteğe bağlı..."/></div><button class="btn bpri bsm" onclick="addEqDoc(\''+eq.id+'\')">+ Ekle</button></div>':'')+
     (docs.length===0?emptyHTML('Doküman eklenmemiş — SOP, validasyon raporu, kalibrasyon sertifikası ekleyebilirsiniz.'):docs.map(function(d,i){return'<div class="irow" style="margin-bottom:9px;border:1px solid var(--bd)"><span style="font-size:22px">📄</span><div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--bll)">'+esc(d.name)+'</div>'+(d.note?'<div style="font-size:11px;color:var(--sub);margin-top:2px">'+esc(d.note)+'</div>':'')+'<div style="font-size:10px;color:var(--mt);margin-top:3px">📅 '+esc(d.date)+' · 👤 '+esc(d.by||'—')+'</div></div>'+(can('w')?'<button onclick="removeEqDoc(\''+eq.id+'\','+i+')" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:18px;padding:4px">🗑</button>':'')+'</div>';}).join(''));
+  }else if(t==='parts'){
+    content=partHist.length===0
+      ?emptyHTML('Bu ekipman için henüz parça değişim kaydı yok')
+      :'<div style="overflow-x:auto"><table class="tbl">'
+        +'<thead><tr><th>Tarih</th><th>Parça Adı</th><th>Kod</th><th>Miktar</th><th>Neden</th><th>İş Emri</th><th>Değiştiren</th></tr></thead>'
+        +'<tbody>'
+        +partHist.map(function(ph){
+          return '<tr>'
+            +'<td style="font-size:11px;white-space:nowrap;color:var(--mt)">'+esc(ph.ts)+'</td>'
+            +'<td style="font-weight:600">'+esc(ph.partName)+'</td>'
+            +'<td style="font-family:monospace;font-size:11px;color:var(--bll)">'+esc(ph.partCode||'—')+'</td>'
+            +'<td style="text-align:center;font-weight:700;color:var(--orl)">'+ph.qty+' '+esc(ph.unit)+'</td>'
+            +'<td style="font-size:12px;color:var(--sub)">'+esc(ph.reason||'—')+'</td>'
+            +'<td style="font-family:monospace;font-size:11px;color:var(--bll)">'+esc(ph.woId||'—')+'</td>'
+            +'<td style="font-size:11px;color:var(--mt)">'+esc(ph.user||'—')+'</td>'
+            +'</tr>';
+        }).join('')
+        +'</tbody></table></div>';
   }
   var actBtns='<button class="btn bout bxs" style="margin-right:6px" onclick="closeM(\'eqDet\');openQRSingle(\''+eq.id+'\')">📱 QR</button>'
     +(can('w')?'<button class="btn bout bxs" style="margin-right:6px" onclick="closeM(\'eqDet\');openEqForm(\''+eq.id+'\')">✏ Düzenle</button>':'')
@@ -2966,6 +2997,8 @@ function tplSpareMovForm(){
   var wos = DB.workOrders.filter(function(w){return w.status!=='kapali';});
   var woOpts = '<option value="">— Bağlı iş emri yok —</option>'
     + wos.map(function(w){return'<option value="'+w.id+'">'+esc(w.id+' — '+w.title.slice(0,30))+'</option>';}).join('');
+  var eqOpts2 = '<option value="">— Ekipman seçin —</option>'
+    + DB.equipment.map(function(e){return'<option value="'+e.id+'">'+esc(e.id+' — '+e.name)+'</option>';}).join('');
   return '<div class="ov" id="ov-spare-mov"><div class="md" style="max-width:480px">'
     +'<div class="mdh">'
     +'<div class="mdt">'+(isGiris?'⬆ Stok Girişi':'⬇ Stok Çıkışı')+'</div>'
@@ -2984,7 +3017,7 @@ function tplSpareMovForm(){
     +'</div>'
     +'<div class="fr"><label class="lbl">Neden / Açıklama *</label>'
     +'<input class="inp" id="spm-reason" placeholder="'+(isGiris?'örn: Satın alma, iade...':'örn: EQ-001 bakımı, WO-005...')+'"/></div>'
-    +(!isGiris?'<div class="fr"><label class="lbl">Bağlı İş Emri (isteğe bağlı)</label><select class="inp" id="spm-wo">'+woOpts+'</select></div>':'')
+    +(!isGiris?'<div class="fr"><label class="lbl">⚙ Kullanılan Ekipman</label><select class="inp" id="spm-eq">'+eqOpts2+'</select></div><div class="fr"><label class="lbl">📋 Bağlı İş Emri</label><select class="inp" id="spm-wo">'+woOpts+'</select></div>':'')
     +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)">'
     +'<button class="btn bghs" onclick="closeSpareMovModal()">İptal</button>'
     +'<button class="btn '+(isGiris?'bsuc':'bout')+'" onclick="saveSpareMovement()">Kaydet</button>'
@@ -2995,40 +3028,50 @@ function saveSpareMovement(){
   var m = ET_SP_MOV||{};
   var p = (DB.spareParts||[]).find(function(x){return x.id===m.partId;});
   if(!p){toast('Parça bulunamadı','err');return;}
-  var qty = parseInt((document.getElementById('spm-qty')||{value:0}).value)||0;
+  var qty    = parseInt((document.getElementById('spm-qty')||{value:0}).value)||0;
   var reason = (document.getElementById('spm-reason')||{value:''}).value.trim();
-  var woId = (document.getElementById('spm-wo')||{value:''}).value||'';
+  var woId   = (document.getElementById('spm-wo')||{value:''}).value||'';
+  var eqId   = (document.getElementById('spm-eq')||{value:''}).value||'';
   if(qty<=0){toast('Miktar 0\'dan büyük olmalı','err');return;}
   if(!reason){toast('Açıklama zorunludur','err');return;}
   var isGiris = m.type==='giris';
-  if(!isGiris && p.stock < qty){toast('Yetersiz stok! Mevcut: '+p.stock+' '+p.unit,'err');return;}
-  var oldStock = p.stock;
-  var newStock = isGiris ? p.stock+qty : p.stock-qty;
+  if(!isGiris&&p.stock<qty){toast('Yetersiz stok! Mevcut: '+p.stock+' '+p.unit,'err');return;}
+  var oldStock=p.stock;
+  var newStock=isGiris?p.stock+qty:p.stock-qty;
+  var ts=nowStr();
   // Stok güncelle
-  DB.spareParts = DB.spareParts.map(function(x){
-    return x.id===p.id ? Object.assign({},x,{stock:newStock}) : x;
+  DB.spareParts=DB.spareParts.map(function(x){
+    return x.id===p.id?Object.assign({},x,{stock:newStock}):x;
   });
   // Hareket kaydı
-  var mov = {
-    id:     'MOV-'+uid(),
-    partId: p.id,
-    type:   m.type,
-    qty:    qty,
-    reason: reason,
-    woId:   woId,
-    user:   U?U.name:'—',
-    ts:     nowStr(),
-  };
+  var mov={id:'MOV-'+uid(),partId:p.id,type:m.type,qty:qty,reason:reason,woId:woId,eqId:eqId,user:U?U.name:'—',ts:ts};
+  if(eqId&&!isGiris){if(!DB.eqPartHistory)DB.eqPartHistory={};if(!DB.eqPartHistory[eqId])DB.eqPartHistory[eqId]=[];DB.eqPartHistory[eqId].unshift({id:'EPH-'+uid(),partId:p.id,partName:p.name,partCode:p.code||'',qty:qty,unit:p.unit||'Adet',reason:reason,woId:woId,user:U?U.name:'—',ts:ts});}
   if(!DB.spareMovements)DB.spareMovements=[];
   DB.spareMovements.unshift(mov);
-  addLog(
-    'Stok Hareketi ('+(isGiris?'Giriş':'Çıkış')+')',
+  // İş emrine yorum olarak ekle (woId seçilmişse)
+  if(woId){
+    var wo=DB.workOrders.find(function(w){return w.id===woId;});
+    if(wo){
+      if(!wo.comments)wo.comments=[];
+      var cmtText='🔩 Yedek Parça '+(isGiris?'Girişi':'Çıkışı')+': '
+        +p.name+' ('+esc(p.code||p.id)+') — '
+        +qty+' '+p.unit
+        +' | Neden: '+reason
+        +' | Stok: '+oldStock+'→'+newStock+' '+p.unit;
+      wo.comments.push({user:U?U.name:'—',text:cmtText,date:ts,type:'spare_part'});
+      // İş emrinin parça maliyetini de güncelle (çıkışta)
+      if(!isGiris){
+        wo.pc=(parseFloat(wo.pc)||0);
+        // Birim fiyat yoksa sadece kayıt tut
+      }
+      DB.workOrders=DB.workOrders.map(function(w){return w.id===woId?wo:w;});
+    }
+  }
+  addLog('Stok Hareketi ('+(isGiris?'Giriş':'Çıkış')+')',
     p.name+' — '+qty+' '+p.unit+(woId?' ['+woId+']':''),
-    oldStock+' '+p.unit,
-    newStock+' '+p.unit
-  );
+    oldStock+' '+p.unit,newStock+' '+p.unit);
   dbSave();
-  toast((isGiris?'Giriş':'Çıkış')+' kaydedildi: '+qty+' '+p.unit);
+  toast((isGiris?'✓ Giriş':'✓ Çıkış')+' kaydedildi: '+qty+' '+p.unit+(woId?' → '+woId+' iş emrine eklendi':''));
   closeSpareMovModal();
   renderPage();
 }
@@ -3233,16 +3276,31 @@ function submitSpareMovQR(spId, type){
     return x.id===spId?Object.assign({},x,{stock:newStock}):x;
   });
   if(!DB.spareMovements)DB.spareMovements=[];
+  var ts2=nowStr();
   DB.spareMovements.unshift({
     id:'MOV-'+uid(), partId:spId,
     type:type, qty:qty, reason:reason,
-    woId:woId, user:U?U.name:'—', ts:nowStr(),
+    woId:woId, user:U?U.name:'—', ts:ts2,
   });
+  // İş emrine yorum ekle
+  if(woId){
+    var wo2=DB.workOrders.find(function(w){return w.id===woId;});
+    if(wo2){
+      if(!wo2.comments)wo2.comments=[];
+      var cmtText2='🔩 Yedek Parça '+(isGiris?'Girişi':'Çıkışı')+': '
+        +p.name+' ('+esc(p.code||p.id)+') — '
+        +qty+' '+p.unit
+        +' | Neden: '+reason
+        +' | Stok: '+oldStock+'→'+newStock+' '+p.unit;
+      wo2.comments.push({user:U?U.name:'—',text:cmtText2,date:ts2,type:'spare_part'});
+      DB.workOrders=DB.workOrders.map(function(w){return w.id===woId?wo2:w;});
+    }
+  }
   addLog('Stok Hareketi ('+(isGiris?'Giriş':'Çıkış')+')',
     p.name+' — '+qty+' '+p.unit+(woId?' ['+woId+']':''),
     oldStock+' '+p.unit, newStock+' '+p.unit);
   dbSave();
-  toast((isGiris?'✓ Giriş':'✓ Çıkış')+' kaydedildi: '+qty+' '+p.unit+' → Yeni stok: '+newStock);
+  toast((isGiris?'✓ Giriş':'✓ Çıkış')+' kaydedildi: '+qty+' '+p.unit+(woId?' → '+woId+' iş emrine eklendi':'')+' | Yeni stok: '+newStock);
   // Başarı sonrası landing'e dön
   setTimeout(function(){showSpareQRLanding(spId);},300);
 }
@@ -3751,6 +3809,7 @@ fbInit();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
