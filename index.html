@@ -196,7 +196,7 @@ function fbInit() {
       }
       // Gelen veriyi uygula
       var needRender = false;
-      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps'];
+      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','spareCats'];
       keys.forEach(function(k) {
         if(data[k] !== undefined) {
           // Array olarak gelenleri düzelt
@@ -248,6 +248,10 @@ function fbSaveNow() {
     schedule:     DB.schedule     || [],
     kvalData:     DB.kvalData     || {},
     kvalSteps:    DB.kvalSteps    || {},
+    logs:         (DB.logs||[]).slice(-500), // Son 500 log sakla
+    spareParts:   DB.spareParts   || [],
+    spareMovements: DB.spareMovements || [],
+    spareCats:    DB.spareCats    || [],
     lastUpdated:  new Date().toISOString(),
     updatedBy:    U ? U.name : 'system'
   };
@@ -290,8 +294,17 @@ var EQST={aktif:{lbl:'Aktif',col:'#10b981'},arizali:{lbl:'Arızalı',col:'#ef444
 var CRITS={kritik:{lbl:'Kritik',col:'#ef4444'},yuksek:{lbl:'Yüksek',col:'#f97316'},orta:{lbl:'Orta',col:'#f59e0b'},dusuk:{lbl:'Düşük',col:'#4f8ef7'}};
 var WTYPES={ariza:{lbl:'Arıza',ico:'⚠'},onleyici:{lbl:'Önleyici Bakım',ico:'🔧'},duzeltici:{lbl:'Düzeltici Bakım',ico:'🛠'},kalibrasyon:{lbl:'Kalibrasyon',ico:'📐'},validasyon:{lbl:'Validasyon',ico:'✅'},temizlik:{lbl:'Temizlik/Sanitasyon',ico:'🧹'}};
 
-function today(){return new Date().toISOString().slice(0,10);}
-function nowStr(){return new Date().toISOString().slice(0,16).replace('T',' ');}
+function today(){
+  var d=new Date();
+  var pad=function(n){return n<10?'0'+n:String(n);};
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+function nowStr(){
+  var d=new Date();
+  var pad=function(n){return n<10?'0'+n:String(n);};
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())
+    +' '+pad(d.getHours())+':'+pad(d.getMinutes());
+}
 function daysLeft(s){if(!s)return null;return Math.ceil((new Date(s)-new Date())/86400000);}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -353,7 +366,11 @@ var SEED={
     {id:'WO-005',eqId:'EQ-004',type:'onleyici',title:'Dolum İğnesi Sterilizasyonu',desc:'Otoklav F0>=8 tamamlandı. BI negatif. Batch dosyasına eklendi.',sev:'bilgi',status:'kapali',date:'2026-06-01',due:'2026-06-01',techId:'T04',gmp:true,root:'',steps:[{t:'Otoklav döngüsü',d:true},{t:'F0 doğrulama',d:true},{t:'BI testi',d:true},{t:'Batch dosyası',d:true}],docs:['Otoclav_Protokol_Jun2026.pdf','BI_Test_Sonucu.pdf'],comments:[],by:'U01',approvedBy:'U02',closedAt:'2026-06-01 14:30',lh:2,pc:85},
     {id:'WO-006',eqId:'EQ-007',type:'kalibrasyon',title:'HPLC 6 Aylık Kalibrasyon',desc:'Detektör, pompa, enjektör kalibrasyonu ISO 17025 prosedürüne göre tamamlandı.',sev:'bilgi',status:'bekliyor',date:'2026-06-10',due:'2026-06-10',techId:'T05',gmp:true,root:'',steps:[{t:'Detektör kalibrasyonu',d:true},{t:'Pompa kalibrasyonu',d:true},{t:'Enjektör kalibrasyonu',d:true},{t:'Sertifika oluşturma',d:true}],docs:['HPLC_Kalibrasyon_Sertifika_2026.pdf'],comments:[{user:'Murat Aydın',text:'Tamamlandı, onay için gönderildi.',date:'2026-06-10 15:45'}],by:'U03',approvedBy:'',closedAt:'',lh:5,pc:320},
   ],
-  kvalData:{},  // {testId: {year: [{area, value, unit, result, notes}]}}
+  kvalData:{},
+  logs:[],       // [{id,ts,user,role,action,detail,oldVal,newVal,page}]
+  spareParts:[], // [{id,name,cat,unit,stock,minStock,location,code}]
+  spareCats:['Mekanik','Elektrik','Enstrümantasyon','HVAC Filtresi','Kimyasal','Yağlama','Conta/Sızdırmazlık','Elektronik','Genel'],
+  spareMovements:[], // [{id,partId,type,qty,reason,user,ts,woId}]
   schedule:[
     {id:'MS-001',eqId:'EQ-001',type:'onleyici',title:'Tablet Pres — 6 Aylık PM',interval:'6 ay',next:'2026-11-15',techId:'T01',estH:8,notes:'Zımba, matriks, yağlama, kalibrasyon',tasks:['Tüm zımbaları muayene et','Aşınan zımbaları değiştir','Punch wear log güncelle','Yağlama noktalarını yağla','Kalibrasyon kontrol et','Temizlik yap']},
     {id:'MS-002',eqId:'EQ-004',type:'onleyici',title:'Steril Hat — Aylık Sterilizasyon',interval:'1 ay',next:'2026-07-01',techId:'T04',estH:4,notes:'Otoklav F0>=8, BI testi',tasks:['Otoklav döngüsünü başlat','F0 değerini doğrula (≥8)','BI testini uygula','Sonuçları kaydet']},
@@ -376,6 +393,10 @@ function dbLoad(){
     if(d.users){d.users=d.users.map(function(u){if(!u.pw&&u.password)u.pw=u.password;return u;});}
     if(!d.kvalData)d.kvalData={};
     if(!d.kvalSteps)d.kvalSteps={};
+    if(!d.logs)d.logs=[];
+    if(!d.spareParts)d.spareParts=[];
+    if(!d.spareMovements)d.spareMovements=[];
+    if(!d.spareCats)d.spareCats=['Mekanik','Elektrik','Enstrümantasyon','HVAC Filtresi','Kimyasal','Yağlama','Conta/Sızdırmazlık','Elektronik','Genel'];
     return d;
   }catch(e){return null;}
 }
@@ -396,7 +417,9 @@ function R(){
 }
 function renderPage(){
   var el=document.getElementById('main');if(!el)return;
-  var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,kvalifikasyon:pgKval,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings};
+  // Sayfa geçiş logu
+  if(U&&PAGE)addLog('Sayfa: '+PAGE,'','','');
+  var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,kvalifikasyon:pgKval,spareparts:pgSpareParts,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings,logs:pgLogs};
   el.innerHTML=(map[PAGE]||pgDash)();bindPage();
 }
 function renderModals(){
@@ -410,6 +433,9 @@ function renderModals(){
   if(MODAL.user)r.innerHTML+=tplUserForm();
   if(MODAL.qr)r.innerHTML+=tplQRModal();
   if(MODAL.schedule)r.innerHTML+=tplScheduleForm();
+  if(MODAL_SP)r.innerHTML+=tplSpareForm();
+  if(MODAL_SP_MOV)r.innerHTML+=tplSpareMovForm();
+  if(MODAL_SP_CAT)r.innerHTML+=tplSpareCatMgr();
   bindModals();
   if(MODAL.qr&&QEID)setTimeout(function(){drawQR(QEID);},80);
 }
@@ -425,8 +451,9 @@ function bindLogin(){
     var u=(document.getElementById('l-u')||{value:''}).value.trim();
     var p=(document.getElementById('l-p')||{value:''}).value;
     var f=DB.users.find(function(x){return x.un===u&&(x.pw===p||x.password===p)&&x.active;});
-    if(f){U=f;var h=window.location.hash;R();if(h&&h.startsWith('#qr=')){var eid=h.replace('#qr=','').split(':')[0];window.location.hash='';setTimeout(function(){showQRLanding(eid);},100);}
+    if(f){U=f;setTimeout(function(){addLog('Giriş','Kullanıcı girişi yapıldı','','');},100);var h=window.location.hash;R();if(h&&h.startsWith('#qr=')){var eid=h.replace('#qr=','').split(':')[0];window.location.hash='';setTimeout(function(){showQRLanding(eid);},100);}
       else if(window._pendingQR){var pqr=window._pendingQR;window._pendingQR=null;setTimeout(function(){showQRLanding(pqr);},100);}
+      else if(window._pendingSP){var psp=window._pendingSP;window._pendingSP=null;setTimeout(function(){handleSpareQR(psp);},100);}
     }
     else{var err=document.getElementById('l-err');if(err)err.style.display='block';}
   }
@@ -441,8 +468,9 @@ function tplShell(){
   var urgent=DB.equipment.filter(function(e){var d=daysLeft(e.nextMaint);return d!==null&&d<=s.critDays&&d>=0;});
   var openN=DB.workOrders.filter(function(w){return w.status==='acik';}).length;
   var pendN=can('ap')?DB.workOrders.filter(function(w){return w.status==='bekliyor';}).length:0;
-  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlama'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Personeller'}];
+  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlama'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'spareparts',ico:'🔩',lbl:'Yedek Parça'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Personeller'}];
   if(can('u'))navDefs.push({id:'users',ico:'👥',lbl:'Kullanıcılar'});
+  if(can('s'))navDefs.push({id:'logs',ico:'📜',lbl:'Aktivite Logu'});
   if(can('s'))navDefs.push({id:'settings',ico:'⚙️',lbl:'Ayarlar'});
   var navH=navDefs.map(function(n){
     var ex='';
@@ -460,7 +488,7 @@ function tplShell(){
 }
 function bindNav(){
   document.querySelectorAll('.nb[data-p]').forEach(function(b){b.onclick=function(){PAGE=b.dataset.p;R();};});
-  var lb=document.getElementById('b-logout');if(lb)lb.onclick=function(){U=null;R();};
+  var lb=document.getElementById('b-logout');if(lb)lb.onclick=function(){addLog('Çıkış','Oturum kapatıldı','','');dbSave();U=null;R();};
   // Mobile nav active state
   ['dashboard','workorders','equipment','schedule','reports'].forEach(function(p){
     var mb=document.getElementById('mn-'+p);
@@ -965,13 +993,14 @@ function saveWO(){
   var status=v('f-status');
   var wo={id:ex?ex.id:'WO-'+uid(),eqId:eqId,type:v('f-type'),title:title,desc:v('f-desc'),sev:v('f-sev'),status:status,date:v('f-date')||today(),due:v('f-due'),techId:v('f-tech'),gmp:vb('f-gmp'),root:v('f-root'),lh:parseFloat(v('f-lh'))||0,pc:parseFloat(v('f-pc'))||0,steps:ex?ex.steps:[],docs:[].concat(WDOCS),comments:ex?ex.comments:[],by:ex?ex.by:U.id,approvedBy:ex?ex.approvedBy:'',closedAt:(status==='kapali'&&!(ex&&ex.closedAt))?nowStr():(ex?ex.closedAt||'':'')};
   if(wo.type==='ariza'&&wo.sev==='kritik'&&wo.status==='acik'){DB.equipment=DB.equipment.map(function(e){return e.id===eqId?Object.assign({},e,{status:'arizali'}):e;});}
-  if(ex)DB.workOrders=DB.workOrders.map(function(w){return w.id===wo.id?wo:w;});
-  else DB.workOrders=[wo].concat(DB.workOrders);
+  if(ex){DB.workOrders=DB.workOrders.map(function(w){return w.id===wo.id?wo:w;});addLog('İş Emri Düzenlendi',wo.title+' ['+wo.id+']','Durum:'+ex.status,'Durum:'+wo.status);}else{DB.workOrders=[wo].concat(DB.workOrders);addLog('İş Emri Oluşturuldu',wo.title+' ['+wo.id+']','',wo.status+'/'+wo.sev);}
   dbSave();WDOCS=[];closeM('wo');toast(ex?'İş emri güncellendi':'İş emri oluşturuldu');R();
 }
 function closeWODirect(id){
   if(!can('cl')){toast('Kapatma yetkiniz yok.','err');return;}
   if(!confirm('Bu iş emrini kapatmak istiyor musunuz?'))return;
+  var _wo=DB.workOrders.find(function(w){return w.id===id;});
+  if(_wo)addLog('İş Emri Kapatıldı',(_wo.title||id)+' ['+id+']','Açık','Kapalı');
   DB.workOrders=DB.workOrders.map(function(w){
     return w.id===id?Object.assign({},w,{status:'kapali',closedAt:nowStr()}):w;
   });
@@ -1001,6 +1030,7 @@ function deleteEq(id){
     toast(eq.name+' için '+openWOs.length+' açık iş emri var. Önce kapatınız.','err');return;
   }
   if(!confirm(eq.name+' ekipmanını silmek istiyor musunuz?\n\nBu işlem geri alınamaz!')) return;
+  addLog('Ekipman Silindi',eq.name+' ['+id+']','Stok:'+eq.status,'');
   DB.equipment=DB.equipment.filter(function(e){return e.id!==id;});
   // İlgili iş emirlerini de sil
   DB.workOrders=DB.workOrders.filter(function(w){return w.eqId!==id;});
@@ -1019,9 +1049,11 @@ function saveEq(){
   var eq={id:ex?ex.id:'EQ-'+uid(),name:name,cat:v('eq-cat'),area:v('eq-a'),status:v('eq-st'),mfr:v('eq-m'),model:v('eq-mo'),sn:v('eq-sn'),instDate:v('eq-id'),lastMaint:v('eq-lm'),nextMaint:v('eq-nm'),crit:v('eq-cr'),val:vb('eq-vl'),valDoc:v('eq-vd'),notes:v('eq-no'),techId:ex?ex.techId:''};
   if(ex){
     DB.equipment=DB.equipment.map(function(e){return e.id===eq.id?eq:e;});
+    addLog('Ekipman Düzenlendi',eq.name+' ['+eq.id+']','','');
     toast('Ekipman güncellendi');
   } else {
     DB.equipment=DB.equipment.concat([eq]);
+    addLog('Ekipman Eklendi',eq.name+' ['+eq.id+']','','');
     var qpayload=BASE_URL+'?eq='+eq.id;
     // QR_IMAGES'e eklemeye gerek yok — drawQR dinamik üretiyor
     toast('Ekipman eklendi — QR kodu hazır ✓');
@@ -1063,6 +1095,7 @@ function deleteUser(id){
     if(adminCount===0){toast('Son yönetici silinemez. Önce başka bir yönetici ekleyin.','err');return;}
   }
   if(!confirm(u.name+' kullanıcısını silmek istiyor musunuz?\n\nBu işlem geri alınamaz!'))return;
+  addLog('Kullanıcı Silindi',u.name+' ['+u.un+']',u.role,'');
   DB.users=DB.users.filter(function(x){return x.id!==id;});
   dbSave();
   toast(u.name+' silindi','warn');
@@ -1076,7 +1109,7 @@ function saveUser(){
   var ex=ET.user;var rawPw=v('u-p');
   if(DB.users.some(function(x){return x.un===un&&x.id!==(ex&&ex.id);})){toast('Bu kullanıcı adı kullanılıyor','err');return;}
   var u={id:ex?ex.id:'U-'+uid(),name:name,un:un,pw:rawPw||(ex&&ex.pw)||'',role:v('u-r'),dept:v('u-d'),email:v('u-e'),active:vb('u-ac')};
-  if(ex){DB.users=DB.users.map(function(x){return x.id===u.id?u:x;});if(U.id===u.id)U=u;}else DB.users=DB.users.concat([u]);
+  if(ex){DB.users=DB.users.map(function(x){return x.id===u.id?u:x;});if(U.id===u.id)U=u;addLog('Kullanıcı Düzenlendi',u.name+' ['+u.un+']','','');}else{DB.users=DB.users.concat([u]);addLog('Kullanıcı Eklendi',u.name+' ['+u.un+']','',u.role);}
   dbSave();closeM('user');toast(ex?'Kullanıcı güncellendi':'Kullanıcı eklendi');R();
 }
 function saveSettings(){
@@ -2562,6 +2595,627 @@ function deleteKvalYear(testId){
   dbSave();
   toast(yr+' yılı verisi silindi','warn');
   renderPage();
+}
+
+// ══════════════════════════════════════════════════════════════
+// AKTİVİTE LOG SİSTEMİ
+// ══════════════════════════════════════════════════════════════
+function addLog(action, detail, oldVal, newVal) {
+  if(!DB.logs) DB.logs = [];
+  var entry = {
+    id:     'L-' + uid(),
+    ts:     nowStr(),
+    user:   U ? U.name : 'Sistem',
+    role:   U ? (ROLES[U.role]&&ROLES[U.role].lbl||U.role) : '—',
+    page:   PAGE,
+    action: action,
+    detail: detail || '',
+    oldVal: oldVal !== undefined ? String(oldVal) : '',
+    newVal: newVal !== undefined ? String(newVal) : '',
+  };
+  DB.logs.unshift(entry); // En yeni başa
+  if(DB.logs.length > 500) DB.logs = DB.logs.slice(0, 500);
+  // Log kaydı için dbSave çağırmıyoruz — ana işlemin dbSave'i yeterli
+}
+
+function pgLogs() {
+  if(!can('s')) return '<div style="text-align:center;padding:60px"><div style="font-size:48px">🔒</div><div style="font-size:18px;font-weight:700;color:var(--rdl);margin-top:16px">Erişim Reddedildi</div></div>';
+
+  var logs = DB.logs || [];
+  var fq = document.getElementById ? (document.getElementById('log-q') ? document.getElementById('log-q').value : '') : '';
+
+  // Filtre seçenekleri
+  var actions = [...new Set(logs.map(function(l){return l.action;}))].sort();
+  var users   = [...new Set(logs.map(function(l){return l.user;}))].sort();
+
+  var actionColors = {
+    'Giriş':         '#10b981',
+    'Çıkış':         '#6b7280',
+    'İş Emri':       '#4f8ef7',
+    'Ekipman':       '#22d3ee',
+    'Kullanıcı':     '#a78bfa',
+    'Yedek Parça':   '#f59e0b',
+    'Stok Hareketi': '#f97316',
+    'Teknisyen':     '#14b8a6',
+    'Kalifikasyon':  '#8b5cf6',
+    'Ayarlar':       '#64748b',
+    'Sistem':        '#94a3b8',
+  };
+
+  var rows = logs.map(function(l) {
+    var col = '#4f8ef7';
+    Object.keys(actionColors).forEach(function(k){ if(l.action.indexOf(k)>=0) col=actionColors[k]; });
+    return '<tr>'
+      + '<td style="font-size:11px;color:var(--mt);white-space:nowrap">'+esc(l.ts)+'</td>'
+      + '<td><div style="font-weight:600;font-size:12px">'+esc(l.user)+'</div><div style="font-size:10px;color:var(--mt)">'+esc(l.role)+'</div></td>'
+      + '<td><span style="background:'+col+'18;color:'+col+';border:1px solid '+col+'40;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">'+esc(l.action)+'</span></td>'
+      + '<td style="font-size:12px;max-width:200px">'+esc(l.detail)+'</td>'
+      + '<td style="font-size:11px;color:var(--mt);max-width:140px">'+(l.oldVal?'<span style="color:var(--rdl)">'+esc(l.oldVal.slice(0,40))+'</span>':'—')+'</td>'
+      + '<td style="font-size:11px;color:var(--mt);max-width:140px">'+(l.newVal?'<span style="color:var(--gnl)">'+esc(l.newVal.slice(0,40))+'</span>':'—')+'</td>'
+      + '<td style="font-size:10px;color:var(--mt)">'+esc(l.page||'—')+'</td>'
+      + '</tr>';
+  }).join('');
+
+  var stats = {};
+  logs.forEach(function(l){
+    Object.keys(actionColors).forEach(function(k){ if(l.action.indexOf(k)>=0){ stats[k]=(stats[k]||0)+1; } });
+  });
+
+  var statsH = Object.entries(stats).slice(0,6).map(function(e){
+    var col = actionColors[e[0]]||'#4f8ef7';
+    return '<div class="sc" style="border-color:'+col+'25"><div class="sa" style="background:'+col+'"></div>'
+      +'<div class="sv" style="color:'+col+';font-size:26px">'+e[1]+'</div>'
+      +'<div class="sl">'+e[0]+'</div></div>';
+  }).join('');
+
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'
+    +'<div style="font-size:20px;font-weight:800;letter-spacing:-.3px">📜 Aktivite Logu</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<span style="font-size:12px;color:var(--mt);padding:6px 12px;background:var(--bg2);border-radius:7px;border:1px solid var(--bd)">Son 500 kayıt</span>'
+    +(can('s')&&logs.length>0?'<button class="btn bdng bsm" onclick="clearLogs()">🗑 Logları Temizle</button>':'')
+    +'</div></div>'
+    +(statsH?'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px">'+statsH+'</div>':'')
+    +'<div class="card" style="padding:12px;margin-bottom:14px">'
+    +'<input class="inp isml" id="log-q" placeholder="Kullanıcı, işlem veya detay ara..." style="width:100%" oninput="renderPage()"/>'
+    +'</div>'
+    +(logs.length===0
+      ? '<div class="empty"><div style="font-size:36px;margin-bottom:10px">📭</div><div style="font-size:14px;font-weight:600;color:var(--sub)">Henüz log kaydı yok</div></div>'
+      : '<div class="card" style="padding:0;overflow:hidden"><div style="overflow-x:auto"><table class="tbl">'
+        +'<thead><tr><th>Zaman</th><th>Kullanıcı</th><th>İşlem</th><th>Detay</th><th>Eski Değer</th><th>Yeni Değer</th><th>Sayfa</th></tr></thead>'
+        +'<tbody>'+rows+'</tbody></table></div></div>');
+}
+
+function clearLogs(){
+  if(!can('s')){toast('Yetki yok','err');return;}
+  if(!confirm('Tüm log kayıtları silinecek. Emin misiniz?'))return;
+  DB.logs=[];
+  dbSave();
+  toast('Loglar temizlendi','warn');
+  renderPage();
+}
+
+// ══════════════════════════════════════════════════════════════
+// YEDEK PARÇA YÖNETİMİ
+// ══════════════════════════════════════════════════════════════
+var SP_Q = '';
+var SP_CAT = 'all';
+var MODAL_SP = false;
+var MODAL_SP_MOV = false;
+var ET_SP = null;
+var ET_SP_MOV = null;
+
+var SP_UNITS = ['Adet','Kutu','Paket','Metre','Litre','Kg','Gram','Rulo','Çift','Set'];
+// SP_CATS artık DB.spareCats'ten gelir — yönetici düzenleyebilir
+
+function pgSpareParts(){
+  var parts = DB.spareParts || [];
+
+  // Filtrele
+  var filtered = parts.filter(function(p){
+    if(SP_CAT !== 'all' && p.cat !== SP_CAT) return false;
+    if(SP_Q){
+      var q = SP_Q.toLowerCase();
+      if((p.name||'').toLowerCase().indexOf(q)<0 &&
+         (p.code||'').toLowerCase().indexOf(q)<0 &&
+         (p.location||'').toLowerCase().indexOf(q)<0) return false;
+    }
+    return true;
+  });
+
+  // İstatistikler
+  var kritikStok = parts.filter(function(p){return p.stock<=p.minStock;}).length;
+  var sifirStok  = parts.filter(function(p){return p.stock<=0;}).length;
+  var toplamCesit= parts.length;
+
+  var statsH = [
+    {lbl:'Toplam Çeşit',  v:toplamCesit,  col:'var(--bll)'},
+    {lbl:'Kritik Stok',   v:kritikStok,   col:'var(--rdl)'},
+    {lbl:'Sıfır Stok',    v:sifirStok,    col:'var(--rdl)'},
+  ].map(function(s){
+    return '<div class="sc" style="border-color:'+s.col+'25"><div class="sa" style="background:'+s.col+'"></div>'
+      +'<div class="sv" style="color:'+s.col+'">'+s.v+'</div><div class="sl">'+s.lbl+'</div></div>';
+  }).join('');
+
+  // Kategori filtreleri
+  var cats = ['all'].concat([...new Set(parts.map(function(p){return p.cat||'Diğer';}))].sort());
+  var catH = cats.map(function(cat){
+    var cnt = cat==='all' ? parts.length : parts.filter(function(p){return p.cat===cat;}).length;
+    var active = SP_CAT===cat;
+    return '<button onclick="SP_CAT=\''+cat+'\';renderPage()" style="background:'+(active?'var(--bl)':'var(--bg3)')+';color:'+(active?'#fff':'var(--sub)')+';border:1px solid '+(active?'var(--bl)':'var(--bd)')+';border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">'+esc(cat==='all'?'Tümü':cat)+' <span style="opacity:.7">('+cnt+')</span></button>';
+  }).join('');
+
+  // Kart listesi
+  var cardsH = filtered.length===0
+    ? emptyHTML('Parça bulunamadı')
+    : filtered.map(function(p){
+        var isKritik = p.stock <= p.minStock;
+        var isSifir  = p.stock <= 0;
+        var stockCol = isSifir?'var(--rdl)':isKritik?'var(--orl)':'var(--gnl)';
+        var pct = p.minStock>0 ? Math.min(100,Math.round((p.stock/p.minStock)*100)) : 100;
+        // Son 3 hareket
+        var hareketler = (DB.spareMovements||[]).filter(function(m){return m.partId===p.id;}).slice(0,3);
+        return '<div style="background:var(--bg2);border:1px solid '+(isKritik?'rgba(239,68,68,.4)':'var(--bdl)')+';border-radius:12px;padding:16px">'
+          // Başlık
+          +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'
+          +'<div style="flex:1"><div style="font-size:10px;font-family:monospace;color:var(--mt);margin-bottom:3px">'+esc(p.code||p.id)+'</div>'
+          +'<div style="font-size:14px;font-weight:800">'+esc(p.name)+'</div>'
+          +'<div style="font-size:11px;color:var(--mt);margin-top:2px">'+esc(p.cat||'—')+' · 📍 '+esc(p.location||'—')+'</div></div>'
+          +'<div style="text-align:right;flex-shrink:0;margin-left:10px">'
+          +'<div style="font-size:28px;font-weight:900;color:'+stockCol+'">'+p.stock+'</div>'
+          +'<div style="font-size:10px;color:var(--mt)">'+esc(p.unit||'Adet')+'</div>'
+          +'</div></div>'
+          // Stok bar
+          +'<div style="margin-bottom:10px">'
+          +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--mt);margin-bottom:4px">'
+          +'<span>Stok</span><span>Min: '+p.minStock+' '+esc(p.unit||'Adet')+'</span>'
+          +'</div>'
+          +'<div class="pbar"><div class="pfil" style="width:'+pct+'%;background:'+stockCol+'"></div></div>'
+          +'</div>'
+          // Uyarı
+          +(isSifir?'<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:6px 10px;font-size:11px;font-weight:700;color:var(--rdl);margin-bottom:10px">⚠ STOK TÜKENDİ</div>'
+            :isKritik?'<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:6px 10px;font-size:11px;font-weight:700;color:var(--orl);margin-bottom:10px">⚠ KRİTİK STOK</div>':'')
+          // Butonlar
+          +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+          +(can('w')?'<button class="btn bsuc bxs" onclick="openSpareMovModal(\''+p.id+'\',\'giris\')">⬆ Giriş</button>':'')
+          +(can('w')?'<button class="btn bout bxs" onclick="openSpareMovModal(\''+p.id+'\',\'cikis\')">⬇ Çıkış</button>':'')
+          +'<button class="btn bghs bxs" onclick="openSpareQR(\''+p.id+'\')">📱 QR</button>'
+          +(can('s')?'<button class="btn bghs bxs" onclick="openSpareForm(\''+p.id+'\')">✏</button>':'')
+          +(can('s')?'<button class="btn bdng bxs" onclick="deleteSparePart(\''+p.id+'\')">🗑</button>':'')
+          +'</div>'
+          +'</div>';
+      }).join('');
+
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'
+    +'<div style="font-size:20px;font-weight:800;letter-spacing:-.3px">🔩 Yedek Parça & Depo</div>'
+    +(can('s')?'<button class="btn bpri bsm" onclick="openSpareForm(null)">+ Parça Ekle</button>':'')
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">'+statsH+'</div>'
+    +'<div class="card" style="padding:12px;margin-bottom:14px">'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+    +'<input class="inp isml" id="sp-q" placeholder="Parça adı, kodu veya konum ara..." style="flex:1;min-width:200px" value="'+esc(SP_Q)+'" oninput="SP_Q=this.value;renderPage()"/>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+catH+'</div>'
+    +'</div></div>'
+    +(kritikStok>0?'<div class="alert" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);margin-bottom:16px"><span style="font-size:20px">⚠</span><div><strong style="color:var(--rdl)">'+kritikStok+' parça kritik stok seviyesinde!</strong> Sipariş verilmesi önerilir.</div></div>':'')
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">'+cardsH+'</div>';
+}
+
+// ── Parça Formu ───────────────────────────────────────────────
+function openSpareForm(id){
+  if(!can('s')){toast('Yönetici yetkisi gerekli','err');return;}
+  ET_SP = id ? (DB.spareParts||[]).find(function(p){return p.id===id;}) : null;
+  MODAL_SP = true;
+  renderModals();
+}
+
+function tplSpareForm(){
+  var p = ET_SP;
+  var f = {name:'',cat:'',code:'',unit:'Adet',stock:0,minStock:5,location:''};
+  if(p) Object.keys(f).forEach(function(k){if(p[k]!==undefined)f[k]=p[k];});
+  var catOpts = (DB.spareCats||[]).map(function(cat){return'<option value="'+cat+'"'+(f.cat===cat?' selected':'')+'>'+cat+'</option>';}).join('');
+  var unitOpts = SP_UNITS.map(function(u){return'<option value="'+u+'"'+(f.unit===u?' selected':'')+'>'+u+'</option>';}).join('');
+  return '<div class="ov" id="ov-spare"><div class="md" style="max-width:520px">'
+    +'<div class="mdh"><div class="mdt">'+(p?'Parça Düzenle':'Yeni Yedek Parça')+'</div><button class="mdc" onclick="closeSpareModal()">✕</button></div>'
+    +'<div class="fr"><label class="lbl">Parça Adı *</label><input class="inp" id="sp-name" value="'+esc(f.name)+'" placeholder="örn: HEPA Filtre H14"/></div>'
+    +'<div class="g2">'
+    +'<div class="fr"><label class="lbl">Kategori</label><select class="inp" id="sp-cat"><option value="">Seçiniz...</option>'+catOpts+'</select></div>'
+    +'<div class="fr"><label class="lbl">Stok Kodu</label><input class="inp" id="sp-code" value="'+esc(f.code||'')+'" placeholder="örn: FLT-001"/></div>'
+    +'</div>'
+    +'<div class="g3">'
+    +'<div class="fr"><label class="lbl">Mevcut Stok</label><input class="inp" type="number" min="0" id="sp-stock" value="'+f.stock+'"/></div>'
+    +'<div class="fr"><label class="lbl">Minimum Stok</label><input class="inp" type="number" min="0" id="sp-min" value="'+f.minStock+'"/></div>'
+    +'<div class="fr"><label class="lbl">Birim</label><select class="inp" id="sp-unit">'+unitOpts+'</select></div>'
+    +'</div>'
+    +'<div class="fr"><label class="lbl">Raf / Konum</label><input class="inp" id="sp-loc" value="'+esc(f.location||'')+'" placeholder="örn: A-3, Depo Raf 2"/></div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)">'
+    +'<button class="btn bghs" onclick="closeSpareModal()">İptal</button>'
+    +'<button class="btn bsuc" onclick="saveSparePart()">Kaydet</button>'
+    +'</div></div></div>';
+}
+
+function saveSparePart(){
+  var name = v('sp-name').trim();
+  if(!name){toast('Parça adı zorunludur','err');return;}
+  var ex = ET_SP;
+  var oldData = ex ? JSON.stringify({name:ex.name,stock:ex.stock,location:ex.location}) : null;
+  var part = {
+    id:       ex ? ex.id : 'SP-'+uid(),
+    name:     name,
+    cat:      v('sp-cat')||'Genel',
+    code:     v('sp-code')||'',
+    stock:    parseInt(v('sp-stock'))||0,
+    minStock: parseInt(v('sp-min'))||5,
+    unit:     v('sp-unit')||'Adet',
+    location: v('sp-loc')||'',
+    createdAt: ex ? ex.createdAt : today(),
+  };
+  if(!DB.spareParts)DB.spareParts=[];
+  if(ex){
+    DB.spareParts=DB.spareParts.map(function(p){return p.id===part.id?part:p;});
+    addLog('Yedek Parça Düzenlendi', part.name, oldData, JSON.stringify({name:part.name,stock:part.stock,location:part.location}));
+    toast('Parça güncellendi');
+  } else {
+    DB.spareParts=DB.spareParts.concat([part]);
+    addLog('Yedek Parça Eklendi', part.name, '', 'Stok: '+part.stock+' '+part.unit);
+    toast('Parça eklendi');
+  }
+  dbSave();
+  closeSpareModal();
+  renderPage();
+}
+
+function deleteSparePart(id){
+  if(!can('s')){toast('Yönetici yetkisi gerekli','err');return;}
+  var p=(DB.spareParts||[]).find(function(x){return x.id===id;});
+  if(!p){toast('Parça bulunamadı','err');return;}
+  if(!confirm(p.name+' parçasını silmek istiyor musunuz?\n\nBu işlem geri alınamaz!'))return;
+  DB.spareParts=DB.spareParts.filter(function(x){return x.id!==id;});
+  DB.spareMovements=(DB.spareMovements||[]).filter(function(m){return m.partId!==id;});
+  addLog('Yedek Parça Silindi', p.name, 'Stok: '+p.stock+' '+p.unit, '');
+  dbSave();
+  toast(p.name+' silindi','warn');
+  renderPage();
+}
+
+function closeSpareModal(){
+  MODAL_SP=false;ET_SP=null;
+  var el=document.getElementById('ov-spare');if(el)el.remove();
+}
+
+// ── Stok Hareketi Formu ───────────────────────────────────────
+function openSpareMovModal(partId, type){
+  ET_SP_MOV = {partId:partId, type:type||'giris'};
+  MODAL_SP_MOV = true;
+  renderModals();
+}
+
+function tplSpareMovForm(){
+  var m = ET_SP_MOV||{};
+  var p = (DB.spareParts||[]).find(function(x){return x.id===m.partId;});
+  if(!p) return '';
+  var isGiris = m.type==='giris';
+  var wos = DB.workOrders.filter(function(w){return w.status!=='kapali';});
+  var woOpts = '<option value="">— Bağlı iş emri yok —</option>'
+    + wos.map(function(w){return'<option value="'+w.id+'">'+esc(w.id+' — '+w.title.slice(0,30))+'</option>';}).join('');
+  return '<div class="ov" id="ov-spare-mov"><div class="md" style="max-width:480px">'
+    +'<div class="mdh">'
+    +'<div class="mdt">'+(isGiris?'⬆ Stok Girişi':'⬇ Stok Çıkışı')+'</div>'
+    +'<button class="mdc" onclick="closeSpareMovModal()">✕</button>'
+    +'</div>'
+    +'<div style="background:var(--bg3);border-radius:9px;padding:12px 14px;margin-bottom:16px;border:1px solid var(--bd)">'
+    +'<div style="font-size:14px;font-weight:800">'+esc(p.name)+'</div>'
+    +'<div style="font-size:12px;color:var(--mt);margin-top:2px">Mevcut stok: <strong style="color:var(--tx)">'+p.stock+' '+esc(p.unit)+'</strong>'
+    +' · Min: '+p.minStock+' '+esc(p.unit)
+    +'</div></div>'
+    +'<div class="g2">'
+    +'<div class="fr"><label class="lbl">'+(isGiris?'Giriş Miktarı':'Çıkış Miktarı')+' *</label>'
+    +'<input class="inp" type="number" min="1" id="spm-qty" placeholder="0"/></div>'
+    +'<div class="fr"><label class="lbl">Birim</label>'
+    +'<div class="inp" style="background:var(--bg3);display:flex;align-items:center">'+esc(p.unit)+'</div></div>'
+    +'</div>'
+    +'<div class="fr"><label class="lbl">Neden / Açıklama *</label>'
+    +'<input class="inp" id="spm-reason" placeholder="'+(isGiris?'örn: Satın alma, iade...':'örn: EQ-001 bakımı, WO-005...')+'"/></div>'
+    +(!isGiris?'<div class="fr"><label class="lbl">Bağlı İş Emri (isteğe bağlı)</label><select class="inp" id="spm-wo">'+woOpts+'</select></div>':'')
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)">'
+    +'<button class="btn bghs" onclick="closeSpareMovModal()">İptal</button>'
+    +'<button class="btn '+(isGiris?'bsuc':'bout')+'" onclick="saveSpareMovement()">Kaydet</button>'
+    +'</div></div></div>';
+}
+
+function saveSpareMovement(){
+  var m = ET_SP_MOV||{};
+  var p = (DB.spareParts||[]).find(function(x){return x.id===m.partId;});
+  if(!p){toast('Parça bulunamadı','err');return;}
+  var qty = parseInt((document.getElementById('spm-qty')||{value:0}).value)||0;
+  var reason = (document.getElementById('spm-reason')||{value:''}).value.trim();
+  var woId = (document.getElementById('spm-wo')||{value:''}).value||'';
+  if(qty<=0){toast('Miktar 0\'dan büyük olmalı','err');return;}
+  if(!reason){toast('Açıklama zorunludur','err');return;}
+  var isGiris = m.type==='giris';
+  if(!isGiris && p.stock < qty){toast('Yetersiz stok! Mevcut: '+p.stock+' '+p.unit,'err');return;}
+  var oldStock = p.stock;
+  var newStock = isGiris ? p.stock+qty : p.stock-qty;
+  // Stok güncelle
+  DB.spareParts = DB.spareParts.map(function(x){
+    return x.id===p.id ? Object.assign({},x,{stock:newStock}) : x;
+  });
+  // Hareket kaydı
+  var mov = {
+    id:     'MOV-'+uid(),
+    partId: p.id,
+    type:   m.type,
+    qty:    qty,
+    reason: reason,
+    woId:   woId,
+    user:   U?U.name:'—',
+    ts:     nowStr(),
+  };
+  if(!DB.spareMovements)DB.spareMovements=[];
+  DB.spareMovements.unshift(mov);
+  addLog(
+    'Stok Hareketi ('+(isGiris?'Giriş':'Çıkış')+')',
+    p.name+' — '+qty+' '+p.unit+(woId?' ['+woId+']':''),
+    oldStock+' '+p.unit,
+    newStock+' '+p.unit
+  );
+  dbSave();
+  toast((isGiris?'Giriş':'Çıkış')+' kaydedildi: '+qty+' '+p.unit);
+  closeSpareMovModal();
+  renderPage();
+}
+
+function closeSpareMovModal(){
+  MODAL_SP_MOV=false;ET_SP_MOV=null;
+  var el=document.getElementById('ov-spare-mov');if(el)el.remove();
+}
+
+// ── Yedek Parça QR ───────────────────────────────────────────
+var SPARE_QR_ID = null;
+function openSpareQR(id){
+  SPARE_QR_ID = id;
+  var p = (DB.spareParts||[]).find(function(x){return x.id===id;});
+  if(!p) return;
+  // QR modalını aç
+  var w = window.open('','_blank','width=400,height=550');
+  var url = BASE_URL+'?sp='+id;
+  w.document.write('<!DOCTYPE html><html><head>'
+    +'<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"><\/script>'
+    +'<style>body{font-family:sans-serif;text-align:center;padding:24px;background:#f8fafc}'
+    +'@media print{button{display:none}}<\/style>'
+    +'</head><body>'
+    +'<div style="background:#1e2761;color:#fff;padding:12px;border-radius:10px;margin-bottom:16px">'
+    +'<div style="font-size:14px;font-weight:800">🔩 Yedek Parça QR</div>'
+    +'<div style="font-size:11px;opacity:.7">PharmaMS</div>'
+    +'</div>'
+    +'<div id="qr" style="display:inline-block;padding:10px;background:#fff;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.1)"></div>'
+    +'<div style="font-size:16px;font-weight:800;margin-top:12px">'+p.name+'</div>'
+    +'<div style="font-size:12px;color:#64748b;margin-top:4px">'+p.code+' · '+p.location+'</div>'
+    +'<div style="font-size:11px;color:#94a3b8;margin-top:4px">'+url+'</div>'
+    +'<br><button onclick="window.print()" style="padding:8px 20px;background:#1e2761;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨 Yazdır</button>'
+    +'<script>new QRCode(document.getElementById("qr"),{text:"'+url+'",width:220,height:220,correctLevel:1});<\/script>'
+    +'</body></html>');
+  w.document.close();
+}
+
+// QR ile gelen ?sp= parametresini işle
+function handleSpareQR(spId){
+  var p=(DB.spareParts||[]).find(function(x){return x.id===spId;});
+  if(!p){toast('Parça bulunamadı: '+spId,'err');return;}
+  PAGE='spareparts';
+  renderPage();
+  // Giriş/Çıkış seçimi sor
+  setTimeout(function(){
+    openSpareMovModal(spId, 'cikis');
+  },300);
+}
+
+
+// ── Yedek Parça Excel Şablonu İndir ──────────────────────────
+function downloadSpareTemplate(){
+  if(typeof XLSX==='undefined'){toast('XLSX kütüphanesi yüklenemedi','err');return;}
+  var wb = XLSX.utils.book_new();
+
+  // Talimatlar sayfası
+  var instrData = [
+    ['NOBEL İLAÇ — YEDEK PARÇA LİSTESİ ŞABLONU'],
+    [''],
+    ['DOLDURMA TALİMATLARI:'],
+    ['1. "Parçalar" sekmesini doldurun'],
+    ['2. Tüm zorunlu (*) alanları doldurun'],
+    ['3. Stok Kodu benzersiz olmalıdır'],
+    ['4. Kategori sütununa: '+(DB.spareCats||[]).join(', ')],
+    ['5. Birim sütununa: Adet, Kutu, Paket, Metre, Litre, Kg, Gram, Rulo, Çift, Set'],
+    ['6. Dosyayı kaydedin ve uygulamaya yükleyin'],
+    [''],
+    ['NOT: Yüklenecek parçalar mevcut listeye EKLENIR (üzerine yazılmaz)'],
+    ['Aynı Stok Kodu varsa güncellenir.'],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instrData), 'Talimatlar');
+
+  // Parçalar sayfası
+  var headers = ['Parça Adı *','Stok Kodu *','Kategori','Birim','Mevcut Stok *','Minimum Stok','Raf / Konum'];
+  var exampleRows = [
+    ['HEPA Filtre H14 592x592x75','FLT-001','HVAC Filtresi','Adet','4','2','Depo A-Raf1'],
+    ['Rulman 6205-2RS','MKN-001','Mekanik','Adet','10','3','Depo B-Raf2'],
+    ['Conta O-Ring Ø50mm','CNT-001','Conta/Sızdırmazlık','Adet','50','10','Depo A-Raf3'],
+    ['Hidrolik Yağ ISO 46 (20L)','YAG-001','Yağlama','Kutu','3','1','Depo C-Raf1'],
+    ['Elektrik Kontaktör 25A','ELK-001','Elektrik','Adet','5','2','Depo B-Raf1'],
+  ];
+  var ws = XLSX.utils.aoa_to_sheet([headers].concat(exampleRows));
+  ws['!cols'] = [{wch:35},{wch:15},{wch:22},{wch:10},{wch:15},{wch:15},{wch:20}];
+  // Başlık satırını kalın yap
+  ['A1','B1','C1','D1','E1','F1','G1'].forEach(function(cell){
+    if(ws[cell]) ws[cell].s = {font:{bold:true}};
+  });
+  XLSX.utils.book_append_sheet(wb, ws, 'Parçalar');
+
+  XLSX.writeFile(wb, 'YedekParca_Listesi_Sablonu.xlsx');
+  toast('Şablon indirildi: YedekParca_Listesi_Sablonu.xlsx');
+}
+
+// ── Yedek Parça Excel Yükleme ─────────────────────────────────
+function uploadSpareExcel(inp){
+  var file = inp.files[0];
+  if(!file) return;
+  if(typeof XLSX==='undefined'){toast('XLSX kütüphanesi yüklenemedi','err');return;}
+
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var wb = XLSX.read(e.target.result, {type:'array'});
+      // "Parçalar" sayfasını bul
+      var wsName = wb.SheetNames.find(function(n){
+        return n==='Parçalar'||n==='Parcalar'||n==='Sheet1'||n==='Sayfa1';
+      }) || wb.SheetNames[0];
+      var ws = wb.Sheets[wsName];
+      var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      if(rows.length < 2){toast('Dosyada veri bulunamadı','err');return;}
+
+      var headers = rows[0].map(function(h){return String(h).trim().toLowerCase();});
+      // Kolon indexleri bul
+      function findCol(keywords){
+        return headers.findIndex(function(h){
+          return keywords.some(function(k){return h.indexOf(k)>=0;});
+        });
+      }
+      var idxName  = findCol(['parça adı','parca adi','ad','name']);
+      var idxCode  = findCol(['stok kodu','kod','code']);
+      var idxCat   = findCol(['kategori','category','cat']);
+      var idxUnit  = findCol(['birim','unit']);
+      var idxStock = findCol(['mevcut stok','stok miktarı','stok','stock','miktar']);
+      var idxMin   = findCol(['minimum','min stok','min']);
+      var idxLoc   = findCol(['raf','konum','location','loc']);
+
+      if(idxName<0||idxCode<0){
+        toast('Parça Adı ve Stok Kodu sütunları zorunludur. Şablonu kullanın.','err');
+        return;
+      }
+
+      if(!DB.spareParts) DB.spareParts=[];
+      var added=0, updated=0, skipped=0;
+
+      for(var i=1;i<rows.length;i++){
+        var row = rows[i];
+        var name = String(row[idxName]||'').trim();
+        var code = String(row[idxCode]||'').trim();
+        if(!name || !code) {skipped++;continue;}
+
+        var stock   = parseInt(row[idxStock])||0;
+        var minStock= parseInt(row[idxMin])||5;
+        var cat     = String(row[idxCat]||'Genel').trim();
+        var unit    = String(row[idxUnit]||'Adet').trim();
+        var loc     = String(idxLoc>=0?row[idxLoc]||'':'').trim();
+
+        // Aynı kod varsa güncelle
+        var existing = DB.spareParts.find(function(p){return p.code===code;});
+        if(existing){
+          Object.assign(existing,{name:name,cat:cat,unit:unit,stock:stock,minStock:minStock,location:loc});
+          updated++;
+        } else {
+          DB.spareParts.push({
+            id:'SP-'+uid(),
+            name:name, code:code, cat:cat,
+            unit:unit, stock:stock, minStock:minStock,
+            location:loc, createdAt:today()
+          });
+          added++;
+        }
+      }
+
+      addLog('Yedek Parça Excel Yüklendi',
+        added+' eklendi, '+updated+' güncellendi',
+        '',added+'+'+updated+' kayıt');
+      dbSave();
+      inp.value='';
+      toast('✓ '+added+' yeni parça eklendi, '+updated+' güncellendi'+(skipped?' ('+skipped+' satır atlandı)':''));
+      renderPage();
+    }catch(err){
+      console.error(err);
+      toast('Excel okuma hatası: '+err.message,'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+
+// ── Yedek Parça Kategori Yöneticisi ─────────────────────────
+var MODAL_SP_CAT = false;
+
+function openSpareCatMgr(){
+  if(!can('s')){toast('Yönetici yetkisi gerekli','err');return;}
+  MODAL_SP_CAT = true;
+  renderModals();
+}
+
+function tplSpareCatMgr(){
+  if(!MODAL_SP_CAT) return '';
+  var cats = DB.spareCats || [];
+  var catsH = cats.map(function(cat,i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:7px;border:1px solid var(--bd);margin-bottom:6px">'
+      +'<span style="flex:1;font-size:13px;font-weight:600">'+esc(cat)+'</span>'
+      +'<button onclick="removeSpareCat('+i+')" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:18px;line-height:1;flex-shrink:0">×</button>'
+      +'</div>';
+  }).join('');
+
+  return '<div class="ov" id="ov-sp-cat"><div class="md" style="max-width:460px">'
+    +'<div class="mdh"><div class="mdt">🏷 Yedek Parça Kategorileri</div>'
+    +'<button class="mdc" onclick="closeSpareCatMgr()">✕</button></div>'
+    +'<div style="font-size:12px;color:var(--mt);margin-bottom:14px">Kategorileri düzenleyin. Parça formunda bu liste görünür.</div>'
+    +'<div id="sp-cat-list">'+catsH+'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:12px">'
+    +'<input class="inp isml" id="sp-cat-inp" placeholder="Yeni kategori adı..." style="flex:1" onkeydown="if(event.key===\'Enter\')addSpareCat()"/>'
+    +'<button class="btn bpri bsm" onclick="addSpareCat()">+ Ekle</button>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--bd)">'
+    +'<button class="btn bghs" onclick="closeSpareCatMgr()">Kapat</button>'
+    +'<button class="btn bsuc" onclick="saveSpareCats()">Kaydet</button>'
+    +'</div>'
+    +'</div></div>';
+}
+
+function addSpareCat(){
+  var inp = document.getElementById('sp-cat-inp');
+  var val = inp ? inp.value.trim() : '';
+  if(!val){toast('Kategori adı boş olamaz','err');return;}
+  if((DB.spareCats||[]).indexOf(val)>=0){toast('Bu kategori zaten var','warn');return;}
+  if(!DB.spareCats)DB.spareCats=[];
+  DB.spareCats.push(val);
+  if(inp)inp.value='';
+  // Listeyi güncelle
+  var list = document.getElementById('sp-cat-list');
+  if(list){
+    var i = DB.spareCats.length-1;
+    var div = document.createElement('div');
+    div.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:7px;border:1px solid var(--bd);margin-bottom:6px';
+    div.innerHTML='<span style="flex:1;font-size:13px;font-weight:600">'+esc(val)+'</span>'
+      +'<button onclick="removeSpareCat('+i+')" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:18px;line-height:1;flex-shrink:0">×</button>';
+    list.appendChild(div);
+  }
+}
+
+function removeSpareCat(idx){
+  var cat = DB.spareCats && DB.spareCats[idx];
+  if(!cat) return;
+  // Bu kategorideki parça var mı kontrol et
+  var inUse = (DB.spareParts||[]).filter(function(p){return p.cat===cat;}).length;
+  if(inUse>0){
+    if(!confirm(cat+' kategorisinde '+inUse+' parça var. Yine de silmek istiyor musunuz?'))return;
+  }
+  DB.spareCats.splice(idx,1);
+  // Modal'ı yenile
+  renderModals();
+}
+
+function saveSpareCats(){
+  addLog('Yedek Parça Kategorileri Güncellendi','','','Toplam: '+(DB.spareCats||[]).length+' kategori');
+  dbSave();
+  closeSpareCatMgr();
+  toast('Kategoriler kaydedildi ✓');
+  renderPage();
+}
+
+function closeSpareCatMgr(){
+  MODAL_SP_CAT=false;
+  var el=document.getElementById('ov-sp-cat');if(el)el.remove();
 }
 
 // BOOT
