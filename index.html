@@ -150,6 +150,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -622,10 +623,10 @@ function pgSched(){
 
   var upH=upcoming.map(function(eq){
     var d=daysLeft(eq.nextMaint);
-    var col=d<0?'var(--rdl)':d<=3?'var(--rdl)':d<=14?'var(--orl)':'var(--gnl)';
+    var col=d<0?'var(--rdl)':d<=14?'var(--orl)':'var(--gnl)';
     var pct=Math.min(100,Math.max(0,((new Date(eq.nextMaint)-new Date())/86400000/90)*100));
     return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
-      +'<div style="width:180px;flex-shrink:0"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(eq.name)+'</div><div style="font-size:10px;color:var(--mt)">'+esc(eq.area)+'</div></div>'
+      +'<div style="width:160px;flex-shrink:0"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(eq.name)+'</div><div style="font-size:10px;color:var(--mt)">'+esc(eq.area)+'</div></div>'
       +'<div style="flex:1;height:22px;background:var(--bg3);border-radius:4px;position:relative;overflow:hidden;border:1px solid var(--bd)">'
       +'<div style="position:absolute;left:'+pct+'%;top:0;bottom:0;width:3px;background:'+col+';box-shadow:0 0 6px '+col+'"></div>'
       +'<div style="position:absolute;inset:0;display:flex;align-items:center;padding-left:8px;font-size:10px;color:var(--mt)">'+esc(eq.nextMaint)+'</div>'
@@ -634,43 +635,76 @@ function pgSched(){
       +'</div>';
   }).join('');
 
-  var msH=scheds.length===0?emptyHTML('Henüz bakım planı yok — aşağıdan ekleyin'):scheds.map(function(ms){
-    var eq=DB.equipment.find(function(e){return e.id===ms.eqId;});
-    var tc=DB.technicians.find(function(t){return t.id===ms.techId;});
-    var d=ms.next?daysLeft(ms.next):null;
-    var dc=d===null?'var(--mt)':d<0?'var(--rdl)':d<=7?'var(--orl)':'var(--gnl)';
-    var wt=WTYPES[ms.type]||{ico:'🔧'};
-    var tasks=ms.tasks||[];
-    var tasksId='tasks-'+ms.id;
-    return '<div style="background:var(--bg2);border:1px solid var(--bdl);border-radius:10px;padding:14px;margin-bottom:10px">'
-      // Başlık satırı
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'
-      +'<div style="display:flex;align-items:center;gap:8px;flex:1">'
-      +'<span style="font-size:18px">'+wt.ico+'</span>'
-      +'<div><div style="font-size:13px;font-weight:700">'+esc(ms.title)+'</div>'
-      +'<div style="font-size:11px;color:var(--mt)"><span style="color:var(--bll);font-weight:600">⚙ '+esc((eq&&eq.name)||ms.eqId)+'</span> · '+esc(ms.interval)+' · '+esc((tc&&tc.name)||'—')+' · '+ms.estH+' saat</div>'
-      +'</div></div>'
-      +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
-      +'<span style="font-size:12px;font-weight:700;color:'+dc+'">'+(d===null?'—':d<0?Math.abs(d)+' gün GEÇ':d===0?'BUGÜN':d+' gün')+'</span>'
-      // Görev listesi toggle
-      +(tasks.length>0?'<button onclick="toggleTasks(\''+tasksId+'\')\" style="background:var(--bg3);border:1px solid var(--bd);border-radius:5px;color:var(--sub);font-size:11px;cursor:pointer;padding:2px 8px">📋 '+tasks.length+' görev</button>':'')
-      // Düzenle / Sil
-      +(can('w')?'<button class="btn bout bxs" onclick="openScheduleForm(\''+ms.id+'\')">Düzenle</button>':'')
-      +(can('d')?'<button class="btn bdng bxs" onclick="deleteSchedule(\''+ms.id+'\')">Sil</button>':'')
-      +'</div></div>'
-      // Notlar
-      +(ms.notes?'<div style="font-size:11px;color:var(--sub);margin-bottom:6px">📝 '+esc(ms.notes)+'</div>':'')
-      // Sonraki tarih
-      +'<div style="font-size:11px;color:var(--mt)">📅 Sonraki: <strong style="color:var(--tx)">'+esc(ms.next||'—')+'</strong></div>'
-      // Görev listesi (gizli başlar)
-      +(tasks.length>0
-        ?'<div id="'+tasksId+'" style="display:none;margin-top:10px;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid var(--bd)">'
-          +'<div style="font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Yapılacak İşler</div>'
-          +tasks.map(function(t,i){return'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;border-bottom:1px solid var(--bd)"><span style="color:var(--teal2);font-size:14px">✓</span>'+esc(t)+'</div>';}).join('')
+  // Ekipman bazlı gruplama
+  var schedsByEq={};
+  scheds.forEach(function(ms){
+    if(!schedsByEq[ms.eqId])schedsByEq[ms.eqId]=[];
+    schedsByEq[ms.eqId].push(ms);
+  });
+
+  var msH=scheds.length===0
+    ? emptyHTML('Henüz bakım planı yok — aşağıdan ekleyin')
+    : Object.keys(schedsByEq).map(function(eqId){
+        var eqObj=DB.equipment.find(function(e){return e.id===eqId;});
+        var eqScheds=schedsByEq[eqId];
+
+        // Her plan için kart
+        var planCards=eqScheds.map(function(ms){
+          var tc=DB.technicians.find(function(t){return t.id===ms.techId;});
+          var d=ms.next?daysLeft(ms.next):null;
+          var dc=d===null?'var(--mt)':d<0?'var(--rdl)':d<=7?'var(--orl)':'var(--gnl)';
+          var wt=WTYPES[ms.type]||{ico:'🔧'};
+          var tasks=ms.tasks||[];
+          var tasksId='tasks-'+ms.id;
+          return '<div style="background:var(--bg3);border:1px solid var(--bdl);border-radius:9px;padding:12px;margin-bottom:8px">'
+            // Periyot badge + başlık
+            +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+            +'<div style="display:flex;align-items:center;gap:8px;flex:1">'
+            +'<span style="font-size:16px">'+wt.ico+'</span>'
+            +'<div>'
+            +'<div style="font-size:13px;font-weight:700">'+esc(ms.title)+'</div>'
+            +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">'
+            +'<span style="background:var(--bg4);border:1px solid var(--bd);border-radius:12px;padding:1px 10px;font-size:11px;color:var(--bll);font-weight:600">🔄 '+esc(ms.interval)+'</span>'
+            +(ms.estH?'<span style="background:var(--bg4);border:1px solid var(--bd);border-radius:12px;padding:1px 10px;font-size:11px;color:var(--mt)">⏱ '+ms.estH+' saat</span>':'')
+            +(tc?'<span style="background:var(--bg4);border:1px solid var(--bd);border-radius:12px;padding:1px 10px;font-size:11px;color:var(--mt)">👷 '+esc(tc.name)+'</span>':'')
+            +'</div></div></div>'
+            // Sağ: tarih + butonlar
+            +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
+            +'<span style="font-size:12px;font-weight:700;color:'+dc+'">'+(d===null?'—':d<0?Math.abs(d)+' gün GEÇ':d===0?'BUGÜN':d+' gün')+'</span>'
+            +(tasks.length>0?'<button onclick="toggleTasks(\''+tasksId+'\')" style="background:var(--bg3);border:1px solid var(--bd);border-radius:5px;color:var(--sub);font-size:11px;cursor:pointer;padding:2px 8px">📋 '+tasks.length+'</button>':'')
+            +(can('w')?'<button class="btn bout bxs" onclick="openScheduleForm(\''+ms.id+'\')">✏</button>':'')
+            +(can('d')?'<button class="btn bdng bxs" onclick="deleteSchedule(\''+ms.id+'\')">🗑</button>':'')
+            +'</div></div>'
+            // Notlar
+            +(ms.notes?'<div style="font-size:11px;color:var(--sub);margin-bottom:6px">📝 '+esc(ms.notes)+'</div>':'')
+            // Sonraki tarih
+            +(ms.next?'<div style="font-size:11px;color:var(--mt)">📅 Sonraki: <strong style="color:var(--tx)">'+esc(ms.next)+'</strong></div>':'')
+            // Görev listesi
+            +(tasks.length>0
+              ?'<div id="'+tasksId+'" style="display:none;margin-top:10px;padding:10px;background:var(--bg2);border-radius:7px;border:1px solid var(--bd)">'
+                +'<div style="font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Yapılacak İşler</div>'
+                +tasks.map(function(t){return'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;border-bottom:1px solid var(--bd)"><span style="color:var(--teal2);font-size:14px">✓</span>'+esc(t)+'</div>';}).join('')
+                +'</div>'
+              :'')
+            +'</div>';
+        }).join('');
+
+        // Ekipman wrapper
+        var critCol = eqObj ? (eqObj.status==='arizali'?'rgba(239,68,68,.3)':eqObj.status==='bakimda'?'rgba(245,158,11,.3)':'var(--bdl)') : 'var(--bdl)';
+        return '<div style="background:var(--bg2);border:1px solid '+critCol+';border-radius:12px;padding:14px;margin-bottom:16px">'
+          // Ekipman başlığı
+          +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--bd)">'
+          +'<div style="display:flex;align-items:center;gap:10px">'
+          +'<span style="font-size:22px">⚙</span>'
+          +'<div>'
+          +'<div style="font-size:15px;font-weight:800;color:var(--tx)">'+esc((eqObj&&eqObj.name)||eqId)+'</div>'
+          +(eqObj?'<div style="font-size:11px;color:var(--mt)">'+esc(eqObj.area)+(eqObj.cat?' · '+esc(eqObj.cat):'')+'</div>':'')
+          +'</div></div>'
+          +'<span style="background:var(--bg3);border:1px solid var(--bd);border-radius:20px;padding:3px 12px;font-size:12px;color:var(--mt);font-weight:600">'+eqScheds.length+' bakım planı</span>'
           +'</div>'
-        :'')
-      +'</div>';
-  }).join('');
+          +planCards
+          +'</div>';
+      }).join('');
 
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'
     +'<div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Bakım Planlaması</div>'
@@ -684,6 +718,7 @@ function pgSched(){
     +'<div class="card"><div class="cardt">Periyodik Bakım Planları <span style="color:var(--mt)">('+scheds.length+')</span></div>'+msH+'</div>'
     +'</div>';
 }
+
 
 function toggleTasks(id){
   var el=document.getElementById(id);
@@ -2325,12 +2360,16 @@ function pgKval(){
   var testData = kd[KVAL_ACTIVE] || {};
   var years = Object.keys(testData).sort().reverse();
 
+  // Aktif yıl — KVAL_YEAR_FILTER veya en son yıl
+  if(KVAL_YEAR_FILTER && years.indexOf(KVAL_YEAR_FILTER)<0) KVAL_YEAR_FILTER=null;
+  var activeYear = KVAL_YEAR_FILTER || (years[0]||null);
+
   // ── Sol panel — test listesi ────────────────────────────
   var testListH = Object.entries(KVAL_TESTS).map(function(e){
     var tid=e[0],tst=e[1];
     var hasData=kd[tid]&&Object.keys(kd[tid]).length>0;
     var isActive=KVAL_ACTIVE===tid;
-    return '<div onclick="KVAL_ACTIVE=\''+tid+'\';renderPage()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:9px;cursor:pointer;margin-bottom:4px;background:'+(isActive?'rgba(79,142,247,.15)':'transparent')+';border:1px solid '+(isActive?'var(--bl)':'transparent')+';transition:all .15s">'
+    return '<div onclick="KVAL_ACTIVE=\''+tid+'\';KVAL_YEAR_FILTER=null;renderPage()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:9px;cursor:pointer;margin-bottom:4px;background:'+(isActive?'rgba(79,142,247,.15)':'transparent')+';border:1px solid '+(isActive?'var(--bl)':'transparent')+'">'
       +'<span style="font-size:22px">'+tst.ico+'</span>'
       +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(isActive?'800':'600')+';color:'+(isActive?'var(--bll)':'var(--tx)')+'">'+tst.lbl+'</div>'
       +'<div style="font-size:10px;color:var(--mt)">'+(hasData?Object.keys(kd[tid]).length+' yıl verisi':'Veri yok')+'</div></div>'
@@ -2339,13 +2378,11 @@ function pgKval(){
   }).join('');
 
   // ── Hazırlık adımları ───────────────────────────────────
-  var steps = (DB.kvalSteps&&DB.kvalSteps[KVAL_ACTIVE]) ? DB.kvalSteps[KVAL_ACTIVE] : test.steps;
-  var stepsEditMode = KVAL_EDIT_STEPS && can('s');
-
-  var stepsContent = '';
+  var steps=(DB.kvalSteps&&DB.kvalSteps[KVAL_ACTIVE])?DB.kvalSteps[KVAL_ACTIVE]:test.steps;
+  var stepsEditMode=KVAL_EDIT_STEPS&&can('s');
+  var stepsContent='';
   if(stepsEditMode){
-    // Düzenleme modu
-    stepsContent = '<div id="steps-edit-container">'
+    stepsContent='<div id="steps-edit-container">'
       +steps.map(function(s,i){
         return '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-start">'
           +'<span style="background:var(--orl);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:4px">'+(i+1)+'</span>'
@@ -2360,15 +2397,14 @@ function pgKval(){
       +'<button class="btn bghs bsm" onclick="KVAL_EDIT_STEPS=false;renderPage()">İptal</button>'
       +'</div>';
   } else {
-    stepsContent = steps.map(function(s,i){
+    stepsContent=steps.map(function(s,i){
       return '<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start">'
         +'<span style="background:var(--orl);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">'+(i+1)+'</span>'
         +'<span style="font-size:13px;color:var(--sub);line-height:1.5">'+esc(s)+'</span>'
         +'</div>';
     }).join('');
   }
-
-  var stepsH = '<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:16px;margin-bottom:18px">'
+  var stepsH='<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:16px;margin-bottom:18px">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
     +'<div style="font-size:12px;font-weight:700;color:var(--orl);letter-spacing:1px;text-transform:uppercase">⚠ Ölçüm Öncesi Hazırlık</div>'
     +(can('s')&&!stepsEditMode?'<button class="btn bghs bxs" onclick="KVAL_EDIT_STEPS=true;renderPage()">✏ Düzenle</button>':'')
@@ -2376,79 +2412,64 @@ function pgKval(){
     +stepsContent
     +'</div>';
 
-  // ── Limit bilgisi ───────────────────────────────────────
-  var limitH = '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px">'
+  // ── Limit + Excel ───────────────────────────────────────
+  var limitH='<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px">'
     +'<span style="color:var(--mt);font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-size:10px">Kabul Limitleri: </span>'
     +'<span style="color:var(--sub)">'+esc(test.limits)+'</span>'
     +'</div>';
 
-  // ── Excel işlemleri ─────────────────────────────────────
-  var excelH = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">'
+  var excelH='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">'
     +'<button class="btn bout bsm" onclick="downloadKvalTemplate(\''+KVAL_ACTIVE+'\')">⬇ Excel Şablonu İndir</button>'
     +(can('w')?'<label style="display:inline-flex;align-items:center;gap:6px" class="btn bsuc bsm">📤 Excel Yükle<input type="file" accept=".xlsx,.xls" style="display:none" onchange="uploadKvalExcel(this,\''+KVAL_ACTIVE+'\')"/></label>':'')
     +(years.length>0&&can('d')?'<button class="btn bdng bsm" onclick="deleteKvalYear(\''+KVAL_ACTIVE+'\')">🗑 Yıl Sil</button>':'')
     +'</div>';
 
-  // ── Yıllık tablo ────────────────────────────────────────
-  var tableH = '';
+  // ── Yıl sekmeleri (TAB) ──────────────────────────────────
+  var yearTabsH='';
+  if(years.length>0){
+    yearTabsH='<div class="tabs" style="margin-bottom:0;border-bottom:2px solid var(--bd);padding-bottom:0">'
+      +years.map(function(yr){
+        var isA=activeYear===yr;
+        var cnt=(testData[yr]||[]).length;
+        return '<button class="tabb'+(isA?' on':'')+'" onclick="KVAL_YEAR_FILTER=\''+yr+'\';renderPage()" style="'+(isA?'border-bottom:2px solid var(--bll);margin-bottom:-2px;':'')+'">📅 '+yr+' <span style="font-size:10px;opacity:.7">('+cnt+')</span></button>';
+      }).join('')
+      +'</div>';
+  }
+
+  // ── Tablo (sadece activeYear verisi) ─────────────────────
+  var tableH='';
   if(years.length===0){
-    tableH = '<div class="empty"><div style="font-size:36px;margin-bottom:10px">📊</div>'
+    tableH='<div class="empty"><div style="font-size:36px;margin-bottom:10px">📊</div>'
       +'<div style="font-size:14px;font-weight:600;color:var(--sub)">Henüz veri yüklenmemiş</div>'
       +'<div style="font-size:12px;color:var(--mt);margin-top:6px">Excel şablonunu indirin, doldurun ve yükleyin</div></div>';
+  } else if(!activeYear){
+    tableH='<div class="empty">Yıl seçin</div>';
   } else {
-    // Her yıl için tüm satırları topla
-    // Tablo yapısı: her satır bir (alan+nokta) kombinasyonu, sütunlar yıllara göre değerler
-    var allKeys = []; // {area, point} unique listesi
-    years.forEach(function(yr){
-      (testData[yr]||[]).forEach(function(row){
-        var key = row.area+'|||'+row.point;
-        if(!allKeys.find(function(k){return k.key===key;})){
-          allKeys.push({key:key,area:row.area,point:row.point});
-        }
-      });
-    });
+    var yearRows=testData[activeYear]||[];
+    if(yearRows.length===0){
+      tableH='<div class="empty">'+activeYear+' yılı için veri yok</div>';
+    } else {
+      var valueCols=getKvalValueCols(KVAL_ACTIVE);
+      var thead='<tr><th>Alan / Oda</th><th>Oda Adı</th>'
+        +valueCols.map(function(col){return'<th style="text-align:center">'+esc(col.label)+'</th>';}).join('')
+        +'<th style="text-align:center">Sonuç</th></tr>';
 
-    // Testin sütunlarını belirle — test tipine göre gösterilecek değer sütunları
-    var valueCols = getKvalValueCols(KVAL_ACTIVE);
-
-    var thead = '<tr>'
-      +'<th>Alan / Oda</th>'
-      +'<th>Oda Adı</th>'
-      +valueCols.map(function(col){return'<th style="text-align:center">'+esc(col.label)+'</th>';}).join('')
-      +'<th style="text-align:center">Sonuç</th>'
-      +years.map(function(yr){return'';}).join('') // yıllar başlıkta değil, satırda
-      +'</tr>';
-
-    // Her alan+nokta için ayrı satır — her yıl için ayrı satır
-    var tbodyRows = '';
-    allKeys.forEach(function(ak){
-      filteredYears.forEach(function(yr){
-        var rows=(testData[yr]||[]).filter(function(r){return r.area===ak.area&&r.point===ak.point;});
-        if(rows.length===0)return;
-        var row=rows[0];
+      var tbodyRows=yearRows.map(function(row){
         var isOk=row.result&&row.result.toUpperCase().indexOf('UYGUN')>=0&&row.result.toUpperCase().indexOf('DEĞİL')<0;
         var isNotOk=row.result&&(row.result.toUpperCase().indexOf('DEĞİL')>=0||row.result.toUpperCase().indexOf('FAIL')>=0);
-        tbodyRows+='<tr>'
-          +'<td style="font-weight:600">'+esc(ak.area)+'</td>'
-          +'<td style="font-size:11px;color:var(--mt)">'+esc(ak.area2||ak.point)+'</td>'
+        return '<tr>'
+          +'<td style="font-weight:600">'+esc(row.area||'—')+'</td>'
+          +'<td style="font-size:11px;color:var(--mt)">'+esc(row.point||'—')+'</td>'
           +valueCols.map(function(col){
             var val=row.rawRow&&row.rawRow[col.rawIdx]!==undefined?row.rawRow[col.rawIdx]:(col.rawIdx<0?row.value:'—');
-            // Sayısal değerleri tam sayıya çevir
             var dispVal='—';
             if(val!==undefined&&val!==null&&val!==''){
               var num=parseFloat(String(val).replace(',','.'));
               if(!isNaN(num)){
-                // Yüzde değerleri küçük olabilir — 2 ondalık basamak göster
-                if(String(col.label).indexOf('%')>=0||String(col.label).indexOf('Sızıntı')>=0){
-                  dispVal=num.toFixed(4).replace(/\.?0+$/,'');
-                } else if(num>0&&num<1){
-                  dispVal=num.toFixed(2);
-                } else {
-                  dispVal=Math.round(num).toLocaleString('tr-TR');
-                }
-              } else {
-                dispVal=String(val);
-              }
+                if(String(col.label).indexOf('%')>=0||String(col.label).indexOf('Sızıntı')>=0) dispVal=num.toFixed(4).replace(/\.?0+$/,'');
+                else if(num>0&&num<1) dispVal=num.toFixed(2);
+                else dispVal=Math.round(num).toLocaleString('tr-TR');
+              } else dispVal=String(val);
             }
             return'<td style="text-align:center;font-weight:600;font-size:12px">'+esc(dispVal)+'</td>';
           }).join('')
@@ -2456,29 +2477,23 @@ function pgKval(){
           +(isOk?'<span style="background:rgba(16,185,129,.15);color:var(--gnl);font-weight:700;padding:3px 10px;border-radius:12px;font-size:11px">✓ Uygun</span>'
             :isNotOk?'<span style="background:rgba(239,68,68,.15);color:var(--rdl);font-weight:700;padding:3px 10px;border-radius:12px;font-size:11px">✗ Uygunsuz</span>'
             :'<span style="color:var(--mt);font-size:11px">'+esc(row.result||'—')+'</span>')
-          +'</td>'
-          +'</tr>';
-      });
-    });
+          +'</td></tr>';
+      }).join('');
 
-    // Yıl başlıklarını üstte göster — yıllar ayrı bir header grubu olarak
-    var yearGroupH = years.length>0
-      ?'<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'
-        +'<span style="font-size:11px;color:var(--mt);font-weight:600;letter-spacing:.8px">YIL:</span>'
-        +'<button onclick="KVAL_YEAR_FILTER=null;renderPage()" style="background:'+(KVAL_YEAR_FILTER===null?'var(--bl)':'var(--bg3)')+';color:'+(KVAL_YEAR_FILTER===null?'#fff':'var(--sub)')+';border:1px solid '+(KVAL_YEAR_FILTER===null?'var(--bl)':'var(--bd)')+';border-radius:6px;padding:3px 12px;font-size:12px;font-weight:600;cursor:pointer">Tümü</button>'
-        +years.map(function(yr){
-          var isA=KVAL_YEAR_FILTER===yr;
-          return'<button onclick="KVAL_YEAR_FILTER=\''+yr+'\';renderPage()" style="background:'+(isA?'var(--teal2)':'var(--bg3)')+';color:'+(isA?'#fff':'var(--sub)')+';border:1px solid '+(isA?'var(--teal2)':'var(--bd)')+';border-radius:6px;padding:3px 12px;font-size:12px;font-weight:700;cursor:pointer">📅 '+yr+' ('+(testData[yr]||[]).length+')</button>';
-        }).join('')
-        +'</div>'
-      :'';
-    var filteredYears = KVAL_YEAR_FILTER ? [KVAL_YEAR_FILTER] : years;
+      // Özet banner
+      var totalRows=yearRows.length;
+      var uygunSay=yearRows.filter(function(r){return r.result&&r.result.toUpperCase().indexOf('UYGUN')>=0&&r.result.toUpperCase().indexOf('DEĞİL')<0;}).length;
+      var uygunsuzSay=yearRows.filter(function(r){return r.result&&(r.result.toUpperCase().indexOf('DEĞİL')>=0||r.result.toUpperCase().indexOf('FAIL')>=0);}).length;
 
-    tableH = yearGroupH
-      +'<div style="overflow-x:auto"><table class="tbl">'
-      +'<thead>'+thead+'</thead>'
-      +'<tbody>'+tbodyRows+'</tbody>'
-      +'</table></div>';
+      var summaryH='<div style="display:flex;gap:12px;padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--bd);flex-wrap:wrap">'
+        +'<span style="font-size:12px;font-weight:700;color:var(--sub)">'+activeYear+' Özeti:</span>'
+        +'<span style="font-size:12px;color:var(--mt)">Toplam: <strong>'+totalRows+'</strong> ölçüm</span>'
+        +'<span style="font-size:12px;color:var(--gnl)">✓ Uygun: <strong>'+uygunSay+'</strong></span>'
+        +(uygunsuzSay>0?'<span style="font-size:12px;color:var(--rdl)">✗ Uygunsuz: <strong>'+uygunsuzSay+'</strong></span>':'')
+        +'</div>';
+
+      tableH=summaryH+'<div style="overflow-x:auto"><table class="tbl"><thead>'+thead+'</thead><tbody>'+tbodyRows+'</tbody></table></div>';
+    }
   }
 
   return '<div style="font-size:20px;font-weight:800;margin-bottom:20px;letter-spacing:-.3px">🔬 Kalifikasyon</div>'
@@ -2492,16 +2507,13 @@ function pgKval(){
     +'</div>'
     +stepsH+limitH+excelH
     +'<div class="card" style="padding:0;overflow:hidden">'
-    +'<div style="padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">'
-    +'<div style="font-size:11px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:1.2px">Yıllık Ölçüm Verileri</div>'
-    +(years.length>0?'<span style="font-size:12px;color:var(--mt)">'+years.length+' yıl · '+(function(){var t=0;years.forEach(function(y){t+=(testData[y]||[]).length;});return t;})()+ ' kayıt</span>':'')
-    +'</div>'
-    +'<div style="padding:16px">'+tableH+'</div>'
+    +(yearTabsH?'<div style="padding:0 16px;background:var(--bg2)">'+yearTabsH+'</div>':'')
+    +'<div style="padding:0">'+tableH+'</div>'
     +'</div>'
     +'</div></div>';
 }
 
-// Her test için hangi sütunlar gösterilecek
+
 function getKvalValueCols(testId){
   // rawRow: Excel'den okunan satır (Yıl hariç tüm sütunlar), index 0'dan başlar
   // cols: ['Alan/Oda', 'Nokta', 'col1', 'col2', ..., 'Sonuç', 'Notlar']
@@ -3703,6 +3715,7 @@ fbInit();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
