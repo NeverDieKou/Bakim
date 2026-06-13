@@ -633,7 +633,7 @@ function pgSched(){
       +'<div style="display:flex;align-items:center;gap:8px;flex:1">'
       +'<span style="font-size:18px">'+wt.ico+'</span>'
       +'<div><div style="font-size:13px;font-weight:700">'+esc(ms.title)+'</div>'
-      +'<div style="font-size:11px;color:var(--mt)">'+esc((eq&&eq.name)||'—')+' · '+esc(ms.interval)+' · '+esc((tc&&tc.name)||'—')+' · '+ms.estH+' saat</div>'
+      +'<div style="font-size:11px;color:var(--mt)"><span style="color:var(--bll);font-weight:600">⚙ '+esc((eq&&eq.name)||ms.eqId)+'</span> · '+esc(ms.interval)+' · '+esc((tc&&tc.name)||'—')+' · '+ms.estH+' saat</div>'
       +'</div></div>'
       +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
       +'<span style="font-size:12px;font-weight:700;color:'+dc+'">'+(d===null?'—':d<0?Math.abs(d)+' gün GEÇ':d===0?'BUGÜN':d+' gün')+'</span>'
@@ -1423,7 +1423,9 @@ function generatePPTX() {
     {text:'Aktif Teknisyen:  ', options:{bold:true, color:C.iceBlue, fontSize:12}},
     {text:String(DB.technicians.filter(function(t){return t.active;}).length)+'      ', options:{color:C.white, fontSize:12, bold:true}},
     {text:'Toplam Ekipman:  ', options:{bold:true, color:C.iceBlue, fontSize:12}},
-    {text:String(DB.equipment.length), options:{color:C.white, fontSize:12, bold:true}},
+    {text:String(DB.equipment.length)+'      ', options:{color:C.white, fontSize:12, bold:true}},
+    {text:'Yedek Parça:  ', options:{bold:true, color:C.iceBlue, fontSize:12}},
+    {text:String((DB.spareParts||[]).length)+' çeşit', options:{color:C.white, fontSize:12, bold:true}},
   ], {x:0.5, y:4.15, w:9, h:0.6, fontFace:'Calibri', margin:0});
 
   // ═══════════════════════════
@@ -2300,6 +2302,7 @@ var KVAL_TESTS = {
 };
 
 var KVAL_ACTIVE = 'partikul'; // aktif test
+var KVAL_YEAR_FILTER = null;
 
 function pgKval(){
   var test = KVAL_TESTS[KVAL_ACTIVE];
@@ -2404,7 +2407,7 @@ function pgKval(){
     // Her alan+nokta için ayrı satır — her yıl için ayrı satır
     var tbodyRows = '';
     allKeys.forEach(function(ak){
-      years.forEach(function(yr){
+      filteredYears.forEach(function(yr){
         var rows=(testData[yr]||[]).filter(function(r){return r.area===ak.area&&r.point===ak.point;});
         if(rows.length===0)return;
         var row=rows[0];
@@ -2444,11 +2447,17 @@ function pgKval(){
     });
 
     // Yıl başlıklarını üstte göster — yıllar ayrı bir header grubu olarak
-    var yearGroupH = years.length>1
-      ?'<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">'
-        +years.map(function(yr){var cnt=(testData[yr]||[]).length;return'<span style="background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:4px 12px;font-size:12px;font-weight:700">📅 '+yr+' <span style="color:var(--mt);font-weight:400">('+cnt+' kayıt)</span></span>';}).join('')
+    var yearGroupH = years.length>0
+      ?'<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'
+        +'<span style="font-size:11px;color:var(--mt);font-weight:600;letter-spacing:.8px">YIL:</span>'
+        +'<button onclick="KVAL_YEAR_FILTER=null;renderPage()" style="background:'+(KVAL_YEAR_FILTER===null?'var(--bl)':'var(--bg3)')+';color:'+(KVAL_YEAR_FILTER===null?'#fff':'var(--sub)')+';border:1px solid '+(KVAL_YEAR_FILTER===null?'var(--bl)':'var(--bd)')+';border-radius:6px;padding:3px 12px;font-size:12px;font-weight:600;cursor:pointer">Tümü</button>'
+        +years.map(function(yr){
+          var isA=KVAL_YEAR_FILTER===yr;
+          return'<button onclick="KVAL_YEAR_FILTER=\''+yr+'\';renderPage()" style="background:'+(isA?'var(--teal2)':'var(--bg3)')+';color:'+(isA?'#fff':'var(--sub)')+';border:1px solid '+(isA?'var(--teal2)':'var(--bd)')+';border-radius:6px;padding:3px 12px;font-size:12px;font-weight:700;cursor:pointer">📅 '+yr+' ('+(testData[yr]||[]).length+')</button>';
+        }).join('')
         +'</div>'
       :'';
+    var filteredYears = KVAL_YEAR_FILTER ? [KVAL_YEAR_FILTER] : years;
 
     tableH = yearGroupH
       +'<div style="overflow-x:auto"><table class="tbl">'
@@ -3660,137 +3669,7 @@ function uploadEqExcel(inp){
 }
 
 
-// ── Ekipman Excel Şablonu İndir ──────────────────────────────
-function downloadEqTemplate(){
-  if(!can('s')){toast('Yönetici yetkisi gerekli','err');return;}
-  if(typeof XLSX==='undefined'){toast('XLSX kütüphanesi yüklenemedi','err');return;}
-  var wb = XLSX.utils.book_new();
-  // Talimatlar
-  var instr = [
-    ['NOBEL İLAÇ — EKİPMAN LİSTESİ ŞABLONU'],
-    [''],
-    ['DOLDURMA TALİMATLARI:'],
-    ['1. "Ekipmanlar" sekmesini doldurun'],
-    ['2. * ile işaretli alanlar zorunludur'],
-    ['3. Durum: aktif / arizali / bakimda / devre_disi'],
-    ['4. Kritiklik: kritik / yuksek / orta / dusuk'],
-    ['5. Validated: Evet / Hayır'],
-    ['6. Tarih formatı: YYYY-AA-GG (örn: 2024-03-15)'],
-    [''],
-    ['NOT: Aynı ID varsa güncellenir, yoksa yeni eklenir'],
-  ];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instr), 'Talimatlar');
-  // Ekipman sayfası
-  var headers = [
-    'Ekipman ID (boş=otomatik)','Ekipman Adı *','Kategori','Bölge *',
-    'Durum','Üretici','Model','Seri No',
-    'Kurulum Tarihi','Son Bakım Tarihi','Sonraki Bakım Tarihi',
-    'Kritiklik','Validated','Validasyon Dok. No','Notlar'
-  ];
-  var exampleRows = [
-    ['EQ-009','Toz Kabini','Üretim Ekipmanı','Üretim A','aktif','Telstar','Labcaire','TC-2024-001','2024-01-15','2024-06-01','2024-12-01','orta','Evet','VP-009-2024','Haftalık filtre kontrolü'],
-    ['','Vakum Pompası','Altyapı Sistemi','Teknik Servis','aktif','Busch','R5','BP-2023-055','2023-06-01','2024-03-01','2024-09-01','dusuk','Hayır','',''],
-  ];
-  var ws = XLSX.utils.aoa_to_sheet([headers].concat(exampleRows));
-  ws['!cols'] = headers.map(function(h){return {wch:Math.max(h.length+2,16)};});
-  XLSX.utils.book_append_sheet(wb, ws, 'Ekipmanlar');
-  XLSX.writeFile(wb, 'Ekipman_Listesi_Sablonu.xlsx');
-  toast('Ekipman şablonu indirildi');
-}
 
-// ── Ekipman Excel Yükleme ─────────────────────────────────────
-function uploadEqExcel(inp){
-  if(!can('s')){toast('Yönetici yetkisi gerekli','err');return;}
-  var file = inp.files[0];
-  if(!file) return;
-  if(typeof XLSX==='undefined'){toast('XLSX kütüphanesi yüklenemedi','err');return;}
-  var reader = new FileReader();
-  reader.onload = function(e){
-    try{
-      var wb = XLSX.read(e.target.result,{type:'array'});
-      var wsName = wb.SheetNames.find(function(n){
-        return n==='Ekipmanlar'||n==='Equipment'||n==='Sayfa1'||n==='Sheet1';
-      })||wb.SheetNames[0];
-      var ws = wb.Sheets[wsName];
-      var rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      if(rows.length<2){toast('Dosyada veri bulunamadı','err');return;}
-      var headers = rows[0].map(function(h){return String(h).trim().toLowerCase();});
-      function fc(kws){
-        var exact=headers.findIndex(function(h){return kws.some(function(k){return h===k;});});
-        if(exact>=0)return exact;
-        return headers.findIndex(function(h){return kws.some(function(k){return h.indexOf(k)>=0;});});
-      }
-      var iId    = fc(['ekipman id','id','equipment id']);
-      var iName  = fc(['ekipman adı','ekipman adi','adı','adi','name','ad']);
-      var iCat   = fc(['kategori','category','cat']);
-      var iArea  = fc(['bölge','bolge','alan','area','location']);
-      var iStat  = fc(['durum','status']);
-      var iMfr   = fc(['üretici','uretici','manufacturer','mfr']);
-      var iModel = fc(['model']);
-      var iSN    = fc(['seri no','serial','sn']);
-      var iInst  = fc(['kurulum','install','inst']);
-      var iLast  = fc(['son bakım','son bakim','last maint','lastmaint']);
-      var iNext  = fc(['sonraki bakım','sonraki bakim','next maint','nextmaint']);
-      var iCrit  = fc(['kritiklik','criticality','crit']);
-      var iVal   = fc(['validated','validasyon','val']);
-      var iValDoc= fc(['validasyon dok','val doc','valdoc']);
-      var iNotes = fc(['notlar','notes','not']);
-      if(iName<0){toast('Ekipman Adı sütunu zorunludur','err');return;}
-      if(iArea<0){toast('Bölge sütunu zorunludur','err');return;}
-      if(!DB.equipment)DB.equipment=[];
-      var added=0,updated=0,skipped=0;
-      for(var i=1;i<rows.length;i++){
-        var row=rows[i];
-        var name=String(row[iName]||'').trim();
-        if(!name){skipped++;continue;}
-        var eqId=iId>=0?String(row[iId]||'').trim():'';
-        var existing=eqId?DB.equipment.find(function(e){return e.id===eqId;}):null;
-        var statRaw=String(row[iStat]||'aktif').trim().toLowerCase().replace(' ','_');
-        var validStat=['aktif','arizali','bakimda','devre_disi'];
-        var stat=validStat.indexOf(statRaw)>=0?statRaw:'aktif';
-        var critRaw=String(row[iCrit]||'orta').trim().toLowerCase();
-        var validCrit=['kritik','yuksek','orta','dusuk'];
-        var crit=validCrit.indexOf(critRaw)>=0?critRaw:'orta';
-        var valRaw=String(row[iVal]||'').trim().toLowerCase();
-        var isVal=valRaw==='evet'||valRaw==='yes'||valRaw==='true'||valRaw==='1';
-        var eq={
-          id:        existing?existing.id:(eqId||'EQ-'+uid()),
-          name:      name,
-          cat:       iCat>=0?String(row[iCat]||'').trim():(existing?existing.cat:''),
-          area:      iArea>=0?String(row[iArea]||'').trim():(existing?existing.area:''),
-          status:    stat,
-          mfr:       iMfr>=0?String(row[iMfr]||'').trim():(existing?existing.mfr:''),
-          model:     iModel>=0?String(row[iModel]||'').trim():(existing?existing.model:''),
-          sn:        iSN>=0?String(row[iSN]||'').trim():(existing?existing.sn:''),
-          instDate:  iInst>=0?String(row[iInst]||'').trim():(existing?existing.instDate:''),
-          lastMaint: iLast>=0?String(row[iLast]||'').trim():(existing?existing.lastMaint:''),
-          nextMaint: iNext>=0?String(row[iNext]||'').trim():(existing?existing.nextMaint:''),
-          crit:      crit,
-          val:       isVal,
-          valDoc:    iValDoc>=0?String(row[iValDoc]||'').trim():(existing?existing.valDoc:''),
-          notes:     iNotes>=0?String(row[iNotes]||'').trim():(existing?existing.notes:''),
-          techId:    existing?existing.techId:'',
-        };
-        if(existing){
-          DB.equipment=DB.equipment.map(function(e){return e.id===eq.id?eq:e;});
-          updated++;
-        } else {
-          DB.equipment=DB.equipment.concat([eq]);
-          added++;
-        }
-      }
-      addLog('Ekipman Excel Yüklendi',added+' eklendi, '+updated+' güncellendi','',added+'+'+updated+' kayıt');
-      dbSave();
-      inp.value='';
-      toast('✓ '+added+' yeni ekipman eklendi, '+updated+' güncellendi'+(skipped?' ('+skipped+' atlandı)':''));
-      R();
-    }catch(err){
-      console.error(err);
-      toast('Excel okuma hatası: '+err.message,'err');
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
 
 // BOOT
 // Firebase başlat
