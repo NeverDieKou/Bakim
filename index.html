@@ -213,6 +213,27 @@ function fbInit() {
         var hasModal = Object.values(MODAL).some(function(v){return v;});
         if(!hasModal) renderPage();
       }
+      // Firebase veri yüklenince pending SP/QR kontrolü
+      if(U) {
+        var psp = window._pendingSP || sessionStorage.getItem('pendingSP');
+        if(psp) {
+          window._pendingSP = null;
+          sessionStorage.removeItem('pendingSP');
+          var spFound = (DB.spareParts||[]).find(function(x){return x.id===psp;});
+          if(spFound) {
+            setTimeout(function(){ showSpareQRLanding(psp); }, 100);
+          }
+        }
+        var pqr = window._pendingQR || sessionStorage.getItem('pendingQR');
+        if(pqr) {
+          window._pendingQR = null;
+          sessionStorage.removeItem('pendingQR');
+          var eqFound = (DB.equipment||[]).find(function(x){return x.id===pqr;});
+          if(eqFound) {
+            setTimeout(function(){ showQRLanding(pqr); }, 100);
+          }
+        }
+      }
       // localStorage'a da kaydet (offline fallback)
       try { localStorage.setItem(SK, JSON.stringify(DB)); } catch(e) {}
     }, function(err) {
@@ -466,33 +487,16 @@ function bindLogin(){
     if(f){
       U=f;
       addLog('Giriş','Kullanıcı girişi yapıldı','','');
-      // QR yönlendirme
+      // Hash QR kontrolü
       var h=window.location.hash;
       if(h&&h.startsWith('#qr=')){
         var eid=h.replace('#qr=','').split(':')[0];
         window.location.hash='';
-        R();
-        setTimeout(function(){showQRLanding(eid);},200);
-      } else if(window._pendingQR){
-        var pqr=window._pendingQR;window._pendingQR=null;
-        R();
-        setTimeout(function(){showQRLanding(pqr);},200);
-      } else if(window._pendingSP){
-        var psp=window._pendingSP;window._pendingSP=null;
-        R(); // Önce shell'i render et
-        // Firebase veri yüklemesini bekle — max 3 saniye dene
-        var spTry=0;
-        var spInterval=setInterval(function(){
-          spTry++;
-          var found=(DB.spareParts||[]).find(function(x){return x.id===psp;});
-          if(found||spTry>=15){
-            clearInterval(spInterval);
-            showSpareQRLanding(psp);
-          }
-        },200);
-      } else {
-        R();
+        sessionStorage.setItem('pendingQR',eid);
+        window._pendingQR=eid;
       }
+      // R() çağır — Firebase listener pending'leri halleder
+      R();
     }
     else{var err=document.getElementById('l-err');if(err)err.style.display='block';}
   }
@@ -3068,31 +3072,29 @@ function openSpareQR(id){
 
 // QR ile gelen ?sp= parametresini işle
 function handleSpareQR(spId){
-  if(!U){window._pendingSP=spId;R();return;}
-  // showSpareQRLanding kendi içinde retry yapıyor
-  showSpareQRLanding(spId);
+  if(!U){
+    sessionStorage.setItem('pendingSP', spId);
+    window._pendingSP = spId;
+    R();
+    return;
+  }
+  // Kullanıcı giriş yapmış — direkt göster
+  var p=(DB.spareParts||[]).find(function(x){return x.id===spId;});
+  if(p){
+    showSpareQRLanding(spId);
+  } else {
+    // Firebase henüz gelmedi — kaydet, listener halleder
+    sessionStorage.setItem('pendingSP', spId);
+    window._pendingSP = spId;
+    toast('Parça bilgisi yükleniyor...','info');
+  }
 }
 
 function showSpareQRLanding(spId){
   var p=(DB.spareParts||[]).find(function(x){return x.id===spId;});
   if(!p){
-    // Son bir kez daha dene
-    var app=document.getElementById('app');
-    if(app){
-      app.innerHTML='<div style="text-align:center;padding:60px 20px">'
-        +'<div style="font-size:48px;margin-bottom:16px">⏳</div>'
-        +'<div style="font-size:16px;font-weight:700;color:var(--sub)">Parça bilgisi yükleniyor...</div>'
-        +'<div style="font-size:12px;color:var(--mt);margin-top:8px">'+esc(spId)+'</div>'
-        +'</div>';
-    }
-    setTimeout(function(){
-      var p2=(DB.spareParts||[]).find(function(x){return x.id===spId;});
-      if(p2){ showSpareQRLanding(spId); }
-      else{
-        toast('Parça bulunamadı: '+spId,'err');
-        PAGE='spareparts';R();
-      }
-    },1000);
+    toast('Parça bulunamadı: '+spId,'err');
+    PAGE='spareparts';R();
     return;
   }
 
@@ -3740,10 +3742,13 @@ fbInit();
 (function(){
   var urlParams = typeof URLSearchParams !== 'undefined'
     ? new URLSearchParams(window.location.search) : null;
-  var qParam = urlParams ? urlParams.get('eq') : null;
+  var qParam  = urlParams ? urlParams.get('eq') : null;
   var spParam = urlParams ? urlParams.get('sp') : null;
-  if(qParam)  window._pendingQR = qParam;
-  if(spParam) window._pendingSP = spParam;
+  if(qParam)  { window._pendingQR = qParam;  sessionStorage.setItem('pendingQR',  qParam);  }
+  if(spParam) { window._pendingSP = spParam; sessionStorage.setItem('pendingSP', spParam); }
+  // Önceki oturumdan kalan pending'leri de oku
+  if(!qParam)  { var sq=sessionStorage.getItem('pendingQR');  if(sq)window._pendingQR=sq;  }
+  if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
 
