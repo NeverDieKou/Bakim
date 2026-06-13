@@ -412,7 +412,19 @@ var U=null,PAGE='dashboard',TAB={eq:'tl',wo:'info'},MODAL={},ET={},FLT={type:'al
 
 function R(){
   var app=document.getElementById('app');
-  if(!U){app.innerHTML=tplLogin();bindLogin();return;}
+  if(!U){
+    app.innerHTML=tplLogin();
+    bindLogin();
+    // Eğer QR parametresi varsa login sayfasında ipucu göster
+    if(window._pendingSP||window._pendingQR){
+      var hint=document.createElement('div');
+      hint.style.cssText='text-align:center;padding:10px;font-size:12px;color:var(--bll);background:rgba(37,99,235,.1);border-radius:8px;margin-top:10px;border:1px solid rgba(37,99,235,.3)';
+      hint.innerHTML='📱 QR kodu algılandı. Giriş yaptıktan sonra otomatik yönlendirileceksiniz.';
+      var lgb=document.querySelector('.lgb');
+      if(lgb)lgb.appendChild(hint);
+    }
+    return;
+  }
   app.innerHTML=tplShell();bindNav();renderPage();renderModals();
 }
 function renderPage(){
@@ -451,9 +463,36 @@ function bindLogin(){
     var u=(document.getElementById('l-u')||{value:''}).value.trim();
     var p=(document.getElementById('l-p')||{value:''}).value;
     var f=DB.users.find(function(x){return x.un===u&&(x.pw===p||x.password===p)&&x.active;});
-    if(f){U=f;setTimeout(function(){addLog('Giriş','Kullanıcı girişi yapıldı','','');},100);var h=window.location.hash;R();if(h&&h.startsWith('#qr=')){var eid=h.replace('#qr=','').split(':')[0];window.location.hash='';setTimeout(function(){showQRLanding(eid);},100);}
-      else if(window._pendingQR){var pqr=window._pendingQR;window._pendingQR=null;setTimeout(function(){showQRLanding(pqr);},100);}
-      else if(window._pendingSP){var psp=window._pendingSP;window._pendingSP=null;setTimeout(function(){handleSpareQR(psp);},100);}
+    if(f){
+      U=f;
+      addLog('Giriş','Kullanıcı girişi yapıldı','','');
+      // QR yönlendirme
+      var h=window.location.hash;
+      if(h&&h.startsWith('#qr=')){
+        var eid=h.replace('#qr=','').split(':')[0];
+        window.location.hash='';
+        R();
+        setTimeout(function(){showQRLanding(eid);},200);
+      } else if(window._pendingQR){
+        var pqr=window._pendingQR;window._pendingQR=null;
+        R();
+        setTimeout(function(){showQRLanding(pqr);},200);
+      } else if(window._pendingSP){
+        var psp=window._pendingSP;window._pendingSP=null;
+        R(); // Önce shell'i render et
+        // Firebase veri yüklemesini bekle — max 3 saniye dene
+        var spTry=0;
+        var spInterval=setInterval(function(){
+          spTry++;
+          var found=(DB.spareParts||[]).find(function(x){return x.id===psp;});
+          if(found||spTry>=15){
+            clearInterval(spInterval);
+            showSpareQRLanding(psp);
+          }
+        },200);
+      } else {
+        R();
+      }
     }
     else{var err=document.getElementById('l-err');if(err)err.style.display='block';}
   }
@@ -552,7 +591,7 @@ function pgEq(){
     var docs=(DB.eqDocs[eq.id]||[]).length;
     return '<div style="background:var(--bg2);border:1px solid var(--bdl);border-radius:12px;padding:20px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor=\'var(--bl)\'" onmouseout="this.style.borderColor=\'var(--bdl)\'" onclick="openEqDet(\''+eq.id+'\')"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px"><div><div style="font-size:10px;font-family:monospace;color:var(--mt);margin-bottom:3px">'+esc(eq.id)+'</div><div style="font-size:15px;font-weight:800;line-height:1.2">'+esc(eq.name)+'</div></div>'+eqLed(eq.status)+'</div><div style="font-size:11px;color:var(--mt);margin-bottom:12px">📍 '+esc(eq.area)+' · '+esc(eq.mfr||'—')+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="background:var(--bg3);border-radius:7px;padding:8px 10px"><div style="font-size:9px;color:var(--mt);margin-bottom:2px;text-transform:uppercase;letter-spacing:.8px">Son Bakım</div><div style="font-size:12px;font-weight:700">'+esc(eq.lastMaint||'—')+'</div></div><div style="background:var(--bg3);border-radius:7px;padding:8px 10px"><div style="font-size:9px;color:var(--mt);margin-bottom:2px;text-transform:uppercase;letter-spacing:.8px">Sonraki</div><div style="font-size:12px;font-weight:700;color:'+dc+'">'+(d===null?'—':d<0?Math.abs(d)+' gün GEÇ':d===0?'BUGÜN':d+' gün')+'</div></div></div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+critBadge(eq.crit,true)+(eq.val?'<span class="badge bxsm" style="color:var(--gnl);border-color:var(--gnl);background:rgba(16,185,129,.1)">✓ Val.</span>':'')+(docs>0?'<span class="badge bxsm" style="color:var(--sub);border-color:var(--bd)">📎 '+docs+'</span>':'')+(open.length>0?'<span style="margin-left:auto;font-size:11px;color:var(--rdl);font-weight:700">'+open.length+' açık İE</span>':'')+'</div></div>';
   }).join('');
-  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Ekipmanlar</div><div style="display:flex;gap:8px"><button class="btn bout bsm" onclick="openQRModal()">📱 QR Kodlar</button>'+(can('w')?'<button class="btn bpri bsm" onclick="openEqForm(null)">+ Ekipman Ekle</button>':'')+'</div></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">'+h+'</div>';
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Ekipmanlar</div><div style="display:flex;gap:8px"><button class="btn bout bsm" onclick="openQRModal()">📱 QR Kodlar</button>'+(can('s')?'<button class="btn bout bsm" onclick="downloadEqTemplate()">⬇ Excel Şablonu</button>':'')+(can('s')?'<label class="btn bsuc bsm" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px">📤 Excel Yükle<input type="file" accept=".xlsx,.xls" style="display:none" onchange="uploadEqExcel(this)"/></label>':'')+(can('s')?'<button class="btn bout bsm" onclick="downloadEqTemplate()">⬇ Excel Şablonu</button>':'')+(can('s')?'<label class="btn bsuc bsm" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">📤 Excel Yükle<input type="file" accept=".xlsx,.xls" style="display:none" onchange="uploadEqExcel(this)"/></label>':'')+(can('s')?'<button class="btn bpri bsm" onclick="openEqForm(null)">+ Ekipman Ekle</button>':can('w')?'<button class="btn bpri bsm" onclick="openEqForm(null)">+ Ekipman Ekle</button>':'')+'</div></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">'+h+'</div>';
 }
 
 function pgSched(){
@@ -3029,19 +3068,33 @@ function openSpareQR(id){
 
 // QR ile gelen ?sp= parametresini işle
 function handleSpareQR(spId){
-  var p=(DB.spareParts||[]).find(function(x){return x.id===spId;});
-  if(!p){
-    // Giriş yapılmamışsa login sonrası tekrar dene
-    if(!U){window._pendingSP=spId;R();return;}
-    toast('Parça bulunamadı: '+spId,'err');return;
-  }
-  // QR landing sayfasını göster
+  if(!U){window._pendingSP=spId;R();return;}
+  // showSpareQRLanding kendi içinde retry yapıyor
   showSpareQRLanding(spId);
 }
 
 function showSpareQRLanding(spId){
   var p=(DB.spareParts||[]).find(function(x){return x.id===spId;});
-  if(!p){toast('Parça bulunamadı','err');return;}
+  if(!p){
+    // Son bir kez daha dene
+    var app=document.getElementById('app');
+    if(app){
+      app.innerHTML='<div style="text-align:center;padding:60px 20px">'
+        +'<div style="font-size:48px;margin-bottom:16px">⏳</div>'
+        +'<div style="font-size:16px;font-weight:700;color:var(--sub)">Parça bilgisi yükleniyor...</div>'
+        +'<div style="font-size:12px;color:var(--mt);margin-top:8px">'+esc(spId)+'</div>'
+        +'</div>';
+    }
+    setTimeout(function(){
+      var p2=(DB.spareParts||[]).find(function(x){return x.id===spId;});
+      if(p2){ showSpareQRLanding(spId); }
+      else{
+        toast('Parça bulunamadı: '+spId,'err');
+        PAGE='spareparts';R();
+      }
+    },1000);
+    return;
+  }
 
   var isKritik = p.stock>0&&p.stock<=p.minStock;
   var isSifir  = p.stock<=0;
@@ -3238,6 +3291,7 @@ function downloadSpareTemplate(){
 
 // ── Yedek Parça Excel Yükleme ─────────────────────────────────
 function uploadSpareExcel(inp){
+  if(!can('s')){toast('Bu işlem için Yönetici yetkisi gerekli','err');return;}
   var file = inp.files[0];
   if(!file) return;
   if(typeof XLSX==='undefined'){toast('XLSX kütüphanesi yüklenemedi','err');return;}
@@ -3408,19 +3462,288 @@ function closeSpareCatMgr(){
   var el=document.getElementById('ov-sp-cat');if(el)el.remove();
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// EKİPMAN EXCEL YÜKLEME / ŞABLON
+// ══════════════════════════════════════════════════════════════
+function downloadEqTemplate(){
+  if(typeof XLSX==='undefined'){toast('XLSX kütüphanesi yüklenemedi','err');return;}
+  var s = DB.settings;
+  var wb = XLSX.utils.book_new();
+
+  // Talimatlar
+  var instrData = [
+    ['NOBEL İLAÇ — EKİPMAN LİSTESİ ŞABLONU'],
+    [''],
+    ['DOLDURMA TALİMATLARI:'],
+    ['1. "Ekipmanlar" sekmesini doldurun'],
+    ['2. Zorunlu (*) alanları doldurun'],
+    ['3. Ekipman ID benzersiz olmalıdır (boş bırakılırsa otomatik atanır)'],
+    ['4. Durum: aktif, arizali, bakimda, devre_disi'],
+    ['5. Kritiklik: kritik, yuksek, orta, dusuk'],
+    ['6. Validated: Evet / Hayır'],
+    ['7. Bölge: '+s.areas.join(', ')],
+    ['8. Kategori: '+(s.eqCats||[]).join(', ')],
+    [''],
+    ['NOT: Aynı Ekipman ID varsa güncellenir.'],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instrData), 'Talimatlar');
+
+  // Ekipman şablon
+  var headers = ['Ekipman ID','Ekipman Adı *','Kategori','Bölge *','Durum','Üretici','Model','Seri No',
+    'Kurulum Tarihi (YYYY-MM-DD)','Son Bakım (YYYY-MM-DD)','Sonraki Bakım (YYYY-MM-DD)',
+    'Kritiklik','Validated (Evet/Hayır)','Validasyon Dok. No','Notlar'];
+
+  var exampleRows = DB.equipment.map(function(e){
+    return [e.id,e.name,e.cat||'',e.area,e.status,e.mfr||'',e.model||'',e.sn||'',
+      e.instDate||'',e.lastMaint||'',e.nextMaint||'',
+      e.crit||'orta',e.val?'Evet':'Hayır',e.valDoc||'',e.notes||''];
+  });
+
+  var ws = XLSX.utils.aoa_to_sheet([headers].concat(exampleRows));
+  ws['!cols'] = headers.map(function(h){return{wch:Math.max(h.length+2,14)};});
+  XLSX.utils.book_append_sheet(wb, ws, 'Ekipmanlar');
+  XLSX.writeFile(wb, 'Ekipman_Listesi_Sablonu.xlsx');
+  toast('Şablon indirildi: Ekipman_Listesi_Sablonu.xlsx');
+}
+
+function uploadEqExcel(inp){
+  if(!can('s')){toast('Bu işlem için Yönetici yetkisi gerekli','err');return;}
+  var file = inp.files[0];
+  if(!file) return;
+  if(typeof XLSX==='undefined'){toast('XLSX kütüphanesi yüklenemedi','err');return;}
+
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var wb = XLSX.read(e.target.result,{type:'array'});
+      var wsName = wb.SheetNames.find(function(n){return n==='Ekipmanlar'||n==='Sheet1';}) || wb.SheetNames[0];
+      var ws = wb.Sheets[wsName];
+      var rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(rows.length<2){toast('Veri bulunamadı','err');return;}
+
+      var headers = rows[0].map(function(h){return String(h).trim().toLowerCase();});
+      function col(kws){
+        var exact=headers.findIndex(function(h){return kws.some(function(k){return h===k;});});
+        if(exact>=0)return exact;
+        return headers.findIndex(function(h){return kws.some(function(k){return h.indexOf(k)>=0;});});
+      }
+
+      var iId    = col(['ekipman id','id']);
+      var iName  = col(['ekipman adı','ekipman adi','ad','name']);
+      var iCat   = col(['kategori','category']);
+      var iArea  = col(['bölge','bolge','alan','area']);
+      var iStat  = col(['durum','status']);
+      var iMfr   = col(['üretici','uretici','mfr','manufacturer']);
+      var iModel = col(['model']);
+      var iSn    = col(['seri no','seri','sn','serial']);
+      var iInst  = col(['kurulum','inst']);
+      var iLast  = col(['son bakım','son bakim','last']);
+      var iNext  = col(['sonraki','next']);
+      var iCrit  = col(['kritiklik','crit','criticality']);
+      var iVal   = col(['validated','validasyon','val']);
+      var iValDoc= col(['validasyon dok','val dok','valdoc']);
+      var iNotes = col(['notlar','notes']);
+
+      if(iName<0){toast('Ekipman Adı sütunu bulunamadı','err');return;}
+
+      var added=0,updated=0,skipped=0;
+      for(var i=1;i<rows.length;i++){
+        var row=rows[i];
+        var name=String(row[iName]||'').trim();
+        if(!name){skipped++;continue;}
+
+        var id = iId>=0?String(row[iId]||'').trim():'';
+        var existing = id ? DB.equipment.find(function(e){return e.id===id;}) : null;
+        if(!existing&&id) existing=DB.equipment.find(function(e){return e.name===name;});
+
+        var valStr = iVal>=0?String(row[iVal]||'').trim().toLowerCase():'';
+        var eq = {
+          id:        existing?existing.id:(id||'EQ-'+uid()),
+          name:      name,
+          cat:       iCat>=0?String(row[iCat]||'').trim():existing&&existing.cat||'',
+          area:      iArea>=0?String(row[iArea]||'').trim():existing&&existing.area||'',
+          status:    iStat>=0?String(row[iStat]||'aktif').trim():existing&&existing.status||'aktif',
+          mfr:       iMfr>=0?String(row[iMfr]||'').trim():existing&&existing.mfr||'',
+          model:     iModel>=0?String(row[iModel]||'').trim():existing&&existing.model||'',
+          sn:        iSn>=0?String(row[iSn]||'').trim():existing&&existing.sn||'',
+          instDate:  iInst>=0?String(row[iInst]||'').trim():existing&&existing.instDate||'',
+          lastMaint: iLast>=0?String(row[iLast]||'').trim():existing&&existing.lastMaint||'',
+          nextMaint: iNext>=0?String(row[iNext]||'').trim():existing&&existing.nextMaint||'',
+          crit:      iCrit>=0?String(row[iCrit]||'orta').trim():existing&&existing.crit||'orta',
+          val:       valStr==='evet'||valStr==='true'||valStr==='1'||valStr==='yes',
+          valDoc:    iValDoc>=0?String(row[iValDoc]||'').trim():existing&&existing.valDoc||'',
+          notes:     iNotes>=0?String(row[iNotes]||'').trim():existing&&existing.notes||'',
+          techId:    existing?existing.techId||'':'',
+        };
+
+        if(existing){
+          DB.equipment=DB.equipment.map(function(x){return x.id===eq.id?eq:x;});
+          updated++;
+        } else {
+          DB.equipment=DB.equipment.concat([eq]);
+          added++;
+        }
+      }
+
+      addLog('Ekipman Excel Yüklendi',added+' eklendi, '+updated+' güncellendi','',added+'+'+updated);
+      dbSave();
+      inp.value='';
+      toast('✓ '+added+' ekipman eklendi, '+updated+' güncellendi'+(skipped?' ('+skipped+' atlandı)':''));
+      R();
+    }catch(err){
+      console.error(err);
+      toast('Excel okuma hatası: '+err.message,'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+
+// ── Ekipman Excel Şablonu İndir ──────────────────────────────
+function downloadEqTemplate(){
+  if(!can('s')){toast('Yönetici yetkisi gerekli','err');return;}
+  if(typeof XLSX==='undefined'){toast('XLSX kütüphanesi yüklenemedi','err');return;}
+  var wb = XLSX.utils.book_new();
+  // Talimatlar
+  var instr = [
+    ['NOBEL İLAÇ — EKİPMAN LİSTESİ ŞABLONU'],
+    [''],
+    ['DOLDURMA TALİMATLARI:'],
+    ['1. "Ekipmanlar" sekmesini doldurun'],
+    ['2. * ile işaretli alanlar zorunludur'],
+    ['3. Durum: aktif / arizali / bakimda / devre_disi'],
+    ['4. Kritiklik: kritik / yuksek / orta / dusuk'],
+    ['5. Validated: Evet / Hayır'],
+    ['6. Tarih formatı: YYYY-AA-GG (örn: 2024-03-15)'],
+    [''],
+    ['NOT: Aynı ID varsa güncellenir, yoksa yeni eklenir'],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instr), 'Talimatlar');
+  // Ekipman sayfası
+  var headers = [
+    'Ekipman ID (boş=otomatik)','Ekipman Adı *','Kategori','Bölge *',
+    'Durum','Üretici','Model','Seri No',
+    'Kurulum Tarihi','Son Bakım Tarihi','Sonraki Bakım Tarihi',
+    'Kritiklik','Validated','Validasyon Dok. No','Notlar'
+  ];
+  var exampleRows = [
+    ['EQ-009','Toz Kabini','Üretim Ekipmanı','Üretim A','aktif','Telstar','Labcaire','TC-2024-001','2024-01-15','2024-06-01','2024-12-01','orta','Evet','VP-009-2024','Haftalık filtre kontrolü'],
+    ['','Vakum Pompası','Altyapı Sistemi','Teknik Servis','aktif','Busch','R5','BP-2023-055','2023-06-01','2024-03-01','2024-09-01','dusuk','Hayır','',''],
+  ];
+  var ws = XLSX.utils.aoa_to_sheet([headers].concat(exampleRows));
+  ws['!cols'] = headers.map(function(h){return {wch:Math.max(h.length+2,16)};});
+  XLSX.utils.book_append_sheet(wb, ws, 'Ekipmanlar');
+  XLSX.writeFile(wb, 'Ekipman_Listesi_Sablonu.xlsx');
+  toast('Ekipman şablonu indirildi');
+}
+
+// ── Ekipman Excel Yükleme ─────────────────────────────────────
+function uploadEqExcel(inp){
+  if(!can('s')){toast('Yönetici yetkisi gerekli','err');return;}
+  var file = inp.files[0];
+  if(!file) return;
+  if(typeof XLSX==='undefined'){toast('XLSX kütüphanesi yüklenemedi','err');return;}
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var wb = XLSX.read(e.target.result,{type:'array'});
+      var wsName = wb.SheetNames.find(function(n){
+        return n==='Ekipmanlar'||n==='Equipment'||n==='Sayfa1'||n==='Sheet1';
+      })||wb.SheetNames[0];
+      var ws = wb.Sheets[wsName];
+      var rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(rows.length<2){toast('Dosyada veri bulunamadı','err');return;}
+      var headers = rows[0].map(function(h){return String(h).trim().toLowerCase();});
+      function fc(kws){
+        var exact=headers.findIndex(function(h){return kws.some(function(k){return h===k;});});
+        if(exact>=0)return exact;
+        return headers.findIndex(function(h){return kws.some(function(k){return h.indexOf(k)>=0;});});
+      }
+      var iId    = fc(['ekipman id','id','equipment id']);
+      var iName  = fc(['ekipman adı','ekipman adi','adı','adi','name','ad']);
+      var iCat   = fc(['kategori','category','cat']);
+      var iArea  = fc(['bölge','bolge','alan','area','location']);
+      var iStat  = fc(['durum','status']);
+      var iMfr   = fc(['üretici','uretici','manufacturer','mfr']);
+      var iModel = fc(['model']);
+      var iSN    = fc(['seri no','serial','sn']);
+      var iInst  = fc(['kurulum','install','inst']);
+      var iLast  = fc(['son bakım','son bakim','last maint','lastmaint']);
+      var iNext  = fc(['sonraki bakım','sonraki bakim','next maint','nextmaint']);
+      var iCrit  = fc(['kritiklik','criticality','crit']);
+      var iVal   = fc(['validated','validasyon','val']);
+      var iValDoc= fc(['validasyon dok','val doc','valdoc']);
+      var iNotes = fc(['notlar','notes','not']);
+      if(iName<0){toast('Ekipman Adı sütunu zorunludur','err');return;}
+      if(iArea<0){toast('Bölge sütunu zorunludur','err');return;}
+      if(!DB.equipment)DB.equipment=[];
+      var added=0,updated=0,skipped=0;
+      for(var i=1;i<rows.length;i++){
+        var row=rows[i];
+        var name=String(row[iName]||'').trim();
+        if(!name){skipped++;continue;}
+        var eqId=iId>=0?String(row[iId]||'').trim():'';
+        var existing=eqId?DB.equipment.find(function(e){return e.id===eqId;}):null;
+        var statRaw=String(row[iStat]||'aktif').trim().toLowerCase().replace(' ','_');
+        var validStat=['aktif','arizali','bakimda','devre_disi'];
+        var stat=validStat.indexOf(statRaw)>=0?statRaw:'aktif';
+        var critRaw=String(row[iCrit]||'orta').trim().toLowerCase();
+        var validCrit=['kritik','yuksek','orta','dusuk'];
+        var crit=validCrit.indexOf(critRaw)>=0?critRaw:'orta';
+        var valRaw=String(row[iVal]||'').trim().toLowerCase();
+        var isVal=valRaw==='evet'||valRaw==='yes'||valRaw==='true'||valRaw==='1';
+        var eq={
+          id:        existing?existing.id:(eqId||'EQ-'+uid()),
+          name:      name,
+          cat:       iCat>=0?String(row[iCat]||'').trim():(existing?existing.cat:''),
+          area:      iArea>=0?String(row[iArea]||'').trim():(existing?existing.area:''),
+          status:    stat,
+          mfr:       iMfr>=0?String(row[iMfr]||'').trim():(existing?existing.mfr:''),
+          model:     iModel>=0?String(row[iModel]||'').trim():(existing?existing.model:''),
+          sn:        iSN>=0?String(row[iSN]||'').trim():(existing?existing.sn:''),
+          instDate:  iInst>=0?String(row[iInst]||'').trim():(existing?existing.instDate:''),
+          lastMaint: iLast>=0?String(row[iLast]||'').trim():(existing?existing.lastMaint:''),
+          nextMaint: iNext>=0?String(row[iNext]||'').trim():(existing?existing.nextMaint:''),
+          crit:      crit,
+          val:       isVal,
+          valDoc:    iValDoc>=0?String(row[iValDoc]||'').trim():(existing?existing.valDoc:''),
+          notes:     iNotes>=0?String(row[iNotes]||'').trim():(existing?existing.notes:''),
+          techId:    existing?existing.techId:'',
+        };
+        if(existing){
+          DB.equipment=DB.equipment.map(function(e){return e.id===eq.id?eq:e;});
+          updated++;
+        } else {
+          DB.equipment=DB.equipment.concat([eq]);
+          added++;
+        }
+      }
+      addLog('Ekipman Excel Yüklendi',added+' eklendi, '+updated+' güncellendi','',added+'+'+updated+' kayıt');
+      dbSave();
+      inp.value='';
+      toast('✓ '+added+' yeni ekipman eklendi, '+updated+' güncellendi'+(skipped?' ('+skipped+' atlandı)':''));
+      R();
+    }catch(err){
+      console.error(err);
+      toast('Excel okuma hatası: '+err.message,'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 // BOOT
 // Firebase başlat
 fbInit();
 
 // QR link ile gelindiyse (?eq=EQ-001)
 (function(){
-  var qParam = typeof URLSearchParams !== 'undefined'
-    ? new URLSearchParams(window.location.search).get('eq')
-    : null;
-  if(qParam) {
-    // Önce login, sonra QR sayfasına yönlendir
-    window._pendingQR = qParam;
-  }
+  var urlParams = typeof URLSearchParams !== 'undefined'
+    ? new URLSearchParams(window.location.search) : null;
+  var qParam = urlParams ? urlParams.get('eq') : null;
+  var spParam = urlParams ? urlParams.get('sp') : null;
+  if(qParam)  window._pendingQR = qParam;
+  if(spParam) window._pendingSP = spParam;
 })();
 R();
 
