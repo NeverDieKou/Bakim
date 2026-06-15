@@ -153,6 +153,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -201,7 +202,7 @@ function fbInit() {
       }
       // Gelen veriyi uygula
       var needRender = false;
-      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats'];
+      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats','waterPlans'];
       keys.forEach(function(k) {
         if(data[k] !== undefined) {
           // Array olarak gelenleri düzelt
@@ -278,6 +279,7 @@ function fbSaveNow() {
     spareParts:   DB.spareParts   || [],
     spareMovements: DB.spareMovements || [],
     eqPartHistory: DB.eqPartHistory || {},
+    waterPlans:   DB.waterPlans   || [],
     spareCats:    DB.spareCats    || [],
     lastUpdated:  new Date().toISOString(),
     updatedBy:    U ? U.name : 'system'
@@ -424,6 +426,7 @@ function dbLoad(){
     if(!d.spareParts)d.spareParts=[];
     if(!d.spareMovements)d.spareMovements=[];
     if(!d.eqPartHistory)d.eqPartHistory={};
+    if(!d.waterPlans)d.waterPlans=[];
     if(!d.spareCats)d.spareCats=['Mekanik','Elektrik','Enstrümantasyon','HVAC Filtresi','Kimyasal','Yağlama','Conta/Sızdırmazlık','Elektronik','Genel'];
     return d;
   }catch(e){return null;}
@@ -459,7 +462,7 @@ function renderPage(){
   var el=document.getElementById('main');if(!el)return;
   // Sayfa geçiş logu
   if(U&&PAGE)addLog('Sayfa: '+PAGE,'','','');
-  var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,kvalifikasyon:pgKval,spareparts:pgSpareParts,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings,logs:pgLogs};
+  var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,kvalifikasyon:pgKval,watersystem:pgWaterSystem,spareparts:pgSpareParts,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings,logs:pgLogs};
   el.innerHTML=(map[PAGE]||pgDash)();bindPage();
 }
 function renderModals(){
@@ -476,6 +479,7 @@ function renderModals(){
   if(MODAL_SP)r.innerHTML+=tplSpareForm();
   if(MODAL_SP_MOV)r.innerHTML+=tplSpareMovForm();
   if(MODAL_SP_CAT)r.innerHTML+=tplSpareCatMgr();
+  if(WS_MODAL)r.innerHTML+=tplWaterModal();
   bindModals();
   if(MODAL.qr&&QEID)setTimeout(function(){drawQR(QEID);},80);
 }
@@ -532,7 +536,7 @@ function tplShell(){
   var urgent=DB.equipment.filter(function(e){var d=daysLeft(e.nextMaint);return d!==null&&d<=s.critDays&&d>=0;});
   var openN=DB.workOrders.filter(function(w){return w.status==='acik';}).length;
   var pendN=can('ap')?DB.workOrders.filter(function(w){return w.status==='bekliyor';}).length:0;
-  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlama'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'spareparts',ico:'🔩',lbl:'Yedek Parça'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Personeller'}];
+  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlama'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'watersystem',ico:'💧',lbl:'Su Sistemi'},{id:'spareparts',ico:'🔩',lbl:'Yedek Parça'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Personeller'}];
   if(can('u'))navDefs.push({id:'users',ico:'👥',lbl:'Kullanıcılar'});
   if(can('s'))navDefs.push({id:'logs',ico:'📜',lbl:'Aktivite Logu'});
   if(can('s'))navDefs.push({id:'settings',ico:'⚙️',lbl:'Ayarlar'});
@@ -1319,7 +1323,7 @@ function exportExcel(){
 function renderDocList(docs,canEdit){if(!docs.length)return'<div style="font-size:12px;color:var(--mt);padding:8px 0">Henüz doküman eklenmedi</div>';return docs.map(function(d,i){return'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:7px 10px;background:var(--bg3);border-radius:7px;border:1px solid var(--bd)">📄<span style="flex:1;font-size:12px;font-weight:600;color:var(--bll)">'+esc(d)+'</span>'+(canEdit?'<button data-i="'+i+'" class="rmdoc" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:16px">×</button>':'')+'</div>';}).join('');}
 function bindDocRemove(){document.querySelectorAll('.rmdoc').forEach(function(b){b.onclick=function(){var i=parseInt(b.dataset.i);WDOCS.splice(i,1);var el=document.getElementById('f-docs');if(el){el.innerHTML=renderDocList(WDOCS,true);bindDocRemove();}};});}
 function bindModals(){
-  [['ov-wo','wo'],['ov-wodet','woDet'],['ov-eqdet','eqDet'],['ov-eqform','eqForm'],['ov-tech','tech'],['ov-user','user'],['ov-qr','qr'],['ov-schedule','schedule']].forEach(function(p){var el=document.getElementById(p[0]);if(el)el.onclick=function(e){if(e.target===el)closeM(p[1]);};});
+  [['ov-wo','wo'],['ov-wodet','woDet'],['ov-eqdet','eqDet'],['ov-eqform','eqForm'],['ov-tech','tech'],['ov-user','user'],['ov-qr','qr'],['ov-schedule','schedule'],['ov-water','_ws']].forEach(function(p){var el=document.getElementById(p[0]);if(el)el.onclick=function(e){if(e.target===el)closeM(p[1]);};});
   var ba=document.getElementById('b-adddoc');if(ba)ba.onclick=function(){var inp=document.getElementById('f-di');if(!inp||!inp.value.trim())return;WDOCS.push(inp.value.trim());inp.value='';var el=document.getElementById('f-docs');if(el){el.innerHTML=renderDocList(WDOCS,true);bindDocRemove();}};
   bindDocRemove();
 }
@@ -3706,6 +3710,347 @@ function uploadEqExcel(inp){
 
 
 
+
+// ══════════════════════════════════════════════════════════════
+// SU SİSTEMİ MODÜLÜ
+// ══════════════════════════════════════════════════════════════
+var WATER_TYPES = [
+  {id:'ham_su',      lbl:'Ham Su Sistemi Sanitasyonu',                     ico:'🪣', col:'#64748b'},
+  {id:'ro1',         lbl:'Saf Su Üretim Sistemi RO-1 Sanitasyonu',         ico:'💧', col:'#0ea5e9'},
+  {id:'ro2edi',      lbl:'Saf Su Üretim Sistemi RO-2+EDI Sanitasyonu',     ico:'💦', col:'#06b6d4'},
+  {id:'depolama',    lbl:'Saf Su Depolama ve Dağıtım Sistemi Sanitasyonu', ico:'🏗️',  col:'#8b5cf6'},
+  {id:'wfi',         lbl:'WFI Sterilizasyonu',                              ico:'🧫', col:'#10b981'},
+];
+
+var WATER_STATUS = {
+  planli:      {lbl:'Planlandı',    col:'#4f8ef7', bg:'rgba(79,142,247,.12)'},
+  tamamlandi:  {lbl:'Tamamlandı',   col:'#10b981', bg:'rgba(16,185,129,.12)'},
+  gecikti:     {lbl:'Gecikti',      col:'#ef4444', bg:'rgba(239,68,68,.12)'},
+  iptal:       {lbl:'İptal',        col:'#94a3b8', bg:'rgba(148,163,184,.12)'},
+};
+
+var WS_CAL_DATE = (function(){
+  var d=new Date(); return d.getFullYear()+'-'+(d.getMonth()<9?'0':'')+(d.getMonth()+1);
+})(); // YYYY-MM
+var WS_SEL_DATE = null;   // seçili gün (takvimde)
+var WS_MODAL    = false;
+var WS_EDIT     = null;   // düzenlenen plan
+
+function pgWaterSystem(){
+  var plans = DB.waterPlans || [];
+
+  // Takvim ayı
+  var parts  = WS_CAL_DATE.split('-');
+  var year   = parseInt(parts[0]);
+  var month  = parseInt(parts[1])-1; // 0-indexed
+  var monthNames=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  var dayNames  =['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+
+  // Bu ayın planları
+  var monthStr = WS_CAL_DATE;
+  var monthPlans = plans.filter(function(p){return p.date&&p.date.startsWith(monthStr);});
+
+  // İstatistikler
+  var total = plans.length;
+  var done  = plans.filter(function(p){return p.status==='tamamlandi';}).length;
+  var late  = plans.filter(function(p){
+    return p.status==='planli' && p.date && p.date < today();
+  }).length;
+
+  var statsH = [
+    {lbl:'Toplam Plan', v:total,  col:'var(--bll)'},
+    {lbl:'Tamamlanan',  v:done,   col:'var(--gnl)'},
+    {lbl:'Geciken',     v:late,   col:'var(--rdl)'},
+  ].map(function(s){
+    return '<div class="sc" style="border-color:'+s.col+'25">'
+      +'<div class="sa" style="background:'+s.col+'"></div>'
+      +'<div class="sv" style="color:'+s.col+'">'+s.v+'</div>'
+      +'<div class="sl">'+s.lbl+'</div></div>';
+  }).join('');
+
+  // Takvim
+  var firstDay = new Date(year, month, 1);
+  var lastDay  = new Date(year, month+1, 0);
+  var startDow = (firstDay.getDay()+6)%7; // Pazartesi=0
+  var todayStr = today();
+
+  // Gün başlıkları
+  var calHeader = dayNames.map(function(d){
+    return '<div style="text-align:center;font-size:11px;font-weight:700;color:var(--mt);padding:6px 0">'+d+'</div>';
+  }).join('');
+
+  // Takvim hücreleri
+  var cells = '';
+  // Boş hücreler
+  for(var i=0;i<startDow;i++) cells+='<div></div>';
+  // Günler
+  for(var day=1;day<=lastDay.getDate();day++){
+    var dateStr = year+'-'+(month<9?'0':'')+(month+1)+'-'+(day<10?'0':'')+day;
+    var dayPlans = plans.filter(function(p){return p.date===dateStr;});
+    var isToday  = dateStr===todayStr;
+    var isSel    = dateStr===WS_SEL_DATE;
+    var hasPlan  = dayPlans.length>0;
+    var isPast   = dateStr < todayStr;
+    // En kritik durumu al
+    var cellStatus = dayPlans.length>0 ? dayPlans.reduce(function(acc,p){
+      if(p.status==='gecikti') return 'gecikti';
+      if(p.status==='planli'&&acc!=='gecikti') return 'planli';
+      if(p.status==='tamamlandi'&&acc==='') return 'tamamlandi';
+      return acc;
+    },'') : '';
+    var dotColor = cellStatus ? WATER_STATUS[cellStatus].col : '';
+    cells += '<div onclick="WS_SEL_DATE=\''+dateStr+'\';renderPage()" style="'
+      +'min-height:52px;padding:4px;border-radius:8px;cursor:pointer;border:2px solid '
+      +(isSel?'var(--bll)':isToday?'rgba(79,142,247,.4)':'transparent')+';'
+      +'background:'+(isSel?'rgba(79,142,247,.1)':isToday?'rgba(79,142,247,.05)':'var(--bg3)')+';'
+      +'transition:all .1s">'
+      +'<div style="font-size:12px;font-weight:'+(isToday?'800':'600')+';color:'+(isToday?'var(--bll)':isPast?'var(--mt)':'var(--tx)')+';text-align:center">'+day+'</div>'
+      +(hasPlan?'<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:3px;justify-content:center">'
+        +dayPlans.slice(0,3).map(function(p){
+          var wt=WATER_TYPES.find(function(w){return w.id===p.typeId;})||{col:'#888'};
+          var sc=WATER_STATUS[p.status]||{col:'#888'};
+          return '<div style="width:8px;height:8px;border-radius:50%;background:'+sc.col+'" title="'+esc((WATER_TYPES.find(function(w){return w.id===p.typeId;})||{lbl:''}).lbl)+'"></div>';
+        }).join('')
+        +(dayPlans.length>3?'<div style="font-size:9px;color:var(--mt)">+'+( dayPlans.length-3)+'</div>':'')
+        +'</div>':'')
+      +'</div>';
+  }
+
+  // Seçili gün detayı
+  var selDayH = '';
+  if(WS_SEL_DATE){
+    var selPlans = plans.filter(function(p){return p.date===WS_SEL_DATE;});
+    var dParts = WS_SEL_DATE.split('-');
+    var dLabel = parseInt(dParts[2])+' '+monthNames[parseInt(dParts[1])-1]+' '+dParts[0];
+    var planItems = selPlans.length===0
+      ? '<div style="font-size:13px;color:var(--mt);padding:12px 0">Bu gün için plan yok.</div>'
+      : selPlans.map(function(p){
+          var wt  = WATER_TYPES.find(function(w){return w.id===p.typeId;})||{lbl:p.typeId,ico:'💧',col:'#888'};
+          var st  = WATER_STATUS[p.status]||{lbl:p.status,col:'#888',bg:'transparent'};
+          var tc  = DB.technicians.find(function(t){return t.id===p.techId;});
+          var isPastPlan = p.date<todayStr && p.status==='planli';
+          return '<div style="background:var(--bg3);border:1px solid var(--bdl);border-radius:9px;padding:12px;margin-bottom:8px">'
+            +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
+            +'<div style="display:flex;align-items:center;gap:8px;flex:1">'
+            +'<span style="font-size:18px">'+wt.ico+'</span>'
+            +'<div><div style="font-size:13px;font-weight:700;color:var(--tx)">'+esc(wt.lbl)+'</div>'
+            +(tc?'<div style="font-size:11px;color:var(--mt);margin-top:2px">👷 '+esc(tc.name)+'</div>':'')
+            +(p.notes?'<div style="font-size:11px;color:var(--sub);margin-top:4px">📝 '+esc(p.notes)+'</div>':'')
+            +'</div></div>'
+            +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">'
+            +'<span style="background:'+st.bg+';color:'+st.col+';border:1px solid '+st.col+'40;border-radius:12px;padding:2px 10px;font-size:11px;font-weight:700">'+st.lbl+(isPastPlan?' ⚠':'')+'</span>'
+            +'<div style="display:flex;gap:4px">'
+            +(can('w')?'<button class="btn bghs bxs" onclick="wsOpenEdit(\''+p.id+'\')">✏</button>':'')
+            +(can('d')?'<button class="btn bdng bxs" onclick="wsDel(\''+p.id+'\')">🗑</button>':'')
+            +'</div></div></div>'
+            +'</div>';
+        }).join('');
+
+    selDayH = '<div class="card" style="margin-top:18px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+      +'<div class="cardt" style="margin:0">📅 '+dLabel+'</div>'
+      +(can('w')?'<button class="btn bpri bsm" onclick="wsOpenNew(\''+WS_SEL_DATE+'\')">+ Plan Ekle</button>':'')
+      +'</div>'
+      +planItems
+      +'</div>';
+  }
+
+  // Alt başlık özeti (sağ panel)
+  var typesSummary = WATER_TYPES.map(function(wt){
+    var wPlans  = plans.filter(function(p){return p.typeId===wt.id;});
+    var wDone   = wPlans.filter(function(p){return p.status==='tamamlandi';}).length;
+    var wLate   = wPlans.filter(function(p){return p.status==='planli'&&p.date<todayStr;}).length;
+    var wNext   = wPlans.filter(function(p){return p.status==='planli'&&p.date>=todayStr;}).sort(function(a,b){return a.date.localeCompare(b.date);})[0];
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">'
+      +'<span style="font-size:20px;flex-shrink:0">'+wt.ico+'</span>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--tx);line-height:1.3">'+esc(wt.lbl)+'</div>'
+      +(wNext?'<div style="font-size:10px;color:var(--mt);margin-top:2px">📅 Sonraki: '+wNext.date+'</div>':'<div style="font-size:10px;color:var(--mt);margin-top:2px">Plan yok</div>')
+      +'</div>'
+      +'<div style="text-align:right;flex-shrink:0">'
+      +'<div style="font-size:11px"><span style="color:var(--gnl);font-weight:700">'+wDone+'✓</span> <span style="color:var(--mt)">'+wPlans.length+' toplam</span></div>'
+      +(wLate>0?'<div style="font-size:10px;color:var(--rdl);font-weight:700">'+wLate+' gecikti</div>':'')
+      +'</div>'
+      +'</div>';
+  }).join('');
+
+  // HTML oluştur
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">'
+    +'<div style="font-size:20px;font-weight:800;letter-spacing:-.3px">💧 Su Sistemi Planlaması</div>'
+    +(can('w')&&WS_SEL_DATE?'<button class="btn bpri bsm" onclick="wsOpenNew(\''+WS_SEL_DATE+'\')">+ Plan Ekle</button>':'')
+    +'</div>'
+    // İstatistikler
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">'+statsH+'</div>'
+    // Ana grid
+    +'<div style="display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start">'
+    // Takvim
+    +'<div class="card">'
+    +'<div style="position:relative">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
+    +'<div style="display:flex;gap:4px">'
+    +'<button onclick="wsPrevYear()" style="background:var(--bg3);border:1px solid var(--bd);border-radius:7px;width:32px;height:32px;cursor:pointer;font-size:13px;font-weight:700" title="Önceki Yıl">«</button>'
+    +'<button onclick="wsPrevMonth()" style="background:var(--bg3);border:1px solid var(--bd);border-radius:7px;width:32px;height:32px;cursor:pointer;font-size:16px">‹</button>'
+    +'</div>'
+    +'<button onclick="wsTogglePicker()" style="background:'+(WS_SHOW_PICKER?'var(--bl)':'var(--bg3)')+';color:'+(WS_SHOW_PICKER?'#fff':'var(--tx)')+';border:1px solid '+(WS_SHOW_PICKER?'var(--bl)':'var(--bd)')+';border-radius:9px;padding:6px 16px;cursor:pointer;font-size:15px;font-weight:800">'+monthNames[month]+' '+year+' ▾</button>'
+    +'<div style="display:flex;gap:4px">'
+    +'<button onclick="wsNextMonth()" style="background:var(--bg3);border:1px solid var(--bd);border-radius:7px;width:32px;height:32px;cursor:pointer;font-size:16px">›</button>'
+    +'<button onclick="wsNextYear()" style="background:var(--bg3);border:1px solid var(--bd);border-radius:7px;width:32px;height:32px;cursor:pointer;font-size:13px;font-weight:700" title="Sonraki Yıl">»</button>'
+    +'</div></div>'
+    +(WS_SHOW_PICKER?(function(){
+        var mnShort=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+        var rows='';
+        for(var ry=year-3;ry<=year+3;ry++){
+          rows+='<div style="margin-bottom:10px">'
+            +'<div style="font-size:12px;font-weight:800;color:var(--bll);margin-bottom:5px">'+ry+'</div>'
+            +'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px">'
+            +mnShort.map(function(mn,mi){
+              var ym=ry+'-'+(mi+1<10?'0':'')+(mi+1);
+              var isA=WS_CAL_DATE===ym;
+              return'<button onclick="wsGotoMonth(\'' +ym+ '\')" style="background:'+(isA?'var(--bl)':'var(--bg3)')+';color:'+(isA?'#fff':'var(--sub)')+';border:1px solid '+(isA?'var(--bl)':'var(--bd)')+';border-radius:5px;padding:4px 2px;font-size:11px;font-weight:600;cursor:pointer">'+mn+'</button>';
+            }).join('')
+            +'</div></div>';
+        }
+        return'<div style="position:absolute;top:46px;left:0;right:0;z-index:200;background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:14px;box-shadow:0 8px 32px rgba(0,0,0,.25);max-height:320px;overflow-y:auto">'
+          +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+          +'<span style="font-size:12px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:.8px">Ay / Yıl Seç</span>'
+          +'<button onclick="wsTogglePicker()" style="background:none;border:none;color:var(--mt);cursor:pointer;font-size:18px;line-height:1">✕</button>'
+          +'</div>'+rows+'</div>';
+      })():'')
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px">'+calHeader+'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">'+cells+'</div>'
+    // Legend
+    +'<div style="display:flex;gap:14px;margin-top:12px;flex-wrap:wrap">'
+    +Object.entries(WATER_STATUS).map(function(e){
+      return '<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mt)">'
+        +'<div style="width:9px;height:9px;border-radius:50%;background:'+e[1].col+'"></div>'+e[1].lbl+'</div>';
+    }).join('')
+    +'</div>'
+    +selDayH
+    +'</div>'
+    // Sağ panel: alt başlıklar özeti
+    +'<div>'
+    +'<div class="card">'
+    +'<div class="cardt">Alt Başlıklar</div>'
+    +typesSummary
+    +'</div>'
+    +'</div>'
+    +'</div>';
+}
+
+function wsPrevMonth(){
+  var parts=WS_CAL_DATE.split('-');
+  var y=parseInt(parts[0]),m=parseInt(parts[1]);
+  m--; if(m<1){y--;m=12;}
+  WS_CAL_DATE=y+'-'+(m<10?'0':'')+m;
+  WS_SEL_DATE=null; renderPage();
+}
+function wsNextMonth(){
+  var parts=WS_CAL_DATE.split('-');
+  var y=parseInt(parts[0]),m=parseInt(parts[1]);
+  m++; if(m>12){y++;m=1;}
+  WS_CAL_DATE=y+'-'+(m<10?'0':'')+m;
+  WS_SEL_DATE=null; renderPage();
+}
+function wsPrevYear(){
+  var parts=WS_CAL_DATE.split('-');
+  WS_CAL_DATE=(parseInt(parts[0])-1)+'-'+parts[1];
+  WS_SEL_DATE=null; renderPage();
+}
+function wsNextYear(){
+  var parts=WS_CAL_DATE.split('-');
+  WS_CAL_DATE=(parseInt(parts[0])+1)+'-'+parts[1];
+  WS_SEL_DATE=null; renderPage();
+}
+var WS_SHOW_PICKER=false;
+function wsTogglePicker(){WS_SHOW_PICKER=!WS_SHOW_PICKER;renderPage();}
+function wsGotoMonth(ym){WS_CAL_DATE=ym;WS_SEL_DATE=null;WS_SHOW_PICKER=false;renderPage();}
+
+function wsOpenNew(date){
+  if(!can('w')){toast('Yetki yok','err');return;}
+  WS_EDIT=null;
+  WS_SEL_DATE=date||WS_SEL_DATE;
+  WS_MODAL=true;
+  renderModals();
+}
+function wsOpenEdit(id){
+  if(!can('w')){toast('Yetki yok','err');return;}
+  WS_EDIT=(DB.waterPlans||[]).find(function(p){return p.id===id;})||null;
+  WS_MODAL=true;
+  renderModals();
+}
+function wsDel(id){
+  if(!can('d')){toast('Yetki yok','err');return;}
+  var p=(DB.waterPlans||[]).find(function(x){return x.id===id;});
+  if(!p||!confirm('Bu planı silmek istiyor musunuz?'))return;
+  DB.waterPlans=DB.waterPlans.filter(function(x){return x.id!==id;});
+  addLog('Su Sistemi Plan Silindi',p.date,'','');
+  dbSave();renderPage();
+}
+
+function tplWaterModal(){
+  if(!WS_MODAL)return '';
+  var p=WS_EDIT;
+  var f={date:WS_SEL_DATE||today(),typeId:'ham_su',techId:'',status:'planli',notes:''};
+  if(p)Object.keys(f).forEach(function(k){if(p[k]!==undefined)f[k]=p[k];});
+  var typeOpts=WATER_TYPES.map(function(wt){
+    return '<option value="'+wt.id+'"'+(f.typeId===wt.id?' selected':'')+'>'+wt.ico+' '+esc(wt.lbl)+'</option>';
+  }).join('');
+  var techOpts='<option value="">— Seçiniz —</option>'
+    +DB.technicians.filter(function(t){return t.active;}).map(function(t){
+      return '<option value="'+t.id+'"'+(f.techId===t.id?' selected':'')+'>'+esc(t.name)+'</option>';
+    }).join('');
+  var statOpts=Object.entries(WATER_STATUS).map(function(e){
+    return '<option value="'+e[0]+'"'+(f.status===e[0]?' selected':'')+'>'+e[1].lbl+'</option>';
+  }).join('');
+  return '<div class="ov" id="ov-water"><div class="md" style="max-width:480px">'
+    +'<div class="mdh"><div class="mdt">'+(p?'Planı Düzenle':'Yeni Su Sistemi Planı')+'</div>'
+    +'<button class="mdc" onclick="wsCloseModal()">✕</button></div>'
+    +'<div class="fr"><label class="lbl">Tarih *</label>'
+    +'<input class="inp" type="date" id="ws-date" value="'+esc(f.date)+'"/></div>'
+    +'<div class="fr"><label class="lbl">İşlem Türü *</label>'
+    +'<select class="inp" id="ws-type">'+typeOpts+'</select></div>'
+    +'<div class="g2">'
+    +'<div class="fr"><label class="lbl">Sorumlu Kişi</label>'
+    +'<select class="inp" id="ws-tech">'+techOpts+'</select></div>'
+    +'<div class="fr"><label class="lbl">Durum</label>'
+    +'<select class="inp" id="ws-status">'+statOpts+'</select></div>'
+    +'</div>'
+    +'<div class="fr"><label class="lbl">Notlar</label>'
+    +'<textarea class="inp" id="ws-notes" rows="2" placeholder="Açıklama...">'+esc(f.notes||'')+'</textarea></div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)">'
+    +'<button class="btn bghs" onclick="wsCloseModal()">İptal</button>'
+    +'<button class="btn bsuc" onclick="wsSave()">Kaydet</button>'
+    +'</div></div></div>';
+}
+
+function wsSave(){
+  var date  =(document.getElementById('ws-date')||{value:''}).value;
+  var typeId=(document.getElementById('ws-type')||{value:''}).value;
+  if(!date){toast('Tarih seçiniz','err');return;}
+  if(!typeId){toast('İşlem türü seçiniz','err');return;}
+  var plan={
+    id:     WS_EDIT?WS_EDIT.id:'WP-'+uid(),
+    date:   date,
+    typeId: typeId,
+    techId: (document.getElementById('ws-tech')||{value:''}).value||'',
+    status: (document.getElementById('ws-status')||{value:'planli'}).value||'planli',
+    notes:  (document.getElementById('ws-notes')||{value:''}).value.trim(),
+  };
+  if(!DB.waterPlans)DB.waterPlans=[];
+  if(WS_EDIT)DB.waterPlans=DB.waterPlans.map(function(p){return p.id===plan.id?plan:p;});
+  else DB.waterPlans=DB.waterPlans.concat([plan]);
+  WS_SEL_DATE=date; // Kaydedilen tarihi seç
+  addLog('Su Sistemi '+(WS_EDIT?'Plan Güncellendi':'Plan Eklendi'),date+' — '+(WATER_TYPES.find(function(w){return w.id===typeId;})||{lbl:typeId}).lbl,'','');
+  dbSave();wsCloseModal();renderPage();
+  toast(WS_EDIT?'Plan güncellendi':'Plan eklendi ✓');
+}
+
+function wsCloseModal(){
+  WS_MODAL=false;WS_EDIT=null;
+  var el=document.getElementById('ov-water');if(el)el.remove();
+}
+
 // BOOT
 // Firebase başlat
 fbInit();
@@ -3723,6 +4068,7 @@ fbInit();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
