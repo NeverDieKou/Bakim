@@ -154,6 +154,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -3754,7 +3755,9 @@ function pgWaterSystem(){
   var total = plans.length;
   var done  = plans.filter(function(p){return p.status==='tamamlandi';}).length;
   var late  = plans.filter(function(p){
-    return p.status==='planli' && p.date && p.date < today();
+    // Durumu 'gecikti' olan VEYA planlanmış ama tarihi geçmiş
+    return p.status==='gecikti' ||
+           (p.status==='planli' && p.date && p.date < today());
   }).length;
 
   var statsH = [
@@ -3859,7 +3862,7 @@ function pgWaterSystem(){
   var typesSummary = WATER_TYPES.map(function(wt){
     var wPlans  = plans.filter(function(p){return p.typeId===wt.id;});
     var wDone   = wPlans.filter(function(p){return p.status==='tamamlandi';}).length;
-    var wLate   = wPlans.filter(function(p){return p.status==='planli'&&p.date<todayStr;}).length;
+    var wLate   = wPlans.filter(function(p){return p.status==='gecikti'||(p.status==='planli'&&p.date&&p.date<todayStr);}).length;
     var wNext   = wPlans.filter(function(p){return p.status==='planli'&&p.date>=todayStr;}).sort(function(a,b){return a.date.localeCompare(b.date);})[0];
     return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">'
       +'<span style="font-size:20px;flex-shrink:0">'+wt.ico+'</span>'
@@ -4068,6 +4071,7 @@ fbInit();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
