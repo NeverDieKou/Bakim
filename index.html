@@ -152,6 +152,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -3600,133 +3601,103 @@ function closeSpareCatMgr(){
 // EKİPMAN EXCEL YÜKLEME / ŞABLON
 // ══════════════════════════════════════════════════════════════
 function downloadEqTemplate(){
-  if(typeof XLSX==='undefined'){toast('XLSX kütüphanesi yüklenemedi','err');return;}
-  var s = DB.settings;
-  var wb = XLSX.utils.book_new();
-
-  // Talimatlar
-  var instrData = [
-    ['NOBEL İLAÇ — EKİPMAN LİSTESİ ŞABLONU'],
-    [''],
+  if(!can('s')){toast('Yönetici yetkisi gerekli','err');return;}
+  if(typeof XLSX==='undefined'){toast('XLSX yüklenemedi','err');return;}
+  var wb=XLSX.utils.book_new();
+  var instr=[
+    ['NOBEL İLAÇ — EKİPMAN LİSTESİ ŞABLONU'],[''],
     ['DOLDURMA TALİMATLARI:'],
     ['1. "Ekipmanlar" sekmesini doldurun'],
-    ['2. Zorunlu (*) alanları doldurun'],
-    ['3. Ekipman ID benzersiz olmalıdır (boş bırakılırsa otomatik atanır)'],
-    ['4. Durum: aktif, arizali, bakimda, devre_disi'],
-    ['5. Kritiklik: kritik, yuksek, orta, dusuk'],
-    ['6. Validated: Evet / Hayır'],
-    ['7. Bölge: '+s.areas.join(', ')],
-    ['8. Kategori: '+(s.eqCats||[]).join(', ')],
-    [''],
-    ['NOT: Aynı Ekipman ID varsa güncellenir.'],
+    ['2. Ekipman Adı ve Lokasyon zorunludur (*)'],
+    ['3. Ekipman Numarası boş bırakılırsa otomatik atanır'],
+    ['4. Aynı numara varsa güncellenir, yoksa eklenir'],
   ];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instrData), 'Talimatlar');
-
-  // Ekipman şablon
-  var headers = ['Ekipman ID','Ekipman Adı *','Kategori','Bölge *','Durum','Üretici','Model','Seri No',
-    'Kurulum Tarihi (YYYY-MM-DD)','Son Bakım (YYYY-MM-DD)','Sonraki Bakım (YYYY-MM-DD)',
-    'Kritiklik','Validated (Evet/Hayır)','Validasyon Dok. No','Notlar'];
-
-  var exampleRows = DB.equipment.map(function(e){
-    return [e.id,e.name,e.cat||'',e.area,e.status,e.mfr||'',e.model||'',e.sn||'',
-      e.instDate||'',e.lastMaint||'',e.nextMaint||'',
-      e.crit||'orta',e.val?'Evet':'Hayır',e.valDoc||'',e.notes||''];
-  });
-
-  var ws = XLSX.utils.aoa_to_sheet([headers].concat(exampleRows));
-  ws['!cols'] = headers.map(function(h){return{wch:Math.max(h.length+2,14)};});
-  XLSX.utils.book_append_sheet(wb, ws, 'Ekipmanlar');
-  XLSX.writeFile(wb, 'Ekipman_Listesi_Sablonu.xlsx');
-  toast('Şablon indirildi: Ekipman_Listesi_Sablonu.xlsx');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(instr),'Talimatlar');
+  var headers=['Ekipman Adı *','Ekipman Numarası','Lokasyon *','Bölüm','Marka','Model','Seri Numarası'];
+  var rows=[
+    ['Tablet Pres','EQ-001','Üretim A','Tablet Üretimi','Fette','KORSCH XL 400','SN-2021-0045'],
+    ['HVAC Sistemi','EQ-002','Teknik Oda','Altyapı','Trane','RTAA 120','SN-2019-0012'],
+    ['HPLC Cihazı','EQ-003','QC Lab','Kalite Kontrol','Agilent','1260 Infinity II','SN-2022-0078'],
+    ['Otoklav','','Steril Üretim','Steril Dolum','Getinge','HS66',''],
+  ];
+  var ws=XLSX.utils.aoa_to_sheet([headers].concat(rows));
+  ws['!cols']=[{wch:28},{wch:20},{wch:22},{wch:20},{wch:16},{wch:22},{wch:22}];
+  XLSX.utils.book_append_sheet(wb,ws,'Ekipmanlar');
+  XLSX.writeFile(wb,'Ekipman_Listesi_Sablonu.xlsx');
+  toast('Şablon indirildi ✓');
 }
 
 function uploadEqExcel(inp){
-  if(!can('s')){toast('Bu işlem için Yönetici yetkisi gerekli','err');return;}
-  var file = inp.files[0];
-  if(!file) return;
-  if(typeof XLSX==='undefined'){toast('XLSX kütüphanesi yüklenemedi','err');return;}
-
-  var reader = new FileReader();
-  reader.onload = function(e){
+  if(!can('s')){toast('Yönetici yetkisi gerekli','err');return;}
+  var file=inp.files[0];
+  if(!file)return;
+  if(typeof XLSX==='undefined'){toast('XLSX yüklenemedi','err');return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
     try{
-      var wb = XLSX.read(e.target.result,{type:'array'});
-      var wsName = wb.SheetNames.find(function(n){return n==='Ekipmanlar'||n==='Sheet1';}) || wb.SheetNames[0];
-      var ws = wb.Sheets[wsName];
-      var rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      if(rows.length<2){toast('Veri bulunamadı','err');return;}
-
-      var headers = rows[0].map(function(h){return String(h).trim().toLowerCase();});
-      function col(kws){
-        var exact=headers.findIndex(function(h){return kws.some(function(k){return h===k;});});
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var wsName=wb.SheetNames.find(function(n){
+        return n==='Ekipmanlar'||n==='Equipment'||n==='Sheet1'||n==='Sayfa1';
+      })||wb.SheetNames[0];
+      var ws=wb.Sheets[wsName];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(rows.length<2){toast('Dosyada veri bulunamadı','err');return;}
+      var hdrs=rows[0].map(function(h){return String(h).trim().toLowerCase();});
+      function fc(kws){
+        var exact=hdrs.findIndex(function(h){return kws.some(function(k){return h===k.toLowerCase();});});
         if(exact>=0)return exact;
-        return headers.findIndex(function(h){return kws.some(function(k){return h.indexOf(k)>=0;});});
+        return hdrs.findIndex(function(h){return kws.some(function(k){return h.indexOf(k.toLowerCase())>=0;});});
       }
-
-      var iId    = col(['ekipman id','id']);
-      var iName  = col(['ekipman adı','ekipman adi','ad','name']);
-      var iCat   = col(['kategori','category']);
-      var iArea  = col(['bölge','bolge','alan','area']);
-      var iStat  = col(['durum','status']);
-      var iMfr   = col(['üretici','uretici','mfr','manufacturer']);
-      var iModel = col(['model']);
-      var iSn    = col(['seri no','seri','sn','serial']);
-      var iInst  = col(['kurulum','inst']);
-      var iLast  = col(['son bakım','son bakim','last']);
-      var iNext  = col(['sonraki','next']);
-      var iCrit  = col(['kritiklik','crit','criticality']);
-      var iVal   = col(['validated','validasyon','val']);
-      var iValDoc= col(['validasyon dok','val dok','valdoc']);
-      var iNotes = col(['notlar','notes']);
-
+      var iName =fc(['ekipman adı','ekipman adi','ad','name','ekipman']);
+      var iNo   =fc(['ekipman numarası','ekipman no','ekipman numarasi','numara','no','id']);
+      var iLoc  =fc(['lokasyon','location','konum','yer']);
+      var iDept =fc(['bölüm','bolum','departman','department','birim']);
+      var iMarka=fc(['marka','brand','manufacturer','üretici','uretici']);
+      var iModel=fc(['model']);
+      var iSN   =fc(['seri numarası','seri no','seri numarasi','serial','sn','seri']);
       if(iName<0){toast('Ekipman Adı sütunu bulunamadı','err');return;}
-
+      if(!DB.equipment)DB.equipment=[];
       var added=0,updated=0,skipped=0;
       for(var i=1;i<rows.length;i++){
         var row=rows[i];
         var name=String(row[iName]||'').trim();
         if(!name){skipped++;continue;}
-
-        var id = iId>=0?String(row[iId]||'').trim():'';
-        var existing = id ? DB.equipment.find(function(e){return e.id===id;}) : null;
-        if(!existing&&id) existing=DB.equipment.find(function(e){return e.name===name;});
-
-        var valStr = iVal>=0?String(row[iVal]||'').trim().toLowerCase():'';
-        var eq = {
-          id:        existing?existing.id:(id||'EQ-'+uid()),
-          name:      name,
-          cat:       iCat>=0?String(row[iCat]||'').trim():existing&&existing.cat||'',
-          area:      iArea>=0?String(row[iArea]||'').trim():existing&&existing.area||'',
-          status:    iStat>=0?String(row[iStat]||'aktif').trim():existing&&existing.status||'aktif',
-          mfr:       iMfr>=0?String(row[iMfr]||'').trim():existing&&existing.mfr||'',
-          model:     iModel>=0?String(row[iModel]||'').trim():existing&&existing.model||'',
-          sn:        iSn>=0?String(row[iSn]||'').trim():existing&&existing.sn||'',
-          instDate:  iInst>=0?String(row[iInst]||'').trim():existing&&existing.instDate||'',
-          lastMaint: iLast>=0?String(row[iLast]||'').trim():existing&&existing.lastMaint||'',
-          nextMaint: iNext>=0?String(row[iNext]||'').trim():existing&&existing.nextMaint||'',
-          crit:      iCrit>=0?String(row[iCrit]||'orta').trim():existing&&existing.crit||'orta',
-          val:       valStr==='evet'||valStr==='true'||valStr==='1'||valStr==='yes',
-          valDoc:    iValDoc>=0?String(row[iValDoc]||'').trim():existing&&existing.valDoc||'',
-          notes:     iNotes>=0?String(row[iNotes]||'').trim():existing&&existing.notes||'',
-          techId:    existing?existing.techId||'':'',
+        var eqNo =iNo>=0   ?String(row[iNo]||'').trim()   :'';
+        var loc  =iLoc>=0  ?String(row[iLoc]||'').trim()  :'';
+        var dept =iDept>=0 ?String(row[iDept]||'').trim() :'';
+        var marka=iMarka>=0?String(row[iMarka]||'').trim():'';
+        var model=iModel>=0?String(row[iModel]||'').trim():'';
+        var sn   =iSN>=0   ?String(row[iSN]||'').trim()   :'';
+        var existing=eqNo
+          ?DB.equipment.find(function(e){return e.id===eqNo;})
+          :null;
+        var eq={
+          id:       existing?existing.id:(eqNo||'EQ-'+uid()),
+          name:     name,
+          area:     loc||(existing?existing.area:''),
+          cat:      dept||(existing?existing.cat:''),
+          mfr:      marka||(existing?existing.mfr:''),
+          model:    model||(existing?existing.model:''),
+          sn:       sn||(existing?existing.sn:''),
+          status:   existing?existing.status:'aktif',
+          crit:     existing?existing.crit:'orta',
+          val:      existing?existing.val:false,
+          techId:   existing?existing.techId:'',
+          instDate: existing?existing.instDate:'',
+          lastMaint:existing?existing.lastMaint:'',
+          nextMaint:existing?existing.nextMaint:'',
+          notes:    existing?existing.notes:'',
         };
-
-        if(existing){
-          DB.equipment=DB.equipment.map(function(x){return x.id===eq.id?eq:x;});
-          updated++;
-        } else {
-          DB.equipment=DB.equipment.concat([eq]);
-          added++;
-        }
+        if(existing){DB.equipment=DB.equipment.map(function(e){return e.id===eq.id?eq:e;});updated++;}
+        else{DB.equipment=DB.equipment.concat([eq]);added++;}
       }
-
-      addLog('Ekipman Excel Yüklendi',added+' eklendi, '+updated+' güncellendi','',added+'+'+updated);
-      dbSave();
-      inp.value='';
-      toast('✓ '+added+' ekipman eklendi, '+updated+' güncellendi'+(skipped?' ('+skipped+' atlandı)':''));
+      addLog('Ekipman Excel Yüklendi',added+' eklendi, '+updated+' güncellendi','',String(added+updated));
+      dbSave();inp.value='';
+      toast('✓ '+added+' eklendi'+(updated?' · '+updated+' güncellendi':'')+(skipped?' ('+skipped+' atlandı)':''));
       R();
     }catch(err){
       console.error(err);
-      toast('Excel okuma hatası: '+err.message,'err');
+      toast('Excel hatası: '+err.message,'err');
     }
   };
   reader.readAsArrayBuffer(file);
@@ -3752,6 +3723,7 @@ fbInit();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
