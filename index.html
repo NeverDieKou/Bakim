@@ -180,6 +180,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -559,6 +560,7 @@ function renderModals(){
   if(MODAL_SP_CAT)r.innerHTML+=tplSpareCatMgr();
   if(WS_MODAL)r.innerHTML+=tplWaterModal();
   if(WS_CLOSE_MODAL)r.innerHTML+=tplWsCloseModal();
+  if(MODAL_PENDING)r.innerHTML+=tplPendingModal();
   bindModals();
   if(MODAL.qr&&QEID)setTimeout(function(){drawQR(QEID);},80);
 }
@@ -628,7 +630,7 @@ function bindLogin(){
 
 // SHELL
 function tplShell(){
-  var logo_b64='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgcng9IjE4IiBmaWxsPSIjMWUzYTVmIi8+PHRleHQgeD0iNjAiIHk9IjUyIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjkwMCIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Tm9iZWw8L3RleHQ+PHRleHQgeD0iNjAiIHk9Ijc2IiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjcwMCIgZm9udC1zaXplPSIxMyIgZmlsbD0iIzRmOGVmNyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SUxBQzwvdGV4dD48cmVjdCB4PSIyMCIgeT0iODUiIHdpZHRoPSI4MCIgaGVpZ2h0PSIzIiByeD0iMS41IiBmaWxsPSIjNGY4ZWY3IiBvcGFjaXR5PSIwLjYiLz48L3N2Zz4=';
+  var logo_b64='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjE2IiBmaWxsPSIjMWEzYTZiIi8+CiAgPHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9Ijg0IiBoZWlnaHQ9Ijg0IiByeD0iMTIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzNhNmFiZiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg1MCw0NikiPgogICAgPHBhdGggZD0iTS0xOCwtMjIgTC0xOCwyMiBMLTEwLDIyIEw4LC04IEw4LDIyIEwxNiwyMiBMMTYsLTIyIEw4LC0yMiBMLTEwLDggTC0xMCwtMjIgWiIgCiAgICAgICAgICBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC45NSIvPgogIDwvZz4KICA8dGV4dCB4PSI1MCIgeT0iODgiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iOTAwIiBmb250LXNpemU9IjEzIiAKICAgICAgICBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgbGV0dGVyLXNwYWNpbmc9IjIiPk5PQkVMPC90ZXh0Pgo8L3N2Zz4=';
   var s=DB.settings,rl=ROLES[U.role];
   var urgent=DB.equipment.filter(function(e){var d=daysLeft(e.nextMaint);return d!==null&&d<=s.critDays&&d>=0;});
   var openN=DB.workOrders.filter(function(w){return w.status==='acik';}).length;
@@ -681,7 +683,10 @@ function tplShell(){
             var rows=[];
             if(myOpen>0) rows.push('<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--bd)"><span style="color:var(--mt)">📋 Atanan</span><span style="background:var(--bl);color:#fff;border-radius:8px;padding:0 6px;font-weight:700">'+myOpen+'</span></div>');
             if(myDevam>0) rows.push('<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--bd)"><span style="color:var(--mt)">🔧 Devam</span><span style="background:var(--orl);color:#fff;border-radius:8px;padding:0 6px;font-weight:700">'+myDevam+'</span></div>');
-            if(myPend>0)  rows.push('<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px"><span style="color:var(--mt)">⏳ Onay</span><span style="background:var(--rdl);color:#fff;border-radius:8px;padding:0 6px;font-weight:700">'+myPend+'</span></div>');
+            if(myPend>0)  rows.push('<div onclick="openPendingModal()" style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;cursor:pointer;border-radius:5px" onmouseover="this.style.background=\'rgba(79,142,247,.1)\'" onmouseout="this.style.background=\'\'">'
+              +'<span style="color:var(--mt)">⏳ Onay Bekleyen</span>'
+              +'<span style="background:var(--rdl);color:#fff;border-radius:8px;padding:0 6px;font-weight:700">'+myPend+'</span>'
+              +'</div>');
             return rows.length>0 ? rows.join('') : '<div style="font-size:11px;color:var(--gnl);text-align:center;padding:2px 0">✓ Açık iş yok</div>';
           })()
         +'</div>'
@@ -1383,10 +1388,68 @@ function closeWODirect(id){
   }
   dbSave();toast('İş emri kapatıldı');closeM('woDet');R();
 }
+function openPendingModal(){
+  MODAL_PENDING=true;
+  renderModals();
+}
+
+function rejectWO(id){
+  if(!can('ap')){toast('Onaylama yetkiniz yok.','err');return;}
+  var wo=DB.workOrders.find(function(w){return w.id===id;});
+  if(!wo)return;
+  if(!confirm('"'+wo.title+'" iş emrini reddetmek istiyor musunuz?\nİş "Açık" durumuna geri alınacak.'))return;
+  DB.workOrders=DB.workOrders.map(function(w){
+    return w.id===id?Object.assign({},w,{status:'acik',rejectedBy:U.id,rejectedAt:nowStr()}):w;
+  });
+  addLog('İş Emri Reddedildi',wo.title+' ['+wo.id+']','bekliyor','acik');
+  dbSave();toast('İş emri reddedildi — "Açık" durumuna alındı','warn');renderModals();R();
+}
+
+function tplPendingModal(){
+  if(!MODAL_PENDING)return '';
+  var pendList=DB.workOrders.filter(function(w){return w.status==='bekliyor';})
+    .sort(function(a,b){return b.date.localeCompare(a.date);});
+  var itemsH=pendList.length===0
+    ?'<div style="text-align:center;padding:30px;color:var(--mt)">Onay bekleyen iş emri yok ✓</div>'
+    :pendList.map(function(wo){
+        var eq=DB.equipment.find(function(e){return e.id===wo.eqId;});
+        var tc=DB.technicians.find(function(t){return t.id===wo.techId;});
+        var wt=WTYPES[wo.type]||{ico:'🔧',lbl:wo.type};
+        var sev={kritik:{lbl:'Kritik',col:'var(--rdl)'},yuksek:{lbl:'Yüksek',col:'var(--orl)'},orta:{lbl:'Orta',col:'var(--bll)'},dusuk:{lbl:'Düşük',col:'var(--mt)'}};
+        var sevInfo=sev[wo.sev]||{lbl:wo.sev,col:'var(--mt)'};
+        return '<div style="background:var(--bg3);border:1px solid var(--bdl);border-radius:10px;padding:14px;margin-bottom:10px">'
+          +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">'
+          +'<div><div style="font-size:14px;font-weight:700;color:var(--tx)">'+wt.ico+' '+esc(wo.title)+'</div>'
+          +'<div style="font-size:11px;color:var(--mt);margin-top:3px">'
+          +'<span style="color:var(--bll);font-weight:600">'+esc(wo.id)+'</span>'
+          +(eq?' · '+esc(eq.name):'')
+          +(tc?' · 👷 '+esc(tc.name):'')
+          +' · 📅 '+esc(wo.date)
+          +'</div></div>'
+          +'<span style="background:'+sevInfo.col+'22;color:'+sevInfo.col+';border:1px solid '+sevInfo.col+'44;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:700;flex-shrink:0">'+sevInfo.lbl+'</span>'
+          +'</div>'
+          +(wo.notes?'<div style="font-size:12px;color:var(--sub);margin-bottom:10px;padding:8px;background:var(--bg2);border-radius:6px">📝 '+esc(wo.notes)+'</div>':'')
+          +'<div style="display:flex;gap:8px">'
+          +(can('ap')?'<button class="btn bsuc bsm" style="flex:1" onclick="approveWO(\''+wo.id+'\');renderModals()">✅ Onayla ve Kapat</button>':'')
+          +(can('ap')?'<button class="btn bdng bsm" style="flex:1" onclick="rejectWO(\''+wo.id+'\')">❌ Reddet</button>':'')
+          +'<button class="btn bghs bxs" onclick="MODAL_PENDING=false;renderModals();openWODet(\''+wo.id+'\')">👁 Detay</button>'
+          +'</div></div>';
+      }).join('');
+  return '<div class="ov" id="ov-pending"><div class="md mdlg">'
+    +'<div class="mdh">'
+    +'<div class="mdt">⏳ Onay Bekleyen İş Emirleri <span style="background:var(--rdl);color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:6px">'+pendList.length+'</span></div>'
+    +'<button class="mdc" onclick="MODAL_PENDING=false;renderModals()">✕</button>'
+    +'</div>'
+    +'<div style="max-height:70vh;overflow-y:auto">'+itemsH+'</div>'
+    +'</div></div>';
+}
+
 function approveWO(id){
   if(!can('ap')){toast('Onaylama yetkiniz yok.','err');return;}
+  var wo=DB.workOrders.find(function(w){return w.id===id;});
+  if(wo)addLog('İş Emri Onaylandı',wo.title+' ['+id+']','bekliyor','kapali');
   DB.workOrders=DB.workOrders.map(function(w){return w.id===id?Object.assign({},w,{status:'kapali',approvedBy:U.id,closedAt:nowStr()}):w;});
-  dbSave();toast('İş emri onaylandı ve kapatıldı');closeM('woDet');R();
+  dbSave();MODAL_PENDING=false;toast('İş emri onaylandı ve kapatıldı ✓');renderModals();R();
 }
 function deleteEq(id){
   if(!can('s')){toast('Bu işlem için Yönetici yetkisi gerekli.','err');return;}
@@ -4090,6 +4153,7 @@ var WS_SEL_DATE = null;   // seçili gün (takvimde)
 var WS_MODAL    = false;
 var WS_SEL_PLAN = null;
 var WS_CLOSE_MODAL = false;
+var MODAL_PENDING = false;
 var WS_EDIT     = null;   // düzenlenen plan
 
 function pgWaterSystem(){
@@ -4401,6 +4465,11 @@ function tplWaterModal(){
        +'<div style="font-size:11px;color:var(--mt);margin-top:4px">Kapatmak için ana sayfadaki <strong>📋 İş Kapat</strong> butonunu kullanın.</div>')
     +'</div>'
     +'</div>'
+    +(f.status==='tamamlandi'||f.status==='iptal'
+    ?'<div class="fr"><label class="lbl">'+(f.status==='tamamlandi'?'✅ Tamamlanma Tarihi':'❌ İptal Tarihi')+' *</label>'
+     +'<input class="inp" type="date" id="ws-closedate" value="'+(f.closedAt?f.closedAt.slice(0,10):today())+'" placeholder="'+today()+'"/>'
+     +'<div style="font-size:11px;color:var(--mt);margin-top:3px">Planlanma tarihi: <strong>'+esc(f.date)+'</strong> — İşlem tarihi farklıysa burada değiştirebilirsiniz.</div></div>'
+    :'')
     +'<div class="fr"><label class="lbl">Notlar</label>'
     +'<textarea class="inp" id="ws-notes" rows="2" placeholder="Açıklama...">'+esc(f.notes||'')+'</textarea></div>'
     +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)">'
@@ -4426,7 +4495,7 @@ function wsSave(){
     techId:  (document.getElementById('ws-tech')||{value:''}).value||'',
     status:  newSt,
     notes:   (document.getElementById('ws-notes')||{value:''}).value.trim(),
-    closedAt:(newSt==='tamamlandi'||newSt==='iptal')?(oldP.closedAt||nowStr()):'',
+    closedAt:(newSt==='tamamlandi'||newSt==='iptal')?(oldP.closedAt||(document.getElementById('ws-closedate')&&document.getElementById('ws-closedate').value?document.getElementById('ws-closedate').value:today())):'',
     closedBy:(newSt==='tamamlandi'||newSt==='iptal')?(oldP.closedBy||(U?U.name:'')):'',
   };
   if(!DB.waterPlans)DB.waterPlans=[];
@@ -4861,6 +4930,7 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
