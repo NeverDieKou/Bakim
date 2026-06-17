@@ -241,7 +241,7 @@ function fbInit() {
       if(needRender && U) {
         // Sayfayı yeniden render et (modal açıksa dokunma)
         var hasModal = Object.values(MODAL).some(function(v){return v;});
-        if(!hasModal && !QR_ACTIVE) renderPage();
+        if(!hasModal && !QR_ACTIVE && !(qrReadTarget&&qrReadTarget())) renderPage();
       }
       // Firebase veri yüklenince pending SP/QR kontrolü
       if(U) {
@@ -254,7 +254,7 @@ function fbInit() {
             setTimeout(function(){ showSpareQRLanding(psp); }, 100);
           }
         }
-        var pqr = window._pendingQR || sessionStorage.getItem('pendingQR');
+        var pqr = window._pendingQR || sessionStorage.getItem('pendingQR') || (qrReadTarget&&qrReadTarget()&&qrReadTarget().eq);
         if(pqr) {
           var eqIdNorm = (typeof normalizeQREqId === 'function') ? normalizeQREqId(pqr) : pqr;
           var ptab = sessionStorage.getItem('pendingQRTab') || QR_PENDING_TAB || 'workorders';
@@ -513,18 +513,17 @@ function R(){
   }
 
   // Giriş yapılmışsa QR isteğini ana sayfaya düşürmeden işle.
+  qrCaptureTarget();
+  if(qrForceOpenTarget && qrForceOpenTarget()) return;
   // Firebase verisi daha önce yüklenmiş olsa bile login sonrası tekrar denenir.
   if(hasPendingQR()){
     if(consumePendingQR && consumePendingQR()) return;
     showPendingRedirect('Ekipman iş emirleri açılıyor');
     setTimeout(function(){
       if(consumePendingQR && consumePendingQR()) return;
-      // Hâlâ bulunamadıysa ana sayfaya atma; QR ekipman ekranında hata göster.
       var raw = window._pendingQR || sessionStorage.getItem('pendingQR');
       var eqId = (typeof normalizeQREqId==='function') ? normalizeQREqId(raw) : raw;
-      window._pendingQR = null;
-      sessionStorage.removeItem('pendingQR');
-      sessionStorage.removeItem('pendingQRTab');
+      qrClearTarget();
       showQRLanding(eqId, 'workorders');
     }, 1200);
     return;
@@ -608,6 +607,8 @@ function bindLogin(){
         window._pendingQR=eid;
       }
       // QR ile gelindiyse ana sayfaya değil doğrudan ekipman İş Emirleri ekranına git
+      qrCaptureTarget();
+      if(qrForceOpenTarget && qrForceOpenTarget()) return;
       if(openQRWorkorderAfterLogin && openQRWorkorderAfterLogin()) return;
       R();
     }
@@ -4394,11 +4395,84 @@ function wsStatusDel(idx){
   renderPage();
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// QR LOGIN REDIRECT HARD FIX v4
+// Amaç: QR ile gelinen eq bilgisini login sonrası kaybetmemek.
+// localStorage + sessionStorage + URL üçlüsünden okur; ana sayfaya düşmeyi engeller.
+// ══════════════════════════════════════════════════════════════
+function qrCaptureTarget(){
+  var eq='', tab='workorders';
+  try{
+    var up=new URLSearchParams(window.location.search||'');
+    eq=up.get('eq')||'';
+    tab=up.get('tab')||up.get('page')||tab;
+  }catch(e){}
+  try{
+    var h=window.location.hash||'';
+    if(!eq && h.indexOf('#qr=')===0) eq=decodeURIComponent(h.replace('#qr=',''));
+  }catch(e){}
+  if(eq){
+    eq=normalizeQREqId(eq);
+    if(tab==='wo'||tab==='workorder'||tab==='is-emri'||tab==='workorders') tab='workorders';
+    if(tab==='new'||tab==='new_wo') tab='new_wo';
+    try{sessionStorage.setItem('pendingQR',eq);sessionStorage.setItem('pendingQRTab',tab);}catch(e){}
+    try{localStorage.setItem('pharma_qr_target',JSON.stringify({eq:eq,tab:tab,ts:Date.now()}));}catch(e){}
+    window._pendingQR=eq; QR_PENDING_TAB=tab;
+  }
+}
+function qrReadTarget(){
+  qrCaptureTarget();
+  var eq=window._pendingQR||'';
+  var tab=QR_PENDING_TAB||'workorders';
+  try{eq=eq||sessionStorage.getItem('pendingQR')||'';tab=sessionStorage.getItem('pendingQRTab')||tab;}catch(e){}
+  try{
+    var r=localStorage.getItem('pharma_qr_target');
+    if(r){
+      var o=JSON.parse(r);
+      if(o && o.eq && (Date.now()-(o.ts||0)<24*60*60*1000)){eq=eq||o.eq;tab=o.tab||tab;}
+    }
+  }catch(e){}
+  if(!eq)return null;
+  eq=normalizeQREqId(eq);
+  if(tab==='wo'||tab==='workorder'||tab==='is-emri')tab='workorders';
+  if(tab==='new'||tab==='new_wo')tab='new_wo';
+  return {eq:eq,tab:tab||'workorders'};
+}
+function qrClearTarget(){
+  window._pendingQR=null;
+  try{sessionStorage.removeItem('pendingQR');sessionStorage.removeItem('pendingQRTab');}catch(e){}
+  try{localStorage.removeItem('pharma_qr_target');}catch(e){}
+}
+function qrForceOpenTarget(){
+  var t=qrReadTarget();
+  if(!t||!t.eq)return false;
+  showPendingRedirect('Ekipman iş emirleri açılıyor');
+  var count=0;
+  (function waitEq(){
+    count++;
+    var eqFound=(DB.equipment||[]).find(function(x){return String(x.id).toUpperCase()===String(t.eq).toUpperCase();});
+    if(eqFound){
+      qrClearTarget();
+      QR_ACTIVE=true;
+      showQRLanding(eqFound.id,t.tab||'workorders');
+      return;
+    }
+    if(count<25){setTimeout(waitEq,200);return;}
+    // Ekipman bulunamazsa ana sayfaya düşürme, QR hata ekranında kal.
+    qrClearTarget();
+    QR_ACTIVE=true;
+    showQRLanding(t.eq,t.tab||'workorders');
+  })();
+  return true;
+}
+
 // BOOT
 // Firebase başlat
 fbInit();
 
 // QR link ile gelindiyse (?eq=EQ-001)
+qrCaptureTarget();
 (function(){
   var urlParams = typeof URLSearchParams !== 'undefined'
     ? new URLSearchParams(window.location.search) : null;
