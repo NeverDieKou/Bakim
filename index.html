@@ -182,6 +182,9 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
+
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -560,6 +563,7 @@ function bindLogin(){
 
 // SHELL
 function tplShell(){
+  var logo_b64='data:image/png;base64,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';
   var s=DB.settings,rl=ROLES[U.role];
   var urgent=DB.equipment.filter(function(e){var d=daysLeft(e.nextMaint);return d!==null&&d<=s.critDays&&d>=0;});
   var openN=DB.workOrders.filter(function(w){return w.status==='acik';}).length;
@@ -575,25 +579,21 @@ function tplShell(){
     return '<button class="nb'+(PAGE===n.id?' on':'')+'" onclick="PAGE=\''+n.id+'\';R()"><span class="nb-ico">'+n.ico+'</span><span class="nb-lbl">'+esc(n.lbl)+'</span>'+ex+'</button>';
   }).join('');
 
+  var pageTitle=(function(){var n=navDefs.find(function(x){return x.id===PAGE;});return n?(n.ico+' '+esc(n.lbl)):'';})();
+
   var mobNav='<nav id="mob-nav">'
     +'<button class="'+(PAGE==='dashboard'?'on':'')+'" onclick="PAGE=\'dashboard\';R()"><span class="mi">▦</span>Gösterge</button>'
     +'<button class="'+(PAGE==='workorders'?'on':'')+'" onclick="PAGE=\'workorders\';R()"><span class="mi">📋</span>İş Em.</button>'
-    +'<button onclick="openQRScanner()"><span class="mi">📷</span>QR Tara</button>'
+    +'<button onclick="openQRScanner()"><span class="mi">📷</span>QR</button>'
     +'<button class="'+(PAGE==='equipment'?'on':'')+'" onclick="PAGE=\'equipment\';R()"><span class="mi">⚙</span>Ekipman</button>'
-    +'<button class="'+(PAGE==='reports'?'on':'')+'" onclick="PAGE=\'reports\';R()"><span class="mi">📊</span>Raporlar</button>'
+    +'<button class="'+(PAGE==='reports'?'on':'')+'" onclick="PAGE=\'reports\';R()"><span class="mi">📊</span>Rapor</button>'
     +'</nav>';
 
-  var pageTitle=(function(){var n=navDefs.find(function(x){return x.id===PAGE;});return n?n.ico+' '+esc(n.lbl):'';})();
-  var rolLbl=(rl&&rl.lbl)||U.role;
-
-  return (
-    '<div id="wrap">'
-    // ── Sol Sidebar ─────────────────────────────────
+  return '<div id="wrap">'
     +'<div id="sidebar">'
-      // Logo + Firma
       +'<div id="sidebar-top">'
         +'<div style="display:flex;align-items:center;gap:10px">'
-          +'<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:3px;background:#fff;flex-shrink:0">'
+          +'<div style="width:36px;height:36px;border-radius:9px;padding:3px;background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center">'
             +'<img src="'+logo_b64+'" style="width:30px;height:30px;object-fit:contain"/>'
           +'</div>'
           +'<div style="min-width:0">'
@@ -602,36 +602,33 @@ function tplShell(){
           +'</div>'
         +'</div>'
       +'</div>'
-      // Navigasyon
       +'<nav id="nav">'+navH+'</nav>'
-      // Alt: kullanıcı bilgisi
       +'<div id="sidebar-bottom">'
-        +'<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg3);border-radius:9px;border:1px solid var(--bd)">'
-          +'<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--bld),var(--bl));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0">'+U.name.charAt(0).toUpperCase()+'</div>'
+        +'<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg3);border-radius:9px;border:1px solid var(--bd)">'
+          +'<div style="width:28px;height:28px;border-radius:50%;background:var(--bl);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0">'+U.name.charAt(0).toUpperCase()+'</div>'
           +'<div style="flex:1;min-width:0">'
-            +'<div style="font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(U.name)+'</div>'
-            +'<div style="font-size:10px;color:var(--mt)">'+esc(rolLbl)+'</div>'
+            +'<div style="font-size:11px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(U.name)+'</div>'
+            +'<div style="font-size:10px;color:var(--mt)">'+esc((rl&&rl.lbl)||U.role)+'</div>'
           +'</div>'
-          +'<button id="b-logout" style="background:none;border:none;color:var(--mt);cursor:pointer;font-size:16px;flex-shrink:0;padding:4px" title="Çıkış">⏻</button>'
+          +'<button id="b-logout" style="background:none;border:none;color:var(--mt);cursor:pointer;font-size:16px;padding:4px" title="Çıkış">⏻</button>'
         +'</div>'
       +'</div>'
     +'</div>'
-    // ── Sağ İçerik ──────────────────────────────────
     +'<div id="content-area">'
-      // Üst bar
       +'<div id="bar">'
         +'<div style="font-size:14px;font-weight:600;color:var(--sub)">'+pageTitle+'</div>'
         +'<div id="tr">'
-          +tr_full
+          +(urgent.length?'<button class="btn bdng bsm" onclick="PAGE=\'schedule\';R()">⚠ '+urgent.length+' Kritik Bakım</button>':'')
+          +(can('w')?'<button class="btn bpri bsm" onclick="openWOModal(null,null)">+ İş Emri</button>':'')
+          +'<div style="width:1px;height:24px;background:var(--bd);margin:0 4px"></div>'
+          +'<div id="sync-ind" style="font-size:11px;color:var(--mt)">☁</div>'
         +'</div>'
       +'</div>'
-      // Ana içerik
       +'<main id="main"></main>'
       +'<div id="modals-root"></div>'
       +mobNav
     +'</div>'
-    +'</div>'
-  );
+  +'</div>';
 }
 
 function bindNav(){
@@ -4150,6 +4147,9 @@ fbInit();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
+
+
 
 
 
