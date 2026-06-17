@@ -1060,6 +1060,39 @@ function tplWODet(){
 }
 
 function openEqDet(id){DID=id;TAB.eq='tl';MODAL.eqDet=true;renderModals();}
+
+// Ekipman parça geçmişini güvenli şekilde oluşturur.
+// Hem özel eqPartHistory tablosunu hem de stok hareketlerindeki eqId bilgisini okur.
+// Böylece QR çıkış kaydı hangi yoldan oluşursa oluşsun ekipman sekmesinde görünür.
+function getEqPartHistory(eqId){
+  var rows=[];
+  var seen={};
+  function add(row, key){
+    if(!row)return;
+    var k=key||row.id||((row.partId||'')+'|'+(row.ts||'')+'|'+(row.qty||''));
+    if(seen[k])return;
+    seen[k]=true;
+    rows.push(row);
+  }
+  var direct=(DB.eqPartHistory&&DB.eqPartHistory[eqId])||[];
+  direct.forEach(function(ph){
+    add({
+      id:ph.id, partId:ph.partId||'', partName:ph.partName||'', partCode:ph.partCode||'',
+      qty:ph.qty||0, unit:ph.unit||'Adet', reason:ph.reason||'', woId:ph.woId||'',
+      user:ph.user||'—', ts:ph.ts||''
+    }, ph.id);
+  });
+  (DB.spareMovements||[]).filter(function(m){return m.eqId===eqId&&m.type==='cikis';}).forEach(function(m){
+    var p=(DB.spareParts||[]).find(function(x){return x.id===m.partId;})||{};
+    add({
+      id:'EPH-MOV-'+(m.id||uid()), partId:m.partId||'', partName:p.name||m.partName||m.partId||'—',
+      partCode:p.code||m.partCode||'', qty:m.qty||0, unit:p.unit||m.unit||'Adet',
+      reason:m.reason||'', woId:m.woId||'', user:m.user||'—', ts:m.ts||''
+    }, 'MOV-'+(m.id||''));
+  });
+  rows.sort(function(a,b){return String(b.ts||'').localeCompare(String(a.ts||''));});
+  return rows;
+}
 function tplEqDet(){
   var eq=DB.equipment.find(function(e){return e.id===DID;});if(!eq)return'';
   var wos=DB.workOrders.filter(function(w){return w.eqId===eq.id;}).sort(function(a,b){return b.date.localeCompare(a.date);});
@@ -1067,7 +1100,7 @@ function tplEqDet(){
   var d=eq.nextMaint?daysLeft(eq.nextMaint):null;
   var dc=d===null?'var(--mt)':d<0?'var(--rdl)':d<=7?'var(--orl)':'var(--gnl)';
   var t=TAB.eq||'tl';
-  var partHist=(DB.eqPartHistory&&DB.eqPartHistory[eq.id])||[];
+  var partHist=getEqPartHistory(eq.id);
   var tabH=[['tl','📋 İş Emri Geçmişi'],['info','⚙ Teknik Bilgiler'],['docs','📎 Dokümanlar ('+docs.length+')'],['parts','🔩 Parça Geçmişi ('+partHist.length+')']].map(function(tb){return'<button class="tabb'+(t===tb[0]?' on':'')+'" onclick="TAB.eq=\''+tb[0]+'\';renderModals()">'+tb[1]+'</button>';}).join('');
   var hdr='<div style="background:var(--bg3);border-radius:10px;padding:14px 18px;margin-bottom:18px;border:1px solid var(--bd)"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px"><div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">'+eqLed(eq.status)+' '+critBadge(eq.crit)+(eq.val?'<span class="badge bxsm" style="color:var(--gnl);border-color:var(--gnl);background:rgba(16,185,129,.1)">✓ Val. '+esc(eq.valDoc||'')+'</span>':'')+'</div><div style="font-size:12px;color:var(--mt)">📍 '+esc(eq.area)+' · '+esc(eq.mfr||'—')+(eq.model?' · '+esc(eq.model):'')+'</div><div style="font-size:11px;color:var(--mt);margin-top:3px">S/N: '+esc(eq.sn||'—')+' · Kurulum: '+esc(eq.instDate||'—')+'</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:10px;color:var(--mt);margin-bottom:3px">SONRAKİ BAKIM</div><div style="font-size:22px;font-weight:900;color:'+dc+'">'+(d===null?'—':d<0?Math.abs(d)+' gün GEÇ':d===0?'BUGÜN':d+' gün')+(eq.nextMaint?'<div style="font-size:11px;color:var(--mt);font-weight:400">'+esc(eq.nextMaint)+'</div>':'')+'</div></div></div>'+(eq.notes?'<div style="margin-top:10px;font-size:12px;color:var(--sub);padding-top:10px;border-top:1px solid var(--bd)">📝 '+esc(eq.notes)+'</div>':'')+'</div>';
   var content='';
@@ -3629,17 +3662,18 @@ function submitSpareMovQR(spId, type){
   });
   if(!DB.spareMovements)DB.spareMovements=[];
   var ts2=nowStr();
+  var movId='MOV-'+uid();
   DB.spareMovements.unshift({
-    id:'MOV-'+uid(), partId:spId,
+    id:movId, partId:spId,
     type:type, qty:qty, reason:reason,
-    woId:woId, eqId:eqId, user:U?U.name:'—', ts:ts2,
+    woId:woId, eqId:eqId, user:U?U.name:'—', ts:ts2
   });
   // QR ile stok çıkışında seçilen ekipmanın parça geçmişine anlık kaydet
   if(eqId&&!isGiris){
     if(!DB.eqPartHistory)DB.eqPartHistory={};
     if(!DB.eqPartHistory[eqId])DB.eqPartHistory[eqId]=[];
     DB.eqPartHistory[eqId].unshift({
-      id:'EPH-'+uid(), partId:p.id, partName:p.name, partCode:p.code||'',
+      id:'EPH-'+uid(), refMovId:movId, partId:p.id, partName:p.name, partCode:p.code||'',
       qty:qty, unit:p.unit||'Adet', reason:reason, woId:woId,
       user:U?U.name:'—', ts:ts2
     });
