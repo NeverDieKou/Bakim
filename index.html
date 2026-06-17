@@ -173,6 +173,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -4200,6 +4201,19 @@ function wsStatusEdit(idx){
   renderPage();
 }
 
+function wsStatusSave(idx){
+  if(!can('s')){toast('Yönetici yetkisi gerekli','err');return;}
+  var lbl=(document.getElementById('wsl-'+idx)||{value:''}).value.trim();
+  var col=(document.getElementById('wsc-'+idx)||{value:'#4f8ef7'}).value||'#4f8ef7';
+  if(!lbl){toast('Durum adı boş olamaz','err');return;}
+  if(!DB.waterStatuses||!DB.waterStatuses[idx]){toast('Durum bulunamadı','err');return;}
+  var oldLbl=DB.waterStatuses[idx].lbl;
+  DB.waterStatuses[idx].lbl=lbl;
+  DB.waterStatuses[idx].col=col;
+  addLog('Su Sistemi Durum Güncellendi',oldLbl+' → '+lbl,'','');
+  dbSave();toast('Kaydedildi: '+lbl+' ✓');renderPage();
+}
+
 function wsStatusDel(idx){
   if(!can('s')){toast('Yönetici yetkisi gerekli','err');return;}
   if(!DB.waterStatuses||!DB.waterStatuses[idx]){return;}
@@ -4235,6 +4249,7 @@ fbInit();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
