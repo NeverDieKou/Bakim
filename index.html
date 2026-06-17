@@ -171,6 +171,8 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -219,7 +221,7 @@ function fbInit() {
       }
       // Gelen veriyi uygula
       var needRender = false;
-      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats','waterPlans'];
+      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats','waterPlans','waterStatuses'];
       keys.forEach(function(k) {
         if(data[k] !== undefined) {
           // Array olarak gelenleri düzelt
@@ -297,6 +299,13 @@ function fbSaveNow() {
     spareMovements: DB.spareMovements || [],
     eqPartHistory: DB.eqPartHistory || {},
     waterPlans:   DB.waterPlans   || [],
+    waterStatuses: DB.waterStatuses || [],
+    waterStatuses: DB.waterStatuses || [
+      {id:'planli',     lbl:'Planlandı',   col:'#4f8ef7'},
+      {id:'tamamlandi', lbl:'Tamamlandı',  col:'#10b981'},
+      {id:'gecikti',    lbl:'Gecikti',     col:'#ef4444'},
+      {id:'iptal',      lbl:'İptal',       col:'#94a3b8'},
+    ],
     spareCats:    DB.spareCats    || [],
     lastUpdated:  new Date().toISOString(),
     updatedBy:    U ? U.name : 'system'
@@ -444,6 +453,12 @@ function dbLoad(){
     if(!d.spareMovements)d.spareMovements=[];
     if(!d.eqPartHistory)d.eqPartHistory={};
     if(!d.waterPlans)d.waterPlans=[];
+    if(!d.waterStatuses)d.waterStatuses=[
+      {id:'planli',lbl:'Planlandı',col:'#4f8ef7'},
+      {id:'tamamlandi',lbl:'Tamamlandı',col:'#10b981'},
+      {id:'gecikti',lbl:'Gecikti',col:'#ef4444'},
+      {id:'iptal',lbl:'İptal',col:'#94a3b8'},
+    ];
     if(!d.spareCats)d.spareCats=['Mekanik','Elektrik','Enstrümantasyon','HVAC Filtresi','Kimyasal','Yağlama','Conta/Sızdırmazlık','Elektronik','Genel'];
     return d;
   }catch(e){return null;}
@@ -901,6 +916,23 @@ function pgUsers(){
 
 function pgSettings(){
   var s=DB.settings;
+  var wsH=(DB.waterStatuses||[]).map(function(st,i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg3);border-radius:8px;border:1px solid var(--bd);margin-bottom:6px">'
+      +'<div style="width:14px;height:14px;border-radius:50%;background:'+st.col+';flex-shrink:0"></div>'
+      +'<input type="text" value="'+esc(st.lbl)+'" id="wsl-'+i+'" style="flex:1;background:var(--bg0);border:1px solid var(--bd);border-radius:6px;padding:5px 8px;color:var(--tx);font-size:13px"/>'
+      +'<input type="color" value="'+st.col+'" id="wsc-'+i+'" style="width:34px;height:32px;border-radius:5px;border:1px solid var(--bd);cursor:pointer"/>'
+      +'<button class="btn bsuc bxs" onclick="wsStatusSave('+i+')">✓</button>'
+      +'<button class="btn bdng bxs" onclick="wsStatusDel('+i+')">🗑</button>'
+      +'</div>';
+  }).join('');
+  var wsSection=can('s')
+    ?'<div>'+wsH+'</div>'
+     +'<div style="display:flex;gap:8px;margin-top:10px;align-items:center">'
+     +'<input class="inp isml" id="ws-new-lbl" placeholder="Yeni durum adı..." style="flex:1"/>'
+     +'<input type="color" id="ws-new-col" value="#4f8ef7" style="width:36px;height:34px;border-radius:6px;border:1px solid var(--bd);cursor:pointer"/>'
+     +'<button class="btn bpri bsm" onclick="wsStatusAdd()">+ Ekle</button>'
+     +'</div>'
+    :'<div style="color:var(--mt);font-size:13px">🔒 Sadece Yönetici düzenleyebilir.</div>';
   var aH=s.areas.map(function(a){return'<div style="display:flex;align-items:center;gap:5px;padding:5px 11px;background:var(--bg3);border-radius:7px;border:1px solid var(--bd);font-size:13px">'+esc(a)+'<button onclick="rmListItem(\'area\',\''+esc(a)+'\')" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:14px;line-height:1;margin-left:2px">×</button></div>';}).join('');
   var rH=s.techRoles.map(function(r){return'<div style="display:flex;align-items:center;gap:5px;padding:5px 11px;background:var(--bg3);border-radius:7px;border:1px solid var(--bd);font-size:13px">'+esc(r)+'<button onclick="rmListItem(\'techRole\',\''+esc(r)+'\')" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:14px;line-height:1;margin-left:2px">×</button></div>';}).join('');
   return '<div style="font-size:20px;font-weight:800;margin-bottom:20px;letter-spacing:-.3px">Sistem Ayarları</div><div class="card"><div class="cardt">🏢 Firma Bilgileri</div><div class="g2"><div class="fr"><label class="lbl">Uygulama Başlığı</label><input class="inp" id="s-co" value="'+esc(s.company)+'"/></div><div class="fr"><label class="lbl">Tesis Adı</label><input class="inp" id="s-fa" value="'+esc(s.facility)+'"/></div><div class="fr"><label class="lbl">Adres</label><input class="inp" id="s-ad" value="'+esc(s.address||'')+'"/></div><div class="fr"><label class="lbl">Telefon</label><input class="inp" id="s-ph" value="'+esc(s.phone||'')+'"/></div></div></div><div class="card"><div class="cardt">⚙ Operasyonel Ayarlar</div><div class="g3"><div class="fr"><label class="lbl">Bakım Uyarı Eşiği (gün)</label><input class="inp" id="s-wd" type="number" min="1" value="'+s.warnDays+'"/></div><div class="fr"><label class="lbl">Kritik Uyarı Eşiği (gün)</label><input class="inp" id="s-cd" type="number" min="1" value="'+s.critDays+'"/></div></div><div class="chkr fr"><input type="checkbox" id="s-gd" '+(s.gmpDef?'checked':'')+"><label for='s-gd'>Yeni iş emirlerinde GMP varsayılan açık</label></div><div class='chkr fr'><input type='checkbox' id='s-ap' "+(s.reqApproval?'checked':'')+"><label for='s-ap'>Tamamlanan iş emirleri için onay mekanizması</label></div></div><div class='card'><div class='cardt'>📍 Bölgeler <button class='btn bout bxs' onclick=\"addListItem('area')\">+ Ekle</button></div><div style='display:flex;gap:6px;flex-wrap:wrap'>"+aH+"</div></div><div class='card'><div class='cardt'>👷 Teknisyen Rolleri <button class='btn bout bxs' onclick=\"addListItem('techRole')\">+ Ekle</button></div><div style='display:flex;gap:6px;flex-wrap:wrap'>"+rH+"</div></div><div class='card'><div class='cardt'>💾 Veri Yönetimi</div><div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px'><div style='background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:16px'><div style='font-weight:700;margin-bottom:5px'>📊 Dışa Aktar</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px;line-height:1.4'>Tüm verileri Excel veya JSON olarak indir.</div><div style='display:flex;flex-direction:column;gap:7px'><button class='btn bsuc bsm' style='justify-content:center' onclick='exportExcel()'>📊 Excel (.xlsx)</button><button class='btn bout bsm' style='justify-content:center' onclick='exportJSON()'>📋 JSON Yedek</button></div></div><div style='background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:16px'><div style='font-weight:700;margin-bottom:5px'>📥 Yeni Bilgisayara Taşı</div><div style='font-size:11px;color:var(--mt);margin-bottom:4px'><strong style='color:var(--sub)'>1.</strong> JSON Yedek al</div><div style='font-size:11px;color:var(--mt);margin-bottom:4px'><strong style='color:var(--sub)'>2.</strong> Yeni bilgisayarda html aç</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px'><strong style='color:var(--sub)'>3.</strong> JSON Yükle → veriler gelir</div><label><button class='btn bout bsm' style='width:100%;justify-content:center' onclick='this.nextElementSibling.click()'>📂 JSON Yükle</button><input type='file' accept='.json' style='display:none' onchange='importJSON(this)'/></label></div><div style='background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.2);border-radius:9px;padding:16px'><div style='font-weight:700;color:var(--rdl);margin-bottom:5px'>⚠ Fabrika Sıfırlama</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px;line-height:1.4'>Tüm veriler silinir, örnek veri yüklenir. Geri alınamaz!</div><button class='btn bdng bsm' style='width:100%;justify-content:center' onclick='resetAll()'>Sıfırla</button></div></div></div><div style='display:flex;justify-content:flex-end;gap:10px;margin-top:4px'><button class='btn bghs' onclick='renderPage()'>İptal</button><button class='btn bsuc' onclick='saveSettings()'>Ayarları Kaydet</button></div>";
@@ -3785,12 +3817,22 @@ var WATER_TYPES = [
   {id:'wfi',         lbl:'WFI Sterilizasyonu',                              ico:'🧫', col:'#10b981'},
 ];
 
-var WATER_STATUS = {
-  planli:      {lbl:'Planlandı',    col:'#4f8ef7', bg:'rgba(79,142,247,.12)'},
-  tamamlandi:  {lbl:'Tamamlandı',   col:'#10b981', bg:'rgba(16,185,129,.12)'},
-  gecikti:     {lbl:'Gecikti',      col:'#ef4444', bg:'rgba(239,68,68,.12)'},
-  iptal:       {lbl:'İptal',        col:'#94a3b8', bg:'rgba(148,163,184,.12)'},
-};
+// WATER_STATUS DB'den dinamik okunur
+function getWaterStatuses(){
+  var arr = DB.waterStatuses || [
+    {id:'planli',lbl:'Planlandı',col:'#4f8ef7'},
+    {id:'tamamlandi',lbl:'Tamamlandı',col:'#10b981'},
+    {id:'gecikti',lbl:'Gecikti',col:'#ef4444'},
+    {id:'iptal',lbl:'İptal',col:'#94a3b8'},
+  ];
+  var obj = {};
+  arr.forEach(function(s){
+    obj[s.id] = {lbl:s.lbl, col:s.col, bg:s.col.replace('#','rgba(').replace(/(..)(..)(..)$/,function(_,r,g,b){
+      return parseInt(r,16)+','+parseInt(g,16)+','+parseInt(b,16)+',.12)';
+    })};
+  });
+  return obj;
+}
 
 var WS_CAL_DATE = (function(){
   var d=new Date(); return d.getFullYear()+'-'+(d.getMonth()<9?'0':'')+(d.getMonth()+1);
@@ -3863,7 +3905,7 @@ function pgWaterSystem(){
       if(p.status==='tamamlandi'&&acc==='') return 'tamamlandi';
       return acc;
     },'') : '';
-    var dotColor = cellStatus ? WATER_STATUS[cellStatus].col : '';
+    var dotColor = cellStatus ? getWaterStatuses()[cellStatus].col : '';
     cells += '<div onclick="WS_SEL_DATE=\''+dateStr+'\';renderPage()" style="'
       +'min-height:52px;padding:4px;border-radius:8px;cursor:pointer;border:2px solid '
       +(isSel?'var(--bll)':isToday?'rgba(79,142,247,.4)':'transparent')+';'
@@ -3873,7 +3915,7 @@ function pgWaterSystem(){
       +(hasPlan?'<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:3px;justify-content:center">'
         +dayPlans.slice(0,3).map(function(p){
           var wt=WATER_TYPES.find(function(w){return w.id===p.typeId;})||{col:'#888'};
-          var sc=WATER_STATUS[p.status]||{col:'#888'};
+          var sc=getWaterStatuses()[p.status]||{col:'#888'};
           return '<div style="width:8px;height:8px;border-radius:50%;background:'+sc.col+'" title="'+esc((WATER_TYPES.find(function(w){return w.id===p.typeId;})||{lbl:''}).lbl)+'"></div>';
         }).join('')
         +(dayPlans.length>3?'<div style="font-size:9px;color:var(--mt)">+'+( dayPlans.length-3)+'</div>':'')
@@ -3891,7 +3933,7 @@ function pgWaterSystem(){
       ? '<div style="font-size:13px;color:var(--mt);padding:12px 0">Bu gün için plan yok.</div>'
       : selPlans.map(function(p){
           var wt  = WATER_TYPES.find(function(w){return w.id===p.typeId;})||{lbl:p.typeId,ico:'💧',col:'#888'};
-          var st  = WATER_STATUS[p.status]||{lbl:p.status,col:'#888',bg:'transparent'};
+          var WS=getWaterStatuses();var st=WS[p.status]||{lbl:p.status,col:'#888',bg:'transparent'};
           var tc  = DB.technicians.find(function(t){return t.id===p.techId;});
           var isPastPlan = p.date<todayStr && p.status==='planli';
           return '<div style="background:var(--bg3);border:1px solid var(--bdl);border-radius:9px;padding:12px;margin-bottom:8px">'
@@ -3986,7 +4028,7 @@ function pgWaterSystem(){
     +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">'+cells+'</div>'
     // Legend
     +'<div style="display:flex;gap:14px;margin-top:12px;flex-wrap:wrap">'
-    +Object.entries(WATER_STATUS).map(function(e){
+    +Object.entries(getWaterStatuses()).map(function(e){
       return '<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mt)">'
         +'<div style="width:9px;height:9px;border-radius:50%;background:'+e[1].col+'"></div>'+e[1].lbl+'</div>';
     }).join('')
@@ -4065,7 +4107,7 @@ function tplWaterModal(){
     +DB.technicians.filter(function(t){return t.active;}).map(function(t){
       return '<option value="'+t.id+'"'+(f.techId===t.id?' selected':'')+'>'+esc(t.name)+'</option>';
     }).join('');
-  var statOpts=Object.entries(WATER_STATUS).map(function(e){
+  var statOpts=Object.entries(getWaterStatuses()).map(function(e){
     return '<option value="'+e[0]+'"'+(f.status===e[0]?' selected':'')+'>'+e[1].lbl+'</option>';
   }).join('');
   return '<div class="ov" id="ov-water"><div class="md" style="max-width:480px">'
@@ -4116,6 +4158,66 @@ function wsCloseModal(){
   var el=document.getElementById('ov-water');if(el)el.remove();
 }
 
+
+// ── Su Sistemi Durum Yönetimi ─────────────────────────────
+function wsStatusAdd(){
+  if(!can('s')){toast('Yönetici yetkisi gerekli','err');return;}
+  var lbl=(document.getElementById('ws-new-lbl')||{value:''}).value.trim();
+  var col=(document.getElementById('ws-new-col')||{value:'#4f8ef7'}).value||'#4f8ef7';
+  if(!lbl){toast('Durum adı boş olamaz','err');return;}
+  if(!DB.waterStatuses)DB.waterStatuses=[];
+  // Aynı isim var mı?
+  if(DB.waterStatuses.find(function(s){return s.lbl.toLowerCase()===lbl.toLowerCase();})){
+    toast('Bu isimde durum zaten var','warn');return;
+  }
+  var id=lbl.toLowerCase().replace(/[^a-z0-9]/g,'_').substring(0,20)+'_'+Date.now().toString(36);
+  DB.waterStatuses.push({id:id,lbl:lbl,col:col});
+  addLog('Su Sistemi Durum Eklendi',lbl,'',col);
+  dbSave();
+  toast('Durum eklendi: '+lbl);
+  renderPage();
+}
+
+function wsStatusEdit(idx){
+  if(!can('s')){toast('Yönetici yetkisi gerekli','err');return;}
+  var lbl=(document.getElementById('ws-lbl-'+idx)||{value:''}).value.trim();
+  var col=(document.getElementById('ws-col-'+idx)||{value:'#888'}).value||'#888';
+  var lblInput=document.getElementById('ws-lbl-'+idx);
+  // Toggle edit mod
+  if(lblInput&&lblInput.style.display==='none'){
+    lblInput.style.display='inline-block';
+    lblInput.focus();
+    return;
+  }
+  if(!lbl){toast('Durum adı boş olamaz','err');return;}
+  if(!DB.waterStatuses||!DB.waterStatuses[idx]){toast('Durum bulunamadı','err');return;}
+  var old=DB.waterStatuses[idx].lbl;
+  DB.waterStatuses[idx].lbl=lbl;
+  DB.waterStatuses[idx].col=col;
+  addLog('Su Sistemi Durum Güncellendi',old+' → '+lbl,'','');
+  dbSave();
+  toast('Durum güncellendi');
+  renderPage();
+}
+
+function wsStatusDel(idx){
+  if(!can('s')){toast('Yönetici yetkisi gerekli','err');return;}
+  if(!DB.waterStatuses||!DB.waterStatuses[idx]){return;}
+  var s=DB.waterStatuses[idx];
+  // Bu durumu kullanan plan var mı?
+  var inUse=(DB.waterPlans||[]).filter(function(p){return p.status===s.id;}).length;
+  if(inUse>0){
+    if(!confirm(s.lbl+' durumunda '+inUse+' plan var. Yine de silmek istiyor musunuz?'))return;
+  } else {
+    if(!confirm(s.lbl+' durumunu silmek istiyor musunuz?'))return;
+  }
+  DB.waterStatuses.splice(idx,1);
+  addLog('Su Sistemi Durum Silindi',s.lbl,'','');
+  dbSave();
+  toast(s.lbl+' silindi','warn');
+  renderPage();
+}
+
 // BOOT
 // Firebase başlat
 fbInit();
@@ -4133,6 +4235,8 @@ fbInit();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
+
 
 
 
