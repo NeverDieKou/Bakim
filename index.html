@@ -256,13 +256,14 @@ function fbInit() {
         }
         var pqr = window._pendingQR || sessionStorage.getItem('pendingQR');
         if(pqr) {
-          window._pendingQR = null;
+          var eqIdNorm = (typeof normalizeQREqId === 'function') ? normalizeQREqId(pqr) : pqr;
           var ptab = sessionStorage.getItem('pendingQRTab') || QR_PENDING_TAB || 'workorders';
-          sessionStorage.removeItem('pendingQR');
-          sessionStorage.removeItem('pendingQRTab');
-          var eqFound = (DB.equipment||[]).find(function(x){return x.id===pqr;});
+          var eqFound = (DB.equipment||[]).find(function(x){return String(x.id).toUpperCase()===eqIdNorm;});
           if(eqFound) {
-            setTimeout(function(){ showQRLanding(pqr, ptab); }, 100);
+            window._pendingQR = null;
+            sessionStorage.removeItem('pendingQR');
+            sessionStorage.removeItem('pendingQRTab');
+            setTimeout(function(){ showQRLanding(eqFound.id, ptab); }, 100);
           }
         }
       }
@@ -486,7 +487,7 @@ function R(){
     app.innerHTML=tplLogin();
     bindLogin();
     // Eğer QR parametresi varsa login sayfasında ipucu göster
-    if(window._pendingSP||window._pendingQR){
+    if(window._pendingSP||window._pendingQR||sessionStorage.getItem('pendingQR')){
       var hint=document.createElement('div');
       hint.style.cssText='text-align:center;padding:10px;font-size:12px;color:var(--bll);background:rgba(37,99,235,.1);border-radius:8px;margin-top:10px;border:1px solid rgba(37,99,235,.3)';
       hint.innerHTML='📱 QR kodu algılandı. Giriş yaptıktan sonra otomatik yönlendirileceksiniz.';
@@ -495,6 +496,8 @@ function R(){
     }
     return;
   }
+  // Giriş yapılmışsa QR isteğini hemen işle. Firebase gecikirse pending korunur.
+  if(consumePendingQR && consumePendingQR()) return;
   app.innerHTML=tplShell();bindNav();renderPage();renderModals();
 }
 function renderPage(){
@@ -1870,7 +1873,7 @@ function generatePPTX() {
 // QR LANDING — Telefon ile okutunca açılan sayfa
 // ═══════════════════════════════════════════════
 var QR_EQ_ID = null;
-var QR_TAB = 'info'; // info | workorders | new_wo
+var QR_TAB = 'workorders'; // info | workorders | new_wo
 var QR_PENDING_TAB = 'workorders'; // QR okutulunca varsayılan açılacak sekme
 
 function showQRLanding(eqId, tab) {
@@ -1879,6 +1882,35 @@ function showQRLanding(eqId, tab) {
   var app = document.getElementById('app');
   app.innerHTML = renderQRLanding();
   bindQRLanding();
+}
+
+function normalizeQREqId(v) {
+  if(!v) return '';
+  v = String(v).trim();
+  if(v.indexOf('PHARMA_MS:') === 0) v = v.replace('PHARMA_MS:','').trim();
+  try {
+    if(v.indexOf('http') === 0) {
+      var u = new URL(v);
+      v = u.searchParams.get('eq') || u.hash.replace(/^#qr=/,'') || v;
+    }
+  } catch(e) {}
+  var m = v.match(/(?:[?&]eq=|#qr=)?([A-Za-z0-9_-]+)/);
+  return m ? m[1].toUpperCase() : v.toUpperCase();
+}
+
+function consumePendingQR() {
+  var raw = window._pendingQR || sessionStorage.getItem('pendingQR');
+  if(!raw) return false;
+  var eqId = normalizeQREqId(raw);
+  var tab = sessionStorage.getItem('pendingQRTab') || QR_PENDING_TAB || 'workorders';
+  if(tab === 'wo' || tab === 'is-emri') tab = 'workorders';
+  var eqFound = (DB.equipment||[]).find(function(x){return String(x.id).toUpperCase()===eqId;});
+  if(!eqFound) return false;
+  window._pendingQR = null;
+  sessionStorage.removeItem('pendingQR');
+  sessionStorage.removeItem('pendingQRTab');
+  showQRLanding(eqFound.id, tab);
+  return true;
 }
 
 function renderQRLanding() {
@@ -2250,21 +2282,22 @@ function handleQRResult(data) {
     if(hashMatch) eqId = hashMatch[1];
   }
 
+  eqId = normalizeQREqId(eqId || data);
   if(!eqId) {
     toast('Tanınmayan QR kodu: ' + data.slice(0,30), 'warn');
     return;
   }
 
-  var eq = DB.equipment.find(function(e){ return e.id === eqId; });
+  var eq = DB.equipment.find(function(e){ return String(e.id).toUpperCase() === eqId; });
   if(!eq) {
     toast('Ekipman bulunamadı: ' + eqId, 'err');
     return;
   }
 
   toast('✓ ' + eq.name + ' — QR okundu', 'ok');
-  QR_EQ_ID = eqId;
+  QR_EQ_ID = eq.id;
   QR_TAB = 'workorders';
-  showQRLanding(eqId, 'workorders');
+  showQRLanding(eq.id, 'workorders');
 }
 
 function closeQRScanner() {
