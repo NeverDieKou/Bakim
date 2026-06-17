@@ -182,6 +182,8 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -962,6 +964,7 @@ function pgTech(){
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Teknisyenler</div>'+(can('s')?'<button class="btn bpri bsm" onclick="openTechForm(null)">+ Personel Ekle</button>':'')+'</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">'+h+'</div>';
 }
 
+function getUserIsOzeti(uid){var uw=(DB.workOrders||[]).filter(function(w){return w.techId===uid;});var op=uw.filter(function(w){return w.status==='acik';}).length;var dv=uw.filter(function(w){return w.status==='devam';}).length;var bk=uw.filter(function(w){return w.status==='bekliyor';}).length;var cl=uw.filter(function(w){return w.status==='kapali';}).length;var sc=0;if(DB.scores)Object.values(DB.scores).forEach(function(s){if(s.techId===uid)sc+=s.point;});var b=[];if(op)b.push('<span style="color:var(--rdl);font-size:10px;font-weight:700">Acik:'+op+'</span>');if(dv)b.push('<span style="color:var(--orl);font-size:10px;font-weight:700">Devam:'+dv+'</span>');if(bk)b.push('<span style="color:#a78bfa;font-size:10px;font-weight:700">Onay:'+bk+'</span>');if(cl)b.push('<span style="color:var(--gnl);font-size:10px;font-weight:700">Kapali:'+cl+'</span>');if(sc&&can('sc'))b.push('<span style="color:var(--bll);font-size:10px;font-weight:700">Puan:'+sc+'</span>');return b.length?'<td><div style="display:flex;flex-wrap:wrap;gap:3px">'+b.join('')+'</div></td>':'<td>—</td>';}
 function pgUsers(){
   if(!can('u')){return '<div style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">🔒</div><div style="font-size:18px;font-weight:700;color:var(--rdl)">Erişim Reddedildi</div><div style="font-size:13px;color:var(--mt);margin-top:8px">Kullanıcı yönetimi sadece Yönetici yetkisine sahip kişiler tarafından görülebilir.</div></div>';}
   var permLabels={r:'Görüntüleme',w:'İş Emri Oluşturma',cl:'İş Emri Kapatma',ap:'Onaylama',d:'Silme',u:'Kullanıcı Yönetimi',s:'Sistem Ayarları'};
@@ -987,6 +990,7 @@ function pgUsers(){
       +'<td><span class="badge bxsm" style="color:'+(rl&&rl.col||'#888')+';border-color:'+(rl&&rl.col||'#888')+';background:'+(rl&&rl.col||'#888')+'18">'+(rl&&rl.lbl||u.role)+'</span></td>'
       +'<td style="color:var(--mt);font-size:11px">'+esc(u.dept||'—')+'</td>'
       +'<td><span style="font-size:11px;font-weight:700;color:'+(u.active?'var(--gnl)':'var(--mt)')+'">'+(u.active?'● Aktif':'○ Pasif')+'</span></td>'
+      +getUserIsOzeti(u.id)
       +'<td style="white-space:nowrap">'
       +(can('s')?'<button class="btn bout bxs" onclick="openUserForm(\''+u.id+'\')">✏ Düzenle</button>':'')
       +(can('s')&&!isSelf?'<button class="btn bdng bxs" style="margin-left:4px" onclick="deleteUser(\''+u.id+'\')">🗑 Sil</button>':'')
@@ -5059,6 +5063,8 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
+
 
 
 
