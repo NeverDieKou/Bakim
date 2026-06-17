@@ -3573,6 +3573,8 @@ function showSpareMovForm(spId, type){
   var wos = DB.workOrders.filter(function(w){return w.status!=='kapali';});
   var woOpts = '<option value="">— Bağlı iş emri yok —</option>'
     +wos.map(function(w){return'<option value="'+w.id+'">'+esc(w.id+' — '+w.title.slice(0,25))+'</option>';}).join('');
+  var eqOpts = '<option value="">— İsteğe bağlı ekipman seç —</option>'
+    +(DB.equipment||[]).map(function(e){return '<option value="'+e.id+'"'+((p.eqId||'')===e.id?' selected':'')+'>'+esc(e.id+' — '+e.name)+'</option>';}).join('');
 
   var app = document.getElementById('app');
   app.innerHTML = '<div id="qr-landing">'
@@ -3595,7 +3597,7 @@ function showSpareMovForm(spId, type){
     +'<input class="inp" type="number" min="1" id="qspm-qty" placeholder="0" style="font-size:24px;font-weight:700;text-align:center;height:56px"/></div>'
     +'<div class="fr"><label class="lbl">Açıklama / Neden *</label>'
     +'<input class="inp" id="qspm-reason" placeholder="'+(isGiris?'Satın alma, iade, sayım...':'Kullanım, fire, WO-001...')+'"/></div>'
-    +(!isGiris?'<div class="fr"><label class="lbl">Bağlı İş Emri</label><select class="inp" id="qspm-wo">'+woOpts+'</select></div>':'')
+    +(!isGiris?'<div class="fr"><label class="lbl">Kullanıldığı Ekipman <span style="color:var(--mt);font-weight:400">(isteğe bağlı)</span></label><select class="inp" id="qspm-eq">'+eqOpts+'</select><div style="font-size:11px;color:var(--mt);margin-top:5px">Seçilen ekipmanın 🔩 Parça Geçmişi sekmesine anlık kaydedilir.</div></div><div class="fr"><label class="lbl">Bağlı İş Emri</label><select class="inp" id="qspm-wo">'+woOpts+'</select></div>':'')
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">'
     +'<button onclick="showSpareQRLanding(\''+spId+'\')" class="btn bghs" style="justify-content:center;padding:14px">İptal</button>'
     +'<button onclick="submitSpareMovQR(\''+spId+'\',\''+type+'\')" class="btn '+(isGiris?'bsuc':'bwrn')+'" style="justify-content:center;padding:14px;font-size:15px">'
@@ -3611,9 +3613,11 @@ function submitSpareMovQR(spId, type){
   var qtyEl    = document.getElementById('qspm-qty');
   var reasonEl = document.getElementById('qspm-reason');
   var woEl     = document.getElementById('qspm-wo');
+  var eqEl     = document.getElementById('qspm-eq');
   var qty    = parseInt(qtyEl?qtyEl.value:0)||0;
   var reason = reasonEl?reasonEl.value.trim():'';
   var woId   = woEl?woEl.value:'';
+  var eqId   = eqEl?eqEl.value:'';
   var isGiris = type==='giris';
   if(qty<=0){toast('Miktar 0\'dan büyük olmalı','err');return;}
   if(!reason){toast('Açıklama zorunludur','err');return;}
@@ -3628,8 +3632,18 @@ function submitSpareMovQR(spId, type){
   DB.spareMovements.unshift({
     id:'MOV-'+uid(), partId:spId,
     type:type, qty:qty, reason:reason,
-    woId:woId, user:U?U.name:'—', ts:ts2,
+    woId:woId, eqId:eqId, user:U?U.name:'—', ts:ts2,
   });
+  // QR ile stok çıkışında seçilen ekipmanın parça geçmişine anlık kaydet
+  if(eqId&&!isGiris){
+    if(!DB.eqPartHistory)DB.eqPartHistory={};
+    if(!DB.eqPartHistory[eqId])DB.eqPartHistory[eqId]=[];
+    DB.eqPartHistory[eqId].unshift({
+      id:'EPH-'+uid(), partId:p.id, partName:p.name, partCode:p.code||'',
+      qty:qty, unit:p.unit||'Adet', reason:reason, woId:woId,
+      user:U?U.name:'—', ts:ts2
+    });
+  }
   // İş emrine yorum ekle
   if(woId){
     var wo2=DB.workOrders.find(function(w){return w.id===woId;});
@@ -3644,11 +3658,13 @@ function submitSpareMovQR(spId, type){
       DB.workOrders=DB.workOrders.map(function(w){return w.id===woId?wo2:w;});
     }
   }
+  var eqName='';
+  if(eqId){var eqObj=(DB.equipment||[]).find(function(e){return e.id===eqId;});eqName=eqObj?(eqObj.id+' — '+eqObj.name):eqId;}
   addLog('Stok Hareketi ('+(isGiris?'Giriş':'Çıkış')+')',
-    p.name+' — '+qty+' '+p.unit+(woId?' ['+woId+']':''),
+    p.name+' — '+qty+' '+p.unit+(woId?' ['+woId+']':'')+(eqName?' | Ekipman: '+eqName:''),
     oldStock+' '+p.unit, newStock+' '+p.unit);
   dbSave();
-  toast((isGiris?'✓ Giriş':'✓ Çıkış')+' kaydedildi: '+qty+' '+p.unit+(woId?' → '+woId+' iş emrine eklendi':'')+' | Yeni stok: '+newStock);
+  toast((isGiris?'✓ Giriş':'✓ Çıkış')+' kaydedildi: '+qty+' '+p.unit+(woId?' → '+woId+' iş emrine eklendi':'')+(eqName?' → '+eqName+' parça geçmişine eklendi':'')+' | Yeni stok: '+newStock);
   // Başarı sonrası landing'e dön
   setTimeout(function(){showSpareQRLanding(spId);},300);
 }
