@@ -257,10 +257,12 @@ function fbInit() {
         var pqr = window._pendingQR || sessionStorage.getItem('pendingQR');
         if(pqr) {
           window._pendingQR = null;
+          var ptab = sessionStorage.getItem('pendingQRTab') || QR_PENDING_TAB || 'workorders';
           sessionStorage.removeItem('pendingQR');
+          sessionStorage.removeItem('pendingQRTab');
           var eqFound = (DB.equipment||[]).find(function(x){return x.id===pqr;});
           if(eqFound) {
-            setTimeout(function(){ showQRLanding(pqr); }, 100);
+            setTimeout(function(){ showQRLanding(pqr, ptab); }, 100);
           }
         }
       }
@@ -555,6 +557,7 @@ function bindLogin(){
         var eid=h.replace('#qr=','').split(':')[0];
         window.location.hash='';
         sessionStorage.setItem('pendingQR',eid);
+        sessionStorage.setItem('pendingQRTab','workorders');
         window._pendingQR=eid;
       }
       // R() çağır — Firebase listener pending'leri halleder
@@ -1143,7 +1146,7 @@ function drawQR(eqId){
   var el=document.getElementById('qr-disp');
   if(!el)return;
   el.innerHTML='';
-  var url=BASE_URL+'?eq='+eq.id;
+  var url=BASE_URL+'?eq='+eq.id+'&tab=workorders';
   // QRCode.js kütüphanesi — telefon kamerası %100 okur
   var div=document.createElement('div');
   el.appendChild(div);
@@ -1192,7 +1195,7 @@ function dlQR(eqId){
   toast('QR bulunamadı','warn');
 }
 function printQR(id,name,area){
-  var url=BASE_URL+'?eq='+id;
+  var url=BASE_URL+'?eq='+id+'&tab=workorders';
   // QRCode.js ile yeni pencerede üret ve yazdır
   var w=window.open('','_blank');
   w.document.write('<!DOCTYPE html><html><head><script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"><\/script><style>body{text-align:center;font-family:sans-serif;padding:20px}@media print{button{display:none}}<\/style></head><body>'
@@ -1220,7 +1223,7 @@ function printAllQR(){
     tableRows+='<tr>'+rows[i]+(rows[i+1]||'<td></td>')+'</tr>';
   }
   var qrScripts=eqs.map(function(eq){
-    var url=BASE_URL+'?eq='+eq.id;
+    var url=BASE_URL+'?eq='+eq.id+'&tab=workorders';
     return 'new QRCode(document.getElementById("qr_'+eq.id+'"),{text:"'+url+'",width:180,height:180,correctLevel:1});';
   }).join('');
 
@@ -1310,7 +1313,7 @@ function saveEq(){
   } else {
     DB.equipment=DB.equipment.concat([eq]);
     addLog('Ekipman Eklendi',eq.name+' ['+eq.id+']','','');
-    var qpayload=BASE_URL+'?eq='+eq.id;
+    var qpayload=BASE_URL+'?eq='+eq.id+'&tab=workorders';
     // QR_IMAGES'e eklemeye gerek yok — drawQR dinamik üretiyor
     toast('Ekipman eklendi — QR kodu hazır ✓');
   }
@@ -1868,10 +1871,11 @@ function generatePPTX() {
 // ═══════════════════════════════════════════════
 var QR_EQ_ID = null;
 var QR_TAB = 'info'; // info | workorders | new_wo
+var QR_PENDING_TAB = 'workorders'; // QR okutulunca varsayılan açılacak sekme
 
-function showQRLanding(eqId) {
+function showQRLanding(eqId, tab) {
   QR_EQ_ID = eqId;
-  QR_TAB = 'info';
+  QR_TAB = tab || QR_PENDING_TAB || 'workorders';
   var app = document.getElementById('app');
   app.innerHTML = renderQRLanding();
   bindQRLanding();
@@ -2259,8 +2263,8 @@ function handleQRResult(data) {
 
   toast('✓ ' + eq.name + ' — QR okundu', 'ok');
   QR_EQ_ID = eqId;
-  QR_TAB = 'info';
-  showQRLanding(eqId);
+  QR_TAB = 'workorders';
+  showQRLanding(eqId, 'workorders');
 }
 
 function closeQRScanner() {
@@ -4275,10 +4279,13 @@ fbInit();
     ? new URLSearchParams(window.location.search) : null;
   var qParam  = urlParams ? urlParams.get('eq') : null;
   var spParam = urlParams ? urlParams.get('sp') : null;
-  if(qParam)  { window._pendingQR = qParam;  sessionStorage.setItem('pendingQR',  qParam);  }
+  var tabParam = urlParams ? (urlParams.get('tab') || urlParams.get('page')) : null;
+  if(tabParam === 'wo' || tabParam === 'workorders' || tabParam === 'is-emri') QR_PENDING_TAB = 'workorders';
+  if(qParam)  { window._pendingQR = qParam;  sessionStorage.setItem('pendingQR',  qParam); sessionStorage.setItem('pendingQRTab', QR_PENDING_TAB); }
   if(spParam) { window._pendingSP = spParam; sessionStorage.setItem('pendingSP', spParam); }
   // Önceki oturumdan kalan pending'leri de oku
   if(!qParam)  { var sq=sessionStorage.getItem('pendingQR');  if(sq)window._pendingQR=sq;  }
+  var st=sessionStorage.getItem('pendingQRTab'); if(st) QR_PENDING_TAB = st;
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
