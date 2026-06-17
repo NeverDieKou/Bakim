@@ -247,11 +247,11 @@ function fbInit() {
       if(U) {
         var psp = window._pendingSP || sessionStorage.getItem('pendingSP');
         if(psp) {
-          window._pendingSP = null;
-          sessionStorage.removeItem('pendingSP');
-          var spFound = (DB.spareParts||[]).find(function(x){return x.id===psp;});
+          var spFound = (typeof findSparePartByQRId==='function') ? findSparePartByQRId(psp) : (DB.spareParts||[]).find(function(x){return x.id===psp;});
           if(spFound) {
-            setTimeout(function(){ showSpareQRLanding(psp); }, 100);
+            window._pendingSP = null;
+            try{sessionStorage.removeItem('pendingSP');localStorage.removeItem('pharma_sp_target');}catch(e){}
+            setTimeout(function(){ showSpareQRLanding(spFound.id); }, 100);
           }
         }
         var pqr = window._pendingQR || sessionStorage.getItem('pendingQR') || (qrReadTarget&&qrReadTarget()&&qrReadTarget().eq);
@@ -512,7 +512,9 @@ function R(){
     return;
   }
 
-  // Giriş yapılmışsa QR isteğini ana sayfaya düşürmeden işle.
+  // Giriş yapılmışsa QR / Yedek Parça isteğini ana sayfaya düşürmeden işle.
+  if(typeof spCaptureTarget==='function') spCaptureTarget();
+  if(typeof spForceOpenTarget==='function' && spForceOpenTarget()) return;
   qrCaptureTarget();
   if(qrForceOpenTarget && qrForceOpenTarget()) return;
   // Firebase verisi daha önce yüklenmiş olsa bile login sonrası tekrar denenir.
@@ -606,7 +608,9 @@ function bindLogin(){
         sessionStorage.setItem('pendingQRTab','workorders');
         window._pendingQR=eid;
       }
-      // QR ile gelindiyse ana sayfaya değil doğrudan ekipman İş Emirleri ekranına git
+      // QR ile gelindiyse ana sayfaya değil doğrudan ilgili ekranı aç
+      if(typeof spCaptureTarget==='function') spCaptureTarget();
+      if(typeof spForceOpenTarget==='function' && spForceOpenTarget()) return;
       qrCaptureTarget();
       if(qrForceOpenTarget && qrForceOpenTarget()) return;
       if(openQRWorkorderAfterLogin && openQRWorkorderAfterLogin()) return;
@@ -3471,12 +3475,14 @@ function handleSpareQR(spId){
 }
 
 function showSpareQRLanding(spId){
-  var p=(DB.spareParts||[]).find(function(x){return x.id===spId;});
+  var p=(typeof findSparePartByQRId==='function') ? findSparePartByQRId(spId) : (DB.spareParts||[]).find(function(x){return x.id===spId;});
   if(!p){
-    toast('Parça bulunamadı: '+spId,'err');
-    PAGE='spareparts';R();
+    QR_ACTIVE=true;
+    var app=document.getElementById('app');
+    if(app){app.innerHTML='<div id="qr-landing"><div class="qr-top"><button onclick="spClearTarget&&spClearTarget();PAGE=\'spareparts\';R()" style="background:none;border:none;color:var(--mt);font-size:22px;cursor:pointer">←</button><div style="font-size:14px;font-weight:800">Yedek Parça Bulunamadı</div></div><div class="qr-body"><div class="alert" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25)"><span>⚠</span><div>QR kodundaki yedek parça sistemde bulunamadı: <b>'+esc(spId)+'</b><br><br>Parça ID veya stok kodu ile sistemdeki kayıt aynı olmalıdır.</div></div><button class="btn bpri" onclick="spClearTarget&&spClearTarget();PAGE=\'spareparts\';R()">Yedek Parça Listesine Git</button></div></div>';}
     return;
   }
+  spId=p.id;
 
   var isKritik = p.stock>0&&p.stock<=p.minStock;
   var isSifir  = p.stock<=0;
@@ -4580,6 +4586,79 @@ handleSpareQR = function(spId){
   spForceOpenTarget();
 };
 spCaptureTarget();
+
+
+
+// ══════════════════════════════════════════════════════════════
+// SPARE PART QR LOGIN REDIRECT HARD FIX v2
+// Login sonrası ana sayfaya düşmeyi engelleyen nihai yönlendirme.
+// URL + sessionStorage + localStorage üzerinden yedek parça QR hedefini korur.
+// ══════════════════════════════════════════════════════════════
+(function(){
+  function _spGetFromUrl(){
+    var sp='';
+    try{
+      var u=new URL(window.location.href);
+      sp=u.searchParams.get('sp')||u.searchParams.get('part')||u.searchParams.get('spare')||u.searchParams.get('code')||'';
+      if(!sp && u.hash){
+        var h=u.hash.replace(/^#/, '');
+        if(h.indexOf('sp=')===0) sp=decodeURIComponent(h.slice(3));
+        if(h.indexOf('part=')===0) sp=decodeURIComponent(h.slice(5));
+      }
+    }catch(e){}
+    return sp;
+  }
+  function _spStore(sp){
+    if(!sp)return;
+    sp=(typeof normalizeSPId==='function')?normalizeSPId(sp):String(sp).trim();
+    window._pendingSP=sp;
+    try{sessionStorage.setItem('pendingSP',sp);}catch(e){}
+    try{localStorage.setItem('pharma_sp_target',JSON.stringify({sp:sp,ts:Date.now()}));}catch(e){}
+  }
+  window.spCaptureTarget=function(){
+    var sp=_spGetFromUrl();
+    if(sp)_spStore(sp);
+  };
+  window.spReadTarget=function(){
+    var sp=_spGetFromUrl()||window._pendingSP||'';
+    try{sp=sp||sessionStorage.getItem('pendingSP')||'';}catch(e){}
+    try{
+      var r=localStorage.getItem('pharma_sp_target');
+      if(r){var o=JSON.parse(r);if(o&&o.sp&&(Date.now()-(o.ts||0)<86400000))sp=sp||o.sp;}
+    }catch(e){}
+    return sp?((typeof normalizeSPId==='function')?normalizeSPId(sp):String(sp).trim()):null;
+  };
+  window.spClearTarget=function(){
+    window._pendingSP=null;
+    try{sessionStorage.removeItem('pendingSP');}catch(e){}
+    try{localStorage.removeItem('pharma_sp_target');}catch(e){}
+  };
+  window.findSparePartByQRId=function(sp){
+    var n=(typeof normalizeSPId==='function')?normalizeSPId(sp):String(sp||'').trim();
+    var nu=String(n).toUpperCase();
+    return (DB.spareParts||[]).find(function(x){
+      return String(x.id||'').toUpperCase()===nu || String(x.code||'').toUpperCase()===nu;
+    });
+  };
+  window.spForceOpenTarget=function(){
+    var sp=spReadTarget();
+    if(!sp)return false;
+    if(!U){_spStore(sp);return false;}
+    QR_ACTIVE=true;
+    showSparePendingRedirect();
+    var tries=0;
+    (function wait(){
+      tries++;
+      var found=findSparePartByQRId(sp);
+      if(found){spClearTarget();showSpareQRLanding(found.id);return;}
+      if(tries<60){setTimeout(wait,200);return;}
+      var app=document.getElementById('app');
+      if(app){app.innerHTML='<div id="qr-landing"><div class="qr-top"><button onclick="spClearTarget();PAGE=\'spareparts\';R()" style="background:none;border:none;color:var(--mt);font-size:22px;cursor:pointer">←</button><div style="font-size:14px;font-weight:800">Yedek Parça Bulunamadı</div></div><div class="qr-body"><div class="alert" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25)"><span>⚠</span><div>QR kodundaki yedek parça sistemde bulunamadı: <b>'+esc(sp)+'</b><br><br>Parça ID veya stok kodu ile sistemdeki kayıt aynı olmalıdır.</div></div><button class="btn bpri" onclick="spClearTarget();PAGE=\'spareparts\';R()">Yedek Parça Listesine Git</button></div></div>';}
+    })();
+    return true;
+  };
+  spCaptureTarget();
+})();
 
 // BOOT
 // Firebase başlat
