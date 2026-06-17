@@ -178,6 +178,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -625,7 +626,7 @@ function bindLogin(){
 
 // SHELL
 function tplShell(){
-  var logo_b64='data:image/png;base64,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';
+  var logo_b64='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgcng9IjE4IiBmaWxsPSIjMWUzYTVmIi8+PHRleHQgeD0iNjAiIHk9IjUyIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjkwMCIgZm9udC1zaXplPSIyOCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Tm9iZWw8L3RleHQ+PHRleHQgeD0iNjAiIHk9Ijc2IiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjcwMCIgZm9udC1zaXplPSIxMyIgZmlsbD0iIzRmOGVmNyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SUxBQzwvdGV4dD48cmVjdCB4PSIyMCIgeT0iODUiIHdpZHRoPSI4MCIgaGVpZ2h0PSIzIiByeD0iMS41IiBmaWxsPSIjNGY4ZWY3IiBvcGFjaXR5PSIwLjYiLz48L3N2Zz4=';
   var s=DB.settings,rl=ROLES[U.role];
   var urgent=DB.equipment.filter(function(e){var d=daysLeft(e.nextMaint);return d!==null&&d<=s.critDays&&d>=0;});
   var openN=DB.workOrders.filter(function(w){return w.status==='acik';}).length;
@@ -994,7 +995,7 @@ function pgSettings(){
   }).join('')||'<span style="font-size:12px;color:var(--mt)">Henüz durum eklenmedi</span>';
   var aH=s.areas.map(function(a){return'<div style="display:flex;align-items:center;gap:5px;padding:5px 11px;background:var(--bg3);border-radius:7px;border:1px solid var(--bd);font-size:13px">'+esc(a)+'<button onclick="rmListItem(\'area\',\''+esc(a)+'\')" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:14px;line-height:1;margin-left:2px">×</button></div>';}).join('');
   var rH=s.techRoles.map(function(r){return'<div style="display:flex;align-items:center;gap:5px;padding:5px 11px;background:var(--bg3);border-radius:7px;border:1px solid var(--bd);font-size:13px">'+esc(r)+'<button onclick="rmListItem(\'techRole\',\''+esc(r)+'\')" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:14px;line-height:1;margin-left:2px">×</button></div>';}).join('');
-  return '<div style="font-size:20px;font-weight:800;margin-bottom:20px;letter-spacing:-.3px">Sistem Ayarları</div><div class="card"><div class="cardt">🏢 Firma Bilgileri</div><div class="g2"><div class="fr"><label class="lbl">Uygulama Başlığı</label><input class="inp" id="s-co" value="'+esc(s.company)+'"/></div><div class="fr"><label class="lbl">Tesis Adı</label><input class="inp" id="s-fa" value="'+esc(s.facility)+'"/></div><div class="fr"><label class="lbl">Adres</label><input class="inp" id="s-ad" value="'+esc(s.address||'')+'"/></div><div class="fr"><label class="lbl">Telefon</label><input class="inp" id="s-ph" value="'+esc(s.phone||'')+'"/></div></div></div><div class="card"><div class="cardt">⚙ Operasyonel Ayarlar</div><div class="g3"><div class="fr"><label class="lbl">Bakım Uyarı Eşiği (gün)</label><input class="inp" id="s-wd" type="number" min="1" value="'+s.warnDays+'"/></div><div class="fr"><label class="lbl">Kritik Uyarı Eşiği (gün)</label><input class="inp" id="s-cd" type="number" min="1" value="'+s.critDays+'"/></div></div><div class="chkr fr"><input type="checkbox" id="s-gd" '+(s.gmpDef?'checked':'')+"><label for='s-gd'>Yeni iş emirlerinde GMP varsayılan açık</label></div><div class='chkr fr'><input type='checkbox' id='s-ap' "+(s.reqApproval?'checked':'')+"><label for='s-ap'>Tamamlanan iş emirleri için onay mekanizması</label></div></div><div class='card'><div class='cardt'>📍 Bölgeler <button class='btn bout bxs' onclick=\"addListItem('area')\">+ Ekle</button></div><div style='display:flex;gap:6px;flex-wrap:wrap'>"+aH+"</div></div><div class='card'><div class='cardt'>👷 Teknisyen Rolleri <button class='btn bout bxs' onclick=\"addListItem('techRole')\">+ Ekle</button></div><div style='display:flex;gap:6px;flex-wrap:wrap'>"+rH+"</div></div><div class='card'><div class='cardt'>💾 Veri Yönetimi</div><div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px'><div style='background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:16px'><div style='font-weight:700;margin-bottom:5px'>📊 Dışa Aktar</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px;line-height:1.4'>Tüm verileri Excel veya JSON olarak indir.</div><div style='display:flex;flex-direction:column;gap:7px'><button class='btn bsuc bsm' style='justify-content:center' onclick='exportExcel()'>📊 Excel (.xlsx)</button><button class='btn bout bsm' style='justify-content:center' onclick='exportJSON()'>📋 JSON Yedek</button></div></div><div style='background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:16px'><div style='font-weight:700;margin-bottom:5px'>📥 Yeni Bilgisayara Taşı</div><div style='font-size:11px;color:var(--mt);margin-bottom:4px'><strong style='color:var(--sub)'>1.</strong> JSON Yedek al</div><div style='font-size:11px;color:var(--mt);margin-bottom:4px'><strong style='color:var(--sub)'>2.</strong> Yeni bilgisayarda html aç</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px'><strong style='color:var(--sub)'>3.</strong> JSON Yükle → veriler gelir</div><label><button class='btn bout bsm' style='width:100%;justify-content:center' onclick='this.nextElementSibling.click()'>📂 JSON Yükle</button><input type='file' accept='.json' style='display:none' onchange='importJSON(this)'/></label></div><div style='background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.2);border-radius:9px;padding:16px'><div style='font-weight:700;color:var(--rdl);margin-bottom:5px'>⚠ Fabrika Sıfırlama</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px;line-height:1.4'>Tüm veriler silinir, örnek veri yüklenir. Geri alınamaz!</div><button class='btn bdng bsm' style='width:100%;justify-content:center' onclick='resetAll()'>Sıfırla</button></div></div></div><div style='display:flex;justify-content:flex-end;gap:10px;margin-top:4px'><button class='btn bghs' onclick='renderPage()'>İptal</button><button class='btn bsuc' onclick='saveSettings()'>Ayarları Kaydet</button></div>";
+  return '<div style="font-size:20px;font-weight:800;margin-bottom:20px;letter-spacing:-.3px">Sistem Ayarları</div><div class="card"><div class="cardt">🏢 Firma Bilgileri</div><div class="g2"><div class="fr"><label class="lbl">Uygulama Başlığı</label><input class="inp" id="s-co" value="'+esc(s.company)+'"/></div><div class="fr"><label class="lbl">Tesis Adı</label><input class="inp" id="s-fa" value="'+esc(s.facility)+'"/></div><div class="fr"><label class="lbl">Adres</label><input class="inp" id="s-ad" value="'+esc(s.address||'')+'"/></div><div class="fr"><label class="lbl">Telefon</label><input class="inp" id="s-ph" value="'+esc(s.phone||'')+'"/></div></div></div><div class="card"><div class="cardt">⚙ Operasyonel Ayarlar</div><div class="g3"><div class="fr"><label class="lbl">Bakım Uyarı Eşiği (gün)</label><input class="inp" id="s-wd" type="number" min="1" value="'+s.warnDays+'"/></div><div class="fr"><label class="lbl">Kritik Uyarı Eşiği (gün)</label><input class="inp" id="s-cd" type="number" min="1" value="'+s.critDays+'"/></div></div><div class="chkr fr"><input type="checkbox" id="s-gd" '+(s.gmpDef?'checked':'')+"><label for='s-gd'>Yeni iş emirlerinde GMP varsayılan açık</label></div><div class='chkr fr'><input type='checkbox' id='s-ap' "+(s.reqApproval?'checked':'')+"><label for='s-ap'>Tamamlanan iş emirleri için onay mekanizması</label></div></div><div class='card'><div class='cardt'>💧 Su Sistemi Durumları <button class='btn bout bxs' onclick=\"addListItem('area')\">+ Ekle</button></div><div style='display:flex;gap:6px;flex-wrap:wrap'>"+aH+"</div></div><div class='card'><div class='cardt'>📍 Bölgeler <button class='btn bout bxs' onclick=\"addListItem('area')\">+ Ekle</button></div><div style='display:flex;gap:6px;flex-wrap:wrap'>"+aH+"</div></div><div class='card'><div class='cardt'>👷 Teknisyen Rolleri <button class='btn bout bxs' onclick=\"addListItem('techRole')\">+ Ekle</button></div><div style='display:flex;gap:6px;flex-wrap:wrap'>"+rH+"</div></div><div class='card'><div class='cardt'>💾 Veri Yönetimi</div><div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px'><div style='background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:16px'><div style='font-weight:700;margin-bottom:5px'>📊 Dışa Aktar</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px;line-height:1.4'>Tüm verileri Excel veya JSON olarak indir.</div><div style='display:flex;flex-direction:column;gap:7px'><button class='btn bsuc bsm' style='justify-content:center' onclick='exportExcel()'>📊 Excel (.xlsx)</button><button class='btn bout bsm' style='justify-content:center' onclick='exportJSON()'>📋 JSON Yedek</button></div></div><div style='background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:16px'><div style='font-weight:700;margin-bottom:5px'>📥 Yeni Bilgisayara Taşı</div><div style='font-size:11px;color:var(--mt);margin-bottom:4px'><strong style='color:var(--sub)'>1.</strong> JSON Yedek al</div><div style='font-size:11px;color:var(--mt);margin-bottom:4px'><strong style='color:var(--sub)'>2.</strong> Yeni bilgisayarda html aç</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px'><strong style='color:var(--sub)'>3.</strong> JSON Yükle → veriler gelir</div><label><button class='btn bout bsm' style='width:100%;justify-content:center' onclick='this.nextElementSibling.click()'>📂 JSON Yükle</button><input type='file' accept='.json' style='display:none' onchange='importJSON(this)'/></label></div><div style='background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.2);border-radius:9px;padding:16px'><div style='font-weight:700;color:var(--rdl);margin-bottom:5px'>⚠ Fabrika Sıfırlama</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px;line-height:1.4'>Tüm veriler silinir, örnek veri yüklenir. Geri alınamaz!</div><button class='btn bdng bsm' style='width:100%;justify-content:center' onclick='resetAll()'>Sıfırla</button></div></div></div><div style='display:flex;justify-content:flex-end;gap:10px;margin-top:4px'><button class='btn bghs' onclick='renderPage()'>İptal</button><button class='btn bsuc' onclick='saveSettings()'>Ayarları Kaydet</button></div>";
 }
 
 // MODALS
@@ -4066,6 +4067,7 @@ var WS_CAL_DATE = (function(){
 })(); // YYYY-MM
 var WS_SEL_DATE = null;   // seçili gün (takvimde)
 var WS_MODAL    = false;
+var WS_SEL_PLAN = null;
 var WS_EDIT     = null;   // düzenlenen plan
 
 function pgWaterSystem(){
@@ -4091,10 +4093,11 @@ function pgWaterSystem(){
            (p.status==='planli' && p.date && p.date < today());
   }).length;
 
+  var maxNo=plans.length>0?Math.max.apply(null,plans.map(function(p){return parseInt(p.no||0)||0;})):0;
   var statsH = [
-    {lbl:'Toplam Plan', v:total,  col:'var(--bll)'},
-    {lbl:'Tamamlanan',  v:done,   col:'var(--gnl)'},
-    {lbl:'Geciken',     v:late,   col:'var(--rdl)'},
+    {lbl:'Toplam Is (#'+maxNo+')',v:total,col:'var(--bll)'},
+    {lbl:'Tamamlanan',            v:done, col:'var(--gnl)'},
+    {lbl:'Geciken',               v:late, col:'var(--rdl)'},
   ].map(function(s){
     return '<div class="sc" style="border-color:'+s.col+'25">'
       +'<div class="sa" style="background:'+s.col+'"></div>'
@@ -4157,26 +4160,48 @@ function pgWaterSystem(){
     var dParts = WS_SEL_DATE.split('-');
     var dLabel = parseInt(dParts[2])+' '+monthNames[parseInt(dParts[1])-1]+' '+dParts[0];
     var planItems = selPlans.length===0
-      ? '<div style="font-size:13px;color:var(--mt);padding:12px 0">Bu gün için plan yok.</div>'
+      ? '<div style="font-size:13px;color:var(--mt);padding:12px 0">Bu gun icin plan yok.</div>'
       : selPlans.map(function(p){
-          var wt  = WATER_TYPES.find(function(w){return w.id===p.typeId;})||{lbl:p.typeId,ico:'💧',col:'#888'};
-          var WS=getWaterStatuses();var st=WS[p.status]||{lbl:p.status,col:'#888',bg:'transparent'};
-          var tc  = DB.technicians.find(function(t){return t.id===p.techId;});
-          var isPastPlan = p.date<todayStr && p.status==='planli';
-          return '<div style="background:var(--bg3);border:1px solid var(--bdl);border-radius:9px;padding:12px;margin-bottom:8px">'
-            +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
+          var wt = WATER_TYPES.find(function(w){return w.id===p.typeId;})||{lbl:p.typeId,ico:'💧',col:'#888'};
+          var WS2= getWaterStatuses();
+          var st = WS2[p.status]||{lbl:p.status,col:'#888',bg:'rgba(136,136,136,.1)'};
+          var tc = DB.technicians.find(function(t){return t.id===p.techId;});
+          var isPast = p.date<todayStr && p.status==='planli';
+          var isSel = WS_SEL_PLAN===p.id;
+          return '<div onclick="WS_SEL_PLAN=(WS_SEL_PLAN===\''+p.id+'\' ? null : \''+p.id+'\');renderPage()" style="background:'+(isSel?'rgba(79,142,247,.08)':'var(--bg3)')+';border:1px solid '+(isSel?'var(--bl)':'var(--bdl)')+';border-radius:9px;padding:12px;margin-bottom:8px;cursor:pointer">'
+            +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
             +'<div style="display:flex;align-items:center;gap:8px;flex:1">'
-            +'<span style="font-size:18px">'+wt.ico+'</span>'
-            +'<div><div style="font-size:13px;font-weight:700;color:var(--tx)">'+esc(wt.lbl)+'</div>'
-            +(tc?'<div style="font-size:11px;color:var(--mt);margin-top:2px">👷 '+esc(tc.name)+'</div>':'')
-            +(p.notes?'<div style="font-size:11px;color:var(--sub);margin-top:4px">📝 '+esc(p.notes)+'</div>':'')
+            +'<div style="background:var(--bl);color:#fff;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:800;flex-shrink:0">#'+(p.no||'?')+'</div>'
+            +'<span style="font-size:17px;flex-shrink:0">'+wt.ico+'</span>'
+            +'<div><div style="font-size:13px;font-weight:700">'+esc(wt.lbl)+'</div>'
+            +(tc?'<div style="font-size:11px;color:var(--mt)">👷 '+esc(tc.name)+'</div>':'')
             +'</div></div>'
-            +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">'
-            +'<span style="background:'+st.bg+';color:'+st.col+';border:1px solid '+st.col+'40;border-radius:12px;padding:2px 10px;font-size:11px;font-weight:700">'+st.lbl+(isPastPlan?' ⚠':'')+'</span>'
+            +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">'
+            +'<span style="background:'+st.bg+';color:'+st.col+';border:1px solid '+st.col+'40;border-radius:12px;padding:2px 10px;font-size:11px;font-weight:700">'+st.lbl+(isPast?' ⚠':'')+'</span>'
             +'<div style="display:flex;gap:4px">'
-            +(can('w')?'<button class="btn bghs bxs" onclick="wsOpenEdit(\''+p.id+'\')">✏</button>':'')
-            +(can('d')?'<button class="btn bdng bxs" onclick="wsDel(\''+p.id+'\')">🗑</button>':'')
+            +(can('w')?'<button class="btn bghs bxs" onclick="event.stopPropagation();wsOpenEdit(\''+p.id+'\')">✏</button>':'')
+            +(can('d')?'<button class="btn bdng bxs" onclick="event.stopPropagation();wsDel(\''+p.id+'\')">🗑</button>':'')
             +'</div></div></div>'
+            +(p.notes?'<div style="font-size:11px;color:var(--sub);margin:6px 0 0;padding-top:6px;border-top:1px solid var(--bd)">📝 '+esc(p.notes)+'</div>':'')
+            +(isSel
+              ?'<div style="margin-top:10px;padding:12px;background:var(--bg2);border-radius:8px;border:1px solid var(--bd)">'
+                +'<div style="font-size:11px;font-weight:700;color:var(--bll);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📋 Is #'+(p.no||'—')+' Detayi</div>'
+                +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">'
+                +'<div><span style="color:var(--mt)">📅 Planlanma:</span> <strong>'+esc(p.date)+'</strong></div>'
+                +(p.closedAt
+                  ?'<div><span style="color:var(--mt)">'+(p.status==='tamamlandi'?'✅':'❌')+' Kapatma:</span> <strong>'+esc(p.closedAt.slice(0,10))+'</strong></div>'
+                  :'<div style="color:var(--mt)">Henuz kapatilmadi</div>')
+                +(p.closedBy?'<div><span style="color:var(--mt)">👤 Kapatan:</span> <strong>'+esc(p.closedBy)+'</strong></div>':'')
+                +(tc?'<div><span style="color:var(--mt)">👷 Sorumlu:</span> <strong>'+esc(tc.name)+'</strong></div>':'')
+                +'</div>'
+                +(p.status==='planli'&&can('w')
+                  ?'<div style="display:flex;gap:8px;margin-top:10px">'
+                    +'<button class="btn bsuc bsm" style="flex:1" onclick="event.stopPropagation();wsClose(\''+p.id+'\',\'tamamlandi\')">✅ Tamamlandi Kapat</button>'
+                    +'<button class="btn bghs bsm" style="flex:1" onclick="event.stopPropagation();wsClose(\''+p.id+'\',\'iptal\')">❌ Iptal Et</button>'
+                    +'</div>'
+                  :'')
+                +'</div>'
+              :'')
             +'</div>';
         }).join('');
 
@@ -4363,13 +4388,20 @@ function wsSave(){
   var typeId=(document.getElementById('ws-type')||{value:''}).value;
   if(!date){toast('Tarih seçiniz','err');return;}
   if(!typeId){toast('İşlem türü seçiniz','err');return;}
+  var wsAll=DB.waterPlans||[];
+  var nextNo=wsAll.length>0?Math.max.apply(null,wsAll.map(function(p){return parseInt(p.no||0)||0;}))+1:1;
+  var newSt=(document.getElementById('ws-status')||{value:'planli'}).value||'planli';
+  var oldP=WS_EDIT||{};
   var plan={
-    id:     WS_EDIT?WS_EDIT.id:'WP-'+uid(),
-    date:   date,
-    typeId: typeId,
-    techId: (document.getElementById('ws-tech')||{value:''}).value||'',
-    status: (document.getElementById('ws-status')||{value:'planli'}).value||'planli',
-    notes:  (document.getElementById('ws-notes')||{value:''}).value.trim(),
+    id:      WS_EDIT?WS_EDIT.id:'WP-'+uid(),
+    no:      WS_EDIT?(WS_EDIT.no||nextNo):nextNo,
+    date:    date,
+    typeId:  typeId,
+    techId:  (document.getElementById('ws-tech')||{value:''}).value||'',
+    status:  newSt,
+    notes:   (document.getElementById('ws-notes')||{value:''}).value.trim(),
+    closedAt:(newSt==='tamamlandi'||newSt==='iptal')?(oldP.closedAt||nowStr()):'',
+    closedBy:(newSt==='tamamlandi'||newSt==='iptal')?(oldP.closedBy||(U?U.name:'')):'',
   };
   if(!DB.waterPlans)DB.waterPlans=[];
   if(WS_EDIT)DB.waterPlans=DB.waterPlans.map(function(p){return p.id===plan.id?plan:p;});
@@ -4380,6 +4412,15 @@ function wsSave(){
   toast(WS_EDIT?'Plan güncellendi':'Plan eklendi ✓');
 }
 
+function wsClose(id,ns){
+  if(!can('w')){toast('Yetki yok','err');return;}
+  var pl=(DB.waterPlans||[]).find(function(p){return p.id===id;});
+  if(!pl){toast('Bulunamadi','err');return;}
+  if(!confirm('#'+(pl.no||'?')+' numarali is '+(ns==='tamamlandi'?'Tamamlandi':'Iptal')+' olarak kapatilacak?'))return;
+  DB.waterPlans=DB.waterPlans.map(function(p){return p.id!==id?p:Object.assign({},p,{status:ns,closedAt:nowStr(),closedBy:U?U.name:'',});});
+  addLog('Su Sistemi Is Kapatildi','#'+(pl.no||'?')+' '+ns,'',pl.date);
+  dbSave();WS_SEL_PLAN=null;toast('#'+(pl.no||'?')+' kapatildi ok');renderPage();
+}
 function wsCloseModal(){
   WS_MODAL=false;WS_EDIT=null;
   var el=document.getElementById('ov-water');if(el)el.remove();
@@ -4738,6 +4779,7 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
