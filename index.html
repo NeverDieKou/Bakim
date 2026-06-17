@@ -481,6 +481,21 @@ function dbSave(){
 var DB=dbLoad()||JSON.parse(JSON.stringify(SEED));
 var U=null,PAGE='dashboard',TAB={eq:'tl',wo:'info'},MODAL={},ET={},FLT={type:'all',sev:'all',status:'all',q:''},DID=null,QEID=null,WDOCS=[],CHARTS={};
 
+function hasPendingQR(){
+  return !!(window._pendingQR || sessionStorage.getItem('pendingQR'));
+}
+function hasPendingSP(){
+  return !!(window._pendingSP || sessionStorage.getItem('pendingSP'));
+}
+function showPendingRedirect(msg){
+  var app=document.getElementById('app');
+  app.innerHTML='<div id="qr-landing"><div class="qr-body" style="text-align:center;padding-top:70px">'
+    +'<div style="font-size:42px;margin-bottom:14px">📱</div>'
+    +'<div style="font-size:18px;font-weight:800;color:var(--tx)">'+esc(msg||'QR yönlendirmesi hazırlanıyor')+'</div>'
+    +'<div style="font-size:13px;color:var(--mt);margin-top:8px">Giriş başarılı. Ekipman iş emirleri açılıyor...</div>'
+    +'</div></div>';
+}
+
 function R(){
   var app=document.getElementById('app');
   if(!U){
@@ -490,14 +505,31 @@ function R(){
     if(window._pendingSP||window._pendingQR||sessionStorage.getItem('pendingQR')){
       var hint=document.createElement('div');
       hint.style.cssText='text-align:center;padding:10px;font-size:12px;color:var(--bll);background:rgba(37,99,235,.1);border-radius:8px;margin-top:10px;border:1px solid rgba(37,99,235,.3)';
-      hint.innerHTML='📱 QR kodu algılandı. Giriş yaptıktan sonra otomatik yönlendirileceksiniz.';
+      hint.innerHTML='📱 QR kodu algılandı. Giriş yaptıktan sonra ekipmanın İş Emirleri sayfası açılacak.';
       var lgb=document.querySelector('.lgb');
       if(lgb)lgb.appendChild(hint);
     }
     return;
   }
-  // Giriş yapılmışsa QR isteğini hemen işle. Firebase gecikirse pending korunur.
-  if(consumePendingQR && consumePendingQR()) return;
+
+  // Giriş yapılmışsa QR isteğini ana sayfaya düşürmeden işle.
+  // Firebase verisi daha önce yüklenmiş olsa bile login sonrası tekrar denenir.
+  if(hasPendingQR()){
+    if(consumePendingQR && consumePendingQR()) return;
+    showPendingRedirect('Ekipman iş emirleri açılıyor');
+    setTimeout(function(){
+      if(consumePendingQR && consumePendingQR()) return;
+      // Hâlâ bulunamadıysa ana sayfaya atma; QR ekipman ekranında hata göster.
+      var raw = window._pendingQR || sessionStorage.getItem('pendingQR');
+      var eqId = (typeof normalizeQREqId==='function') ? normalizeQREqId(raw) : raw;
+      window._pendingQR = null;
+      sessionStorage.removeItem('pendingQR');
+      sessionStorage.removeItem('pendingQRTab');
+      showQRLanding(eqId, 'workorders');
+    }, 1200);
+    return;
+  }
+
   app.innerHTML=tplShell();bindNav();renderPage();renderModals();
 }
 function renderPage(){
@@ -554,6 +586,17 @@ function bindLogin(){
       }catch(e){}
       U=f;
       addLog('Giriş','Kullanıcı girişi yapıldı','','');
+      // URL ile gelen QR parametresini login sonrası tekrar garanti altına al
+      try{
+        var up = new URLSearchParams(window.location.search);
+        var qe = up.get('eq');
+        var qt = up.get('tab') || up.get('page');
+        if(qe){
+          window._pendingQR = qe;
+          sessionStorage.setItem('pendingQR', qe);
+          sessionStorage.setItem('pendingQRTab', (qt==='new_wo'||qt==='new'?'new_wo':'workorders'));
+        }
+      }catch(e){}
       // Hash QR kontrolü
       var h=window.location.hash;
       if(h&&h.startsWith('#qr=')){
