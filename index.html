@@ -502,10 +502,10 @@ function R(){
     app.innerHTML=tplLogin();
     bindLogin();
     // Eğer QR parametresi varsa login sayfasında ipucu göster
-    if(window._pendingSP||window._pendingQR||sessionStorage.getItem('pendingQR')){
+    if(window._pendingSP||window._pendingQR||sessionStorage.getItem('pendingQR')||sessionStorage.getItem('pendingSP')){
       var hint=document.createElement('div');
       hint.style.cssText='text-align:center;padding:10px;font-size:12px;color:var(--bll);background:rgba(37,99,235,.1);border-radius:8px;margin-top:10px;border:1px solid rgba(37,99,235,.3)';
-      hint.innerHTML='📱 QR kodu algılandı. Giriş yaptıktan sonra ekipmanın İş Emirleri sayfası açılacak.';
+      hint.innerHTML='📱 QR kodu algılandı. Giriş yaptıktan sonra ilgili ekipman veya yedek parça ekranı açılacak.';
       var lgb=document.querySelector('.lgb');
       if(lgb)lgb.appendChild(hint);
     }
@@ -4467,6 +4467,120 @@ function qrForceOpenTarget(){
   return true;
 }
 
+
+
+// ══════════════════════════════════════════════════════════════
+// SPARE PART QR LOGIN REDIRECT HARD FIX v1
+// Amaç: Yedek parça QR (?sp=...) ile gelindiğinde login sonrası ana sayfaya düşmeden
+// direkt ilgili yedek parça stok giriş/çıkış ekranını açmak.
+// localStorage + sessionStorage + URL üçlüsünden okur.
+// ══════════════════════════════════════════════════════════════
+function normalizeSPId(v){
+  if(!v) return '';
+  v=String(v).trim();
+  if(v.indexOf('PHARMA_SP:')===0) v=v.replace('PHARMA_SP:','').trim();
+  if(v.indexOf('SPARE:')===0) v=v.replace('SPARE:','').trim();
+  try{
+    if(v.indexOf('http')===0){
+      var u=new URL(v);
+      v=u.searchParams.get('sp')||u.searchParams.get('part')||u.searchParams.get('spare')||u.searchParams.get('code')||v;
+    }
+  }catch(e){}
+  return String(v).trim();
+}
+function spCaptureTarget(){
+  var sp='';
+  try{
+    var up=new URLSearchParams(window.location.search||'');
+    sp=up.get('sp')||up.get('part')||up.get('spare')||up.get('code')||'';
+  }catch(e){}
+  try{
+    var h=window.location.hash||'';
+    if(!sp && h.indexOf('#sp=')===0) sp=decodeURIComponent(h.replace('#sp=',''));
+    if(!sp && h.indexOf('#part=')===0) sp=decodeURIComponent(h.replace('#part=',''));
+  }catch(e){}
+  if(sp){
+    sp=normalizeSPId(sp);
+    try{sessionStorage.setItem('pendingSP',sp);}catch(e){}
+    try{localStorage.setItem('pharma_sp_target',JSON.stringify({sp:sp,ts:Date.now()}));}catch(e){}
+    window._pendingSP=sp;
+  }
+}
+function spReadTarget(){
+  spCaptureTarget();
+  var sp=window._pendingSP||'';
+  try{sp=sp||sessionStorage.getItem('pendingSP')||'';}catch(e){}
+  try{
+    var r=localStorage.getItem('pharma_sp_target');
+    if(r){
+      var o=JSON.parse(r);
+      if(o && o.sp && (Date.now()-(o.ts||0)<24*60*60*1000)) sp=sp||o.sp;
+    }
+  }catch(e){}
+  return sp?normalizeSPId(sp):null;
+}
+function spClearTarget(){
+  window._pendingSP=null;
+  try{sessionStorage.removeItem('pendingSP');}catch(e){}
+  try{localStorage.removeItem('pharma_sp_target');}catch(e){}
+}
+function findSparePartByQRId(sp){
+  var n=normalizeSPId(sp);
+  var nu=String(n).toUpperCase();
+  return (DB.spareParts||[]).find(function(x){
+    return String(x.id||'').toUpperCase()===nu || String(x.code||'').toUpperCase()===nu;
+  });
+}
+function showSparePendingRedirect(){
+  var app=document.getElementById('app');
+  app.innerHTML='<div id="qr-landing"><div class="qr-body" style="text-align:center;padding-top:70px">'
+    +'<div style="font-size:42px;margin-bottom:14px">🔩</div>'
+    +'<div style="font-size:18px;font-weight:800;color:var(--tx)">Yedek parça ekranı açılıyor</div>'
+    +'<div style="font-size:13px;color:var(--mt);margin-top:8px">Giriş başarılı. QR ile okutulan parçanın stok ekranı hazırlanıyor...</div>'
+    +'</div></div>';
+}
+function spForceOpenTarget(){
+  var sp=spReadTarget();
+  if(!sp) return false;
+  showSparePendingRedirect();
+  var count=0;
+  (function waitSp(){
+    count++;
+    var found=findSparePartByQRId(sp);
+    if(found){
+      spClearTarget();
+      QR_ACTIVE=true;
+      showSpareQRLanding(found.id);
+      return;
+    }
+    if(count<40){setTimeout(waitSp,200);return;}
+    // Parça bulunamazsa ana sayfaya düşürme; kullanıcıya hatayı QR ekranında göster.
+    QR_ACTIVE=true;
+    var app=document.getElementById('app');
+    app.innerHTML='<div id="qr-landing"><div class="qr-top"><button onclick="spClearTarget();PAGE=\'spareparts\';R()" style="background:none;border:none;color:var(--mt);font-size:22px;cursor:pointer">←</button><div style="font-size:14px;font-weight:800">Yedek Parça Bulunamadı</div></div>'
+      +'<div class="qr-body"><div class="alert" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25)"><span>⚠</span><div>QR kodundaki yedek parça sistemde bulunamadı: <b>'+esc(sp)+'</b><br><br>Parça ID veya parça kodu ile sistemdeki kayıt aynı olmalıdır.</div></div>'
+      +'<button class="btn bpri" onclick="spClearTarget();PAGE=\'spareparts\';R()">Yedek Parça Listesine Git</button></div></div>';
+  })();
+  return true;
+}
+// Mevcut R fonksiyonunu bozmadan yedek parça QR yönlendirmesini en üste al.
+var __R_WITHOUT_SP_REDIRECT = R;
+R = function(){
+  spCaptureTarget();
+  if(U && spForceOpenTarget()) return;
+  return __R_WITHOUT_SP_REDIRECT();
+};
+// handleSpareQR fonksiyonunu daha dayanıklı hale getir.
+handleSpareQR = function(spId){
+  spId=normalizeSPId(spId);
+  window._pendingSP=spId;
+  try{sessionStorage.setItem('pendingSP',spId);}catch(e){}
+  try{localStorage.setItem('pharma_sp_target',JSON.stringify({sp:spId,ts:Date.now()}));}catch(e){}
+  if(!U){R();return;}
+  spForceOpenTarget();
+};
+spCaptureTarget();
+
 // BOOT
 // Firebase başlat
 fbInit();
@@ -4481,7 +4595,7 @@ qrCaptureTarget();
   var tabParam = urlParams ? (urlParams.get('tab') || urlParams.get('page')) : null;
   if(tabParam === 'wo' || tabParam === 'workorders' || tabParam === 'is-emri') QR_PENDING_TAB = 'workorders';
   if(qParam)  { window._pendingQR = qParam;  sessionStorage.setItem('pendingQR',  qParam); sessionStorage.setItem('pendingQRTab', QR_PENDING_TAB); }
-  if(spParam) { window._pendingSP = spParam; sessionStorage.setItem('pendingSP', spParam); }
+  if(spParam) { window._pendingSP = spParam; sessionStorage.setItem('pendingSP', spParam); try{localStorage.setItem('pharma_sp_target',JSON.stringify({sp:spParam,ts:Date.now()}));}catch(e){} }
   // Önceki oturumdan kalan pending'leri de oku
   if(!qParam)  { var sq=sessionStorage.getItem('pendingQR');  if(sq)window._pendingQR=sq;  }
   var st=sessionStorage.getItem('pendingQRTab'); if(st) QR_PENDING_TAB = st;
