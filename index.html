@@ -232,7 +232,7 @@ function fbInit() {
       }
       // Gelen veriyi uygula
       var needRender = false;
-      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats','waterPlans','waterStatuses','scores'];
+      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats','waterPlans','waterStatuses','scores','qmexTasks'];
       keys.forEach(function(k) {
         if(data[k] !== undefined) {
           // Array olarak gelenleri düzelt
@@ -314,6 +314,7 @@ function fbSaveNow() {
     eqPartHistory: DB.eqPartHistory || {},
     waterPlans:   DB.waterPlans   || [],
     scores:       DB.scores       || {},
+    qmexTasks:    DB.qmexTasks    || [],
     waterStatuses: DB.waterStatuses || [],
     waterStatuses: DB.waterStatuses || [
       {id:'planli',     lbl:'Planlandı',   col:'#4f8ef7'},
@@ -469,6 +470,9 @@ function dbLoad(){
     if(!d.eqPartHistory)d.eqPartHistory={};
     if(!d.waterPlans)d.waterPlans=[];
     if(!d.scores)d.scores={};
+    if(!d.qmexTasks)d.qmexTasks=[];
+    if(!d.settings)d.settings={};
+    if(!d.settings.scoreFormula)d.settings.scoreFormula='x^2';
     if(!d.waterStatuses)d.waterStatuses=[
       {id:'planli',lbl:'Planlandı',col:'#4f8ef7'},
       {id:'tamamlandi',lbl:'Tamamlandı',col:'#10b981'},
@@ -5040,6 +5044,198 @@ function saveScore(){
   dbSave(); MODAL_SCORE=false; SCORE_WO_ID=null;
   toast(point+'/10 puan kaydedildi ✓'); renderModals(); renderPage();
 }
+
+
+
+// ═══════════════════════════════════════════════
+// CUSTOM PATCH v5 — Yetki Matrisi, Yardımcı Teknisyen, Dinamik Puan, Qmex
+// ═══════════════════════════════════════════════
+(function(){
+  function ensureCustomData(){
+    if(!DB.settings)DB.settings={};
+    if(!DB.settings.scoreFormula)DB.settings.scoreFormula='x^2';
+    if(!DB.qmexTasks)DB.qmexTasks=[];
+    if(!DB.waterStatuses)DB.waterStatuses=[];
+    var have={}; DB.waterStatuses.forEach(function(s){have[s.id]=1;});
+    [
+      {id:'onay_bekliyor',lbl:'Onay Bekliyor',col:'#a78bfa'},
+      {id:'reddedildi',lbl:'Reddedildi',col:'#ef4444'},
+      {id:'planli',lbl:'Planlandı',col:'#4f8ef7'},
+      {id:'tamamlandi',lbl:'Tamamlandı',col:'#10b981'},
+      {id:'gecikti',lbl:'Gecikti',col:'#ef4444'},
+      {id:'iptal',lbl:'İptal',col:'#94a3b8'}
+    ].forEach(function(s){if(!have[s.id])DB.waterStatuses.push(s);});
+    (DB.workOrders||[]).forEach(function(w){if(!Array.isArray(w.assistantTechIds))w.assistantTechIds=[];});
+  }
+  ensureCustomData();
+
+  function roleCanApprove(){return !!(U&&(U.role==='admin'||U.role==='muhendis'||can('ap')));}
+  function isTechnicianRole(){return !!(U&&U.role==='teknisyen');}
+  function techName(id){var t=(DB.technicians||[]).find(function(x){return x.id===id;});return t?t.name:id;}
+  function safeFormulaEval(x){
+    var f=(DB.settings&&DB.settings.scoreFormula)||'x^2';
+    f=String(f).trim().toLowerCase()
+      .replace(/üzeri/g,'^').replace(/ustu/g,'^').replace(/üstü/g,'^')
+      .replace(/puan/g,'x').replace(/,/g,'.').replace(/\s+/g,'');
+    f=f.replace(/x\^([0-9.]+)/g,'Math.pow(x,$1)').replace(/\^/g,'**');
+    if(!/^[0-9x+\-*/()., Mathpow]+$/i.test(f))return x;
+    try{var y=Function('x','return Number('+f+');')(Number(x));return isFinite(y)?Math.round(y*100)/100:x;}catch(e){return x;}
+  }
+  window.updateScoreFormula=function(){
+    var el=document.getElementById('score-formula'); if(!el)return;
+    DB.settings.scoreFormula=el.value.trim()||'x^2'; dbSave(); toast('Puan formülü kaydedildi'); renderPage();
+  };
+
+  // İş emri modalına yardımcı teknisyen seçimi ekle
+  var _tplWOModal=window.tplWOModal || tplWOModal;
+  window.tplWOModal=tplWOModal=function(){
+    var html=_tplWOModal();
+    var w=ET.wo||{}; var selected=w.assistantTechIds||[];
+    var dis=(!can('w'))?' disabled':'';
+    var opts=(DB.technicians||[]).filter(function(t){return t.active;}).map(function(t){
+      return '<option value="'+t.id+'"'+(selected.indexOf(t.id)>=0?' selected':'')+'>'+esc(t.name)+'</option>';
+    }).join('');
+    var block='<div class="fr"><label class="lbl">Yardım Eden Kişiler</label>'+
+      '<select class="inp" id="f-assist" multiple size="3"'+dis+' style="min-height:70px">'+opts+'</select>'+
+      '<div style="font-size:10px;color:var(--mt);margin-top:3px">Çoklu seçim: Ctrl / ⌘ ile seçin. Yardımcılar ana puanın yarısını alır.</div></div>';
+    return html.replace('<div class="fr"><label class="lbl">Kök Neden</label>', block+'<div class="fr"><label class="lbl">Kök Neden</label>');
+  };
+
+  window.saveWO=function(){
+    var eqId=v('f-eqid'),title=v('f-title').trim();
+    if(!eqId){toast('Ekipman seçiniz','err');return;}
+    if(!title){toast('Başlık zorunludur','err');return;}
+    var statusVal=v('f-status');
+    if(statusVal==='kapali'&&!can('cl')){toast('Kapatma yetkiniz yok.','err');return;}
+    var ex=ET.wo&&ET.wo.id?DB.workOrders.find(function(w){return w.id===ET.wo.id;}):null;
+    var assistEl=document.getElementById('f-assist');
+    var assistantTechIds=assistEl?Array.prototype.slice.call(assistEl.selectedOptions).map(function(o){return o.value;}).filter(function(id){return id!==v('f-tech');}):(ex?ex.assistantTechIds||[]:[]);
+    var status=v('f-status');
+    var wo={id:ex?ex.id:(function(){var mx=0;(DB.workOrders||[]).forEach(function(w){var n=parseInt((w.id||'').replace(/[^0-9]/g,''));if(n>mx)mx=n;});mx++;return 'WO-'+(mx<10?'000'+mx:mx<100?'00'+mx:mx<1000?'0'+mx:mx);})(),eqId:eqId,type:v('f-type'),title:title,desc:v('f-desc'),sev:v('f-sev'),status:status,date:v('f-date')||today(),due:v('f-due'),techId:v('f-tech'),assistantTechIds:assistantTechIds,gmp:vb('f-gmp'),root:v('f-root'),lh:parseFloat(v('f-lh'))||0,pc:parseFloat(v('f-pc'))||0,steps:ex?ex.steps:[],docs:[].concat(WDOCS),comments:ex?ex.comments:[],by:ex?ex.by:U.id,approvedBy:ex?ex.approvedBy:'',closedAt:(status==='kapali'&&!(ex&&ex.closedAt))?nowStr():(ex?ex.closedAt||'':'')};
+    if(wo.type==='ariza'&&wo.sev==='kritik'&&wo.status==='acik'){DB.equipment=DB.equipment.map(function(e){return e.id===eqId?Object.assign({},e,{status:'arizali'}):e;});}
+    if(ex){DB.workOrders=DB.workOrders.map(function(w){return w.id===wo.id?wo:w;});addLog('İş Emri Düzenlendi',wo.title+' ['+wo.id+']','Durum:'+ex.status,'Durum:'+wo.status);}else{DB.workOrders=[wo].concat(DB.workOrders);addLog('İş Emri Oluşturuldu',wo.title+' ['+wo.id+']','',wo.status+'/'+wo.sev);}
+    dbSave();WDOCS=[];closeM('wo');toast(ex?'İş emri güncellendi':'İş emri oluşturuldu');R();
+  };
+
+  // Puan modalı ve formüllü puanlama
+  window.tplScoreModal=function(){
+    if(!MODAL_SCORE||!SCORE_WO_ID)return '';
+    var wo=DB.workOrders.find(function(w){return w.id===SCORE_WO_ID;}); if(!wo)return '';
+    var tc=DB.technicians.find(function(t){return t.id===wo.techId;});
+    var ex=(DB.scores||{})[SCORE_WO_ID];
+    var base=ex?(ex.basePoint||ex.rawPoint||ex.point):8;
+    return '<div class="ov" id="ov-score"><div class="md" style="max-width:460px">'
+      +'<div class="mdh"><div class="mdt">⭐ Puan Ver</div><button class="mdc" onclick="MODAL_SCORE=false;SCORE_WO_ID=null;renderModals()">✕</button></div>'
+      +'<div style="background:var(--bg3);border-radius:9px;padding:12px;margin-bottom:16px"><div style="font-size:14px;font-weight:700">'+esc(wo.id)+' — '+esc(wo.title)+'</div>'
+      +(tc?'<div style="font-size:12px;color:var(--mt);margin-top:4px">Sorumlu: 👷 '+esc(tc.name)+'</div>':'')
+      +((wo.assistantTechIds||[]).length?'<div style="font-size:12px;color:var(--mt);margin-top:4px">Yardımcılar: '+(wo.assistantTechIds||[]).map(techName).map(esc).join(', ')+'</div>':'')+'</div>'
+      +'<div class="fr"><label class="lbl">Ana Puan / x</label><input class="inp" type="number" id="sc-point" min="1" max="10" value="'+base+'" oninput="var p=safeFormulaPreview(this.value);document.getElementById(\'sc-prev\').innerHTML=p"/>'
+      +'<div id="sc-prev" style="font-size:12px;color:var(--bll);margin-top:6px">Formül sonucu: '+safeFormulaEval(base)+' | Yardımcı kişi: '+(safeFormulaEval(base)/2)+'</div></div>'
+      +'<div class="fr"><label class="lbl">Not</label><input class="inp" id="sc-note" placeholder="Hızlı müdahale, eksiksiz..." value="'+esc(ex?ex.note||'':'')+'"/></div>'
+      +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)"><button class="btn bghs" onclick="MODAL_SCORE=false;SCORE_WO_ID=null;renderModals()">İptal</button><button class="btn bsuc" onclick="saveScore()">Kaydet</button></div>'
+      +'</div></div>';
+  };
+  window.safeFormulaPreview=function(x){var y=safeFormulaEval(x);return 'Formül sonucu: '+y+' | Yardımcı kişi: '+(Math.round((y/2)*100)/100);};
+  window.saveScore=function(){
+    if(!can('sc')){toast('Yetki yok','err');return;}
+    var raw=parseFloat((document.getElementById('sc-point')||{value:0}).value)||0;
+    var note=(document.getElementById('sc-note')||{value:''}).value.trim();
+    if(raw<1||raw>10){toast('Ana puan 1-10 arasında olmalı','err');return;}
+    var wo=DB.workOrders.find(function(w){return w.id===SCORE_WO_ID;}); if(!wo){toast('İş bulunamadı','err');return;}
+    var main=safeFormulaEval(raw), assist=Math.round((main/2)*100)/100;
+    if(!DB.scores)DB.scores={};
+    DB.scores[SCORE_WO_ID]={techId:wo.techId,assistantTechIds:wo.assistantTechIds||[],rawPoint:raw,basePoint:raw,point:main,assistantPoint:assist,formula:DB.settings.scoreFormula||'x^2',note:note,by:U?U.name:'',ts:nowStr()};
+    addLog('Puan Verildi',wo.id+' — ana:'+main+' yardımcı:'+assist,'',wo.techId);
+    dbSave(); MODAL_SCORE=false; SCORE_WO_ID=null; toast('Puan kaydedildi ✓'); renderModals(); renderPage();
+  };
+
+  window.pgScoreboard=function(){
+    if(!can('sc')) return '<div style="text-align:center;padding:60px"><div style="font-size:48px">🔒</div><div style="font-size:18px;font-weight:700;color:var(--rdl);margin-top:12px">Sadece Yöneticiler görebilir</div></div>';
+    ensureCustomData();
+    var techScores={}; (DB.technicians||[]).filter(function(t){return t.active;}).forEach(function(t){techScores[t.id]={tech:t,total:0,count:0,entries:[]};});
+    Object.keys(DB.scores||{}).forEach(function(woId){var s=DB.scores[woId];
+      if(s.techId&&techScores[s.techId]){techScores[s.techId].total+=Number(s.point||0);techScores[s.techId].count++;techScores[s.techId].entries.push(Object.assign({woId:woId,role:'Sorumlu'},s));}
+      (s.assistantTechIds||[]).forEach(function(tid){if(techScores[tid]){techScores[tid].total+=Number(s.assistantPoint||((s.point||0)/2));techScores[tid].count++;techScores[tid].entries.push(Object.assign({woId:woId,role:'Yardımcı',point:s.assistantPoint||((s.point||0)/2)},s));}});
+    });
+    var ranked=Object.values(techScores).sort(function(a,b){return b.total-a.total;});
+    var rows=ranked.map(function(r,i){return '<tr><td>'+(i+1)+'</td><td>'+esc(r.tech.name)+'</td><td>'+esc(r.tech.role||'')+'</td><td><strong>'+Math.round(r.total*100)/100+'</strong></td><td>'+r.count+'</td></tr>';}).join('');
+    var formula=DB.settings.scoreFormula||'x^2';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:10px;flex-wrap:wrap"><div style="font-size:20px;font-weight:800">⭐ Puan Sistemi</div></div>'
+      +'<div class="card"><div class="cardt">Puanlama Formülü</div><div class="g3"><div class="fr"><label class="lbl">Formül</label><input class="inp" id="score-formula" value="'+esc(formula)+'" placeholder="x^2 veya x üzeri 2"></div><div class="fr"><label class="lbl">Örnek x=5</label><div class="inp" style="height:37px">'+safeFormulaEval(5)+'</div></div><div class="fr" style="display:flex;align-items:end"><button class="btn bsuc" onclick="updateScoreFormula()">Formülü Kaydet</button></div></div><div style="font-size:12px;color:var(--mt)">Sorumlu kişi formül sonucunun tamamını, yardımcı kişiler yarısını alır.</div></div>'
+      +'<div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>Sıra</th><th>Kişi</th><th>Görev</th><th>Toplam Puan</th><th>İş Sayısı</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  };
+
+  // Su sistemi yetki matrisi
+  window.wsSave=function(){
+    var date=(document.getElementById('ws-date')||{value:''}).value;
+    var typeId=(document.getElementById('ws-type')||{value:''}).value;
+    if(!date){toast('Tarih seçiniz','err');return;} if(!typeId){toast('İşlem türü seçiniz','err');return;}
+    var wsAll=DB.waterPlans||[]; var nextNo=wsAll.length>0?Math.max.apply(null,wsAll.map(function(p){return parseInt(p.no||0)||0;}))+1:1;
+    var oldP=WS_EDIT||{};
+    var newSt=(document.getElementById('ws-status')||{value:'planli'}).value||'planli';
+    if(isTechnicianRole())newSt='onay_bekliyor';
+    if(WS_EDIT && oldP.status==='onay_bekliyor' && !roleCanApprove())newSt='onay_bekliyor';
+    var plan={id:WS_EDIT?WS_EDIT.id:'WP-'+uid(),no:WS_EDIT?(WS_EDIT.no||nextNo):nextNo,date:date,typeId:typeId,techId:(document.getElementById('ws-tech')||{value:''}).value||'',status:newSt,notes:(document.getElementById('ws-notes')||{value:''}).value.trim(),createdBy:oldP.createdBy||(U?U.id:''),createdByName:oldP.createdByName||(U?U.name:''),approvedBy:oldP.approvedBy||'',approvedAt:oldP.approvedAt||'',rejectReason:oldP.rejectReason||'',closedAt:(newSt==='tamamlandi'||newSt==='iptal')?(oldP.closedAt||(document.getElementById('ws-closedate')&&document.getElementById('ws-closedate').value?document.getElementById('ws-closedate').value:today())):'',closedBy:(newSt==='tamamlandi'||newSt==='iptal')?(oldP.closedBy||(U?U.name:'')):''};
+    if(!DB.waterPlans)DB.waterPlans=[]; if(WS_EDIT)DB.waterPlans=DB.waterPlans.map(function(p){return p.id===plan.id?plan:p;}); else DB.waterPlans=DB.waterPlans.concat([plan]);
+    WS_SEL_DATE=date; addLog('Su Sistemi '+(WS_EDIT?'Plan Güncellendi':'Plan Eklendi'),date+' — '+((WATER_TYPES.find(function(w){return w.id===typeId;})||{lbl:typeId}).lbl),'',newSt);
+    dbSave();wsCloseModal();renderPage(); toast(isTechnicianRole()?'Plan onay beklemeye alındı':'Plan kaydedildi ✓');
+  };
+  var _tplWaterModal=window.tplWaterModal || tplWaterModal;
+  window.tplWaterModal=tplWaterModal=function(){var html=_tplWaterModal(); if(isTechnicianRole()) html=html.replace('<select class="inp" id="ws-status"><option value="planli">Planlandı</option></select>','<select class="inp" id="ws-status"><option value="onay_bekliyor">Onay Bekliyor</option></select>'); return html;};
+  window.wsOpenCloseModal=function(){if(!roleCanApprove()){toast('Su sistemi iş kapatma/onay işlemi için mühendis veya yönetici yetkisi gerekli.','err');return;} WS_CLOSE_MODAL=true;renderModals();};
+  window.approveWaterPlan=function(id){if(!roleCanApprove()){toast('Onay yetkiniz yok','err');return;} DB.waterPlans=(DB.waterPlans||[]).map(function(p){return p.id===id?Object.assign({},p,{status:'planli',approvedBy:U.name,approvedAt:nowStr(),rejectReason:''}):p;}); addLog('Su Sistemi Plan Onaylandı',id,'onay_bekliyor','planli'); dbSave();toast('Su sistemi planı onaylandı');renderPage();};
+  window.rejectWaterPlan=function(id){if(!roleCanApprove()){toast('Red yetkiniz yok','err');return;} var rs=prompt('Red nedeni'); if(rs===null)return; DB.waterPlans=(DB.waterPlans||[]).map(function(p){return p.id===id?Object.assign({},p,{status:'reddedildi',rejectReason:rs,approvedBy:U.name,approvedAt:nowStr()}):p;}); addLog('Su Sistemi Plan Reddedildi',id,'onay_bekliyor','reddedildi'); dbSave();toast('Plan reddedildi','warn');renderPage();};
+  function waterApprovalPanel(){
+    var pend=(DB.waterPlans||[]).filter(function(p){return p.status==='onay_bekliyor';});
+    if(!pend.length)return '';
+    return '<div class="card"><div class="cardt">Onay Bekleyen Su Sistemi Planları</div>'+pend.map(function(p){var wt=WATER_TYPES.find(function(w){return w.id===p.typeId;})||{lbl:p.typeId,ico:'💧'};var tc=DB.technicians.find(function(t){return t.id===p.techId;});return '<div style="display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:10px;margin-bottom:8px"><div style="font-weight:800;color:var(--pul)">#'+(p.no||'?')+'</div><div style="flex:1"><div style="font-weight:700">'+wt.ico+' '+esc(wt.lbl)+'</div><div style="font-size:11px;color:var(--mt)">'+esc(p.date)+(tc?' · '+esc(tc.name):'')+(p.createdByName?' · Oluşturan: '+esc(p.createdByName):'')+'</div></div>'+(roleCanApprove()?'<button class="btn bsuc bsm" onclick="approveWaterPlan(\''+p.id+'\')">Onay</button><button class="btn bdng bsm" onclick="rejectWaterPlan(\''+p.id+'\')">Red</button>':'<span class="badge" style="color:var(--pul);border-color:var(--pul)">Onay Bekliyor</span>')+'</div>';}).join('')+'</div>';
+  }
+
+  // Qmex takip sayfası
+  window.saveQmexTask=function(){
+    var id=(document.getElementById('qx-id')||{value:''}).value.trim();
+    var type=(document.getElementById('qx-type')||{value:''}).value;
+    var title=(document.getElementById('qx-title')||{value:''}).value.trim();
+    if(!title){toast('Qmex iş başlığı zorunlu','err');return;}
+    var obj={id:id||('QX-'+uid()),type:type,title:title,owner:(document.getElementById('qx-owner')||{value:''}).value.trim(),due:(document.getElementById('qx-due')||{value:''}).value,status:(document.getElementById('qx-status')||{value:'acik'}).value,note:(document.getElementById('qx-note')||{value:''}).value.trim(),createdAt:nowStr(),createdBy:U?U.name:''};
+    DB.qmexTasks=[obj].concat(DB.qmexTasks||[]); dbSave(); toast('Qmex işi kaydedildi'); renderPage();
+  };
+  window.deleteQmexTask=function(id){if(!confirm('Qmex kaydı silinsin mi?'))return; DB.qmexTasks=(DB.qmexTasks||[]).filter(function(x){return x.id!==id;});dbSave();renderPage();};
+  window.pgQmex=function(){
+    ensureCustomData(); var rows=(DB.qmexTasks||[]).map(function(q){return '<tr><td>'+esc(q.id)+'</td><td>'+esc(q.type)+'</td><td>'+esc(q.title)+'</td><td>'+esc(q.owner||'-')+'</td><td>'+esc(q.due||'-')+'</td><td>'+esc(q.status)+'</td><td><button class="btn bdng bxs" onclick="deleteQmexTask(\''+q.id+'\')">Sil</button></td></tr>';}).join('');
+    return '<div style="font-size:20px;font-weight:800;margin-bottom:18px">📑 Qmex İş Takibi</div>'
+      +'<div class="card"><div class="cardt">Yeni Qmex Kaydı</div><div class="g3"><div class="fr"><label class="lbl">Tür</label><select class="inp" id="qx-type"><option>CAPA</option><option>DÖF</option><option>Sapma</option><option>Değişiklik</option><option>Aksiyon</option></select></div><div class="fr"><label class="lbl">Başlık</label><input class="inp" id="qx-title"></div><div class="fr"><label class="lbl">Sorumlu</label><input class="inp" id="qx-owner"></div></div><div class="g3"><div class="fr"><label class="lbl">Termin</label><input class="inp" type="date" id="qx-due"></div><div class="fr"><label class="lbl">Durum</label><select class="inp" id="qx-status"><option value="acik">Açık</option><option value="devam">Devam Ediyor</option><option value="bekliyor">Bekliyor</option><option value="kapali">Kapalı</option></select></div><div class="fr"><label class="lbl">Qmex No</label><input class="inp" id="qx-id" placeholder="Opsiyonel"></div></div><div class="fr"><label class="lbl">Not</label><textarea class="inp" id="qx-note" rows="2"></textarea></div><button class="btn bsuc" onclick="saveQmexTask()">Kaydet</button></div>'
+      +'<div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>No</th><th>Tür</th><th>Başlık</th><th>Sorumlu</th><th>Termin</th><th>Durum</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" style="text-align:center;color:var(--mt);padding:30px">Henüz Qmex kaydı yok</td></tr>')+'</tbody></table></div>';
+  };
+
+  function ensureNav(){
+    var nav=document.getElementById('nav'); if(!nav||document.querySelector('.nb[data-p="qmex"]'))return;
+    var btn=document.createElement('button'); btn.className='nb'; btn.dataset.p='qmex'; btn.innerHTML='<span class="nb-ico">📑</span><span class="nb-lbl">Qmex İşleri</span>'; btn.onclick=function(){PAGE='qmex';R();};
+    var logs=document.querySelector('.nb[data-p="logs"]'); if(logs)nav.insertBefore(btn,logs); else nav.appendChild(btn);
+  }
+  function enhanceUserPanel(){
+    var top=document.getElementById('sidebar-top'); if(!top||!U)return;
+    var box=document.getElementById('user-work-summary'); if(!box){box=document.createElement('div');box.id='user-work-summary';top.appendChild(box);} 
+    var open=(DB.workOrders||[]).filter(function(w){return w.status==='acik'||w.status==='devam';}).length;
+    var pend=(DB.workOrders||[]).filter(function(w){return w.status==='bekliyor';}).length;
+    var closed=(DB.workOrders||[]).filter(function(w){return w.status==='kapali';}).length;
+    var wPend=(DB.waterPlans||[]).filter(function(p){return p.status==='onay_bekliyor';}).length;
+    box.innerHTML='<div style="margin-top:10px;background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:8px;font-size:11px;color:var(--sub)"><div style="font-weight:800;color:var(--bll);margin-bottom:5px">İş Özeti</div><div>Açık: <b>'+open+'</b> · Onay: <b>'+pend+'</b> · Kapalı: <b>'+closed+'</b></div><div>Su Plan Onayı: <b>'+wPend+'</b></div></div>';
+  }
+
+  var _renderPage=window.renderPage || renderPage;
+  window.renderPage=renderPage=function(){
+    ensureCustomData();
+    var el=document.getElementById('main'); if(!el)return;
+    if(PAGE==='qmex'){el.innerHTML=pgQmex();}
+    else if(PAGE==='scoreboard'){el.innerHTML=pgScoreboard();}
+    else { _renderPage(); if(PAGE==='watersystem'){var m=document.getElementById('main'); if(m)m.innerHTML=waterApprovalPanel()+m.innerHTML;} }
+    bindPage(); ensureNav(); enhanceUserPanel();
+    document.querySelectorAll('.nb[data-p]').forEach(function(b){b.classList.toggle('on',b.dataset.p===PAGE);});
+  };
+  var _R=window.R || R;
+  window.R=R=function(){_R(); ensureNav(); enhanceUserPanel();};
+})();
 
 
 // BOOT
