@@ -179,6 +179,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -557,6 +558,7 @@ function renderModals(){
   if(MODAL_SP_MOV)r.innerHTML+=tplSpareMovForm();
   if(MODAL_SP_CAT)r.innerHTML+=tplSpareCatMgr();
   if(WS_MODAL)r.innerHTML+=tplWaterModal();
+  if(WS_CLOSE_MODAL)r.innerHTML+=tplWsCloseModal();
   bindModals();
   if(MODAL.qr&&QEID)setTimeout(function(){drawQR(QEID);},80);
 }
@@ -655,14 +657,33 @@ function tplShell(){
   return '<div id="wrap">'
     +'<div id="sidebar">'
       +'<div id="sidebar-top">'
-        +'<div style="display:flex;align-items:center;gap:10px">'
-          +'<div style="width:36px;height:36px;border-radius:9px;padding:3px;background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center">'
-            +'<img src="'+logo_b64+'" style="width:30px;height:30px;object-fit:contain"/>'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+          +'<div style="width:34px;height:34px;border-radius:8px;padding:3px;background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center">'
+            +'<img src="'+logo_b64+'" style="width:28px;height:28px;object-fit:contain"/>'
           +'</div>'
           +'<div style="min-width:0">'
-            +'<div style="font-size:12px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(s.facility)+'</div>'
+            +'<div style="font-size:11px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(s.facility)+'</div>'
             +'<div style="font-size:10px;color:var(--mt)">Bakım Yönetim Sistemi</div>'
           +'</div>'
+        +'</div>'
+        +'<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:10px">'
+          +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+            +'<div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--bld),var(--bl));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0">'+U.name.charAt(0).toUpperCase()+'</div>'
+            +'<div style="flex:1;min-width:0">'
+              +'<div style="font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(U.name)+'</div>'
+              +'<div style="font-size:10px;color:var(--bll);font-weight:600">'+esc((ROLES[U.role]&&ROLES[U.role].lbl)||U.role)+'</div>'
+            +'</div>'
+          +'</div>'
+          +(function(){
+            var myOpen=DB.workOrders.filter(function(w){return w.techId===U.id&&w.status==='acik';}).length;
+            var myDevam=DB.workOrders.filter(function(w){return w.techId===U.id&&w.status==='devam';}).length;
+            var myPend=can('ap')?DB.workOrders.filter(function(w){return w.status==='bekliyor';}).length:0;
+            var rows=[];
+            if(myOpen>0) rows.push('<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--bd)"><span style="color:var(--mt)">📋 Atanan</span><span style="background:var(--bl);color:#fff;border-radius:8px;padding:0 6px;font-weight:700">'+myOpen+'</span></div>');
+            if(myDevam>0) rows.push('<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--bd)"><span style="color:var(--mt)">🔧 Devam</span><span style="background:var(--orl);color:#fff;border-radius:8px;padding:0 6px;font-weight:700">'+myDevam+'</span></div>');
+            if(myPend>0)  rows.push('<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px"><span style="color:var(--mt)">⏳ Onay</span><span style="background:var(--rdl);color:#fff;border-radius:8px;padding:0 6px;font-weight:700">'+myPend+'</span></div>');
+            return rows.length>0 ? rows.join('') : '<div style="font-size:11px;color:var(--gnl);text-align:center;padding:2px 0">✓ Açık iş yok</div>';
+          })()
         +'</div>'
       +'</div>'
       +'<nav id="nav">'+navH+'</nav>'
@@ -3631,7 +3652,7 @@ function showSpareMovForm(spId, type){
     +'<input class="inp" type="number" min="1" id="qspm-qty" placeholder="0" style="font-size:24px;font-weight:700;text-align:center;height:56px"/></div>'
     +'<div class="fr"><label class="lbl">Açıklama / Neden *</label>'
     +'<input class="inp" id="qspm-reason" placeholder="'+(isGiris?'Satın alma, iade, sayım...':'Kullanım, fire, WO-001...')+'"/></div>'
-    +(!isGiris?'<div class="fr"><label class="lbl">Kullanıldığı Ekipman <span style="color:var(--mt);font-weight:400">(isteğe bağlı)</span></label><select class="inp" id="qspm-eq">'+eqOpts+'</select><div style="font-size:11px;color:var(--mt);margin-top:5px">Seçilen ekipmanın 🔩 Parça Geçmişi sekmesine anlık kaydedilir.</div></div><div class="fr"><label class="lbl">Bağlı İş Emri</label><select class="inp" id="qspm-wo">'+woOpts+'</select></div>':'')
+    +(!isGiris?'<div class="fr"><label class="lbl">Kullanıldığı Ekipman</label><select class="inp" id="qspm-eq">'+eqOpts+'</select><div style="font-size:11px;color:var(--mt);margin-top:5px">Seçilen ekipmanın 🔩 Parça Geçmişi sekmesine anlık kaydedilir.</div></div><div class="fr"><label class="lbl">Bağlı İş Emri</label><select class="inp" id="qspm-wo">'+woOpts+'</select></div>':'')
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">'
     +'<button onclick="showSpareQRLanding(\''+spId+'\')" class="btn bghs" style="justify-content:center;padding:14px">İptal</button>'
     +'<button onclick="submitSpareMovQR(\''+spId+'\',\''+type+'\')" class="btn '+(isGiris?'bsuc':'bwrn')+'" style="justify-content:center;padding:14px;font-size:15px">'
@@ -4068,6 +4089,7 @@ var WS_CAL_DATE = (function(){
 var WS_SEL_DATE = null;   // seçili gün (takvimde)
 var WS_MODAL    = false;
 var WS_SEL_PLAN = null;
+var WS_CLOSE_MODAL = false;
 var WS_EDIT     = null;   // düzenlenen plan
 
 function pgWaterSystem(){
@@ -4236,7 +4258,7 @@ function pgWaterSystem(){
   // HTML oluştur
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">'
     +'<div style="font-size:20px;font-weight:800;letter-spacing:-.3px">💧 Su Sistemi Planlaması</div>'
-    +(can('w')&&WS_SEL_DATE?'<button class="btn bpri bsm" onclick="wsOpenNew(\''+WS_SEL_DATE+'\')">+ Plan Ekle</button>':'')
+    +'<button class="btn bghs bsm" onclick="wsOpenCloseModal()">📋 İş Kapat</button>'+(can('w')&&WS_SEL_DATE?'<button class="btn bpri bsm" onclick="wsOpenNew(\''+WS_SEL_DATE+'\')">+ Plan Ekle</button>':'')
     +'</div>'
     // İstatistikler
     +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">'+statsH+'</div>'
@@ -4373,7 +4395,11 @@ function tplWaterModal(){
     +'<div class="fr"><label class="lbl">Sorumlu Kişi</label>'
     +'<select class="inp" id="ws-tech">'+techOpts+'</select></div>'
     +'<div class="fr"><label class="lbl">Durum</label>'
-    +'<select class="inp" id="ws-status">'+statOpts+'</select></div>'
+    +(p
+      ?'<select class="inp" id="ws-status">'+statOpts+'</select>'
+      :'<select class="inp" id="ws-status"><option value="planli">Planlandı</option></select>'
+       +'<div style="font-size:11px;color:var(--mt);margin-top:4px">Kapatmak için ana sayfadaki <strong>📋 İş Kapat</strong> butonunu kullanın.</div>')
+    +'</div>'
     +'</div>'
     +'<div class="fr"><label class="lbl">Notlar</label>'
     +'<textarea class="inp" id="ws-notes" rows="2" placeholder="Açıklama...">'+esc(f.notes||'')+'</textarea></div>'
@@ -4410,6 +4436,62 @@ function wsSave(){
   addLog('Su Sistemi '+(WS_EDIT?'Plan Güncellendi':'Plan Eklendi'),date+' — '+(WATER_TYPES.find(function(w){return w.id===typeId;})||{lbl:typeId}).lbl,'','');
   dbSave();wsCloseModal();renderPage();
   toast(WS_EDIT?'Plan güncellendi':'Plan eklendi ✓');
+}
+
+function wsOpenCloseModal(){
+  if(!can('w')){toast('Yetki yok','err');return;}
+  WS_CLOSE_MODAL=true;renderModals();
+}
+function tplWsCloseModal(){
+  if(!WS_CLOSE_MODAL)return '';
+  var openPlans=(DB.waterPlans||[]).filter(function(p){return p.status==='planli';}).sort(function(a,b){return (a.no||0)-(b.no||0);});
+  var WS2=getWaterStatuses();
+  var planOpts='<option value="">— İş numarası seçin —</option>'
+    +openPlans.map(function(p){
+      var wt=WATER_TYPES.find(function(w){return w.id===p.typeId;})||{lbl:p.typeId,ico:'💧'};
+      return '<option value="'+p.id+'">#'+(p.no||'?')+' — '+wt.ico+' '+esc(wt.lbl)+' ('+esc(p.date)+')</option>';
+    }).join('');
+  var statusOpts=Object.entries(WS2).filter(function(e){return e[0]!=='planli';}).map(function(e){
+    return '<option value="'+e[0]+'">'+e[1].lbl+'</option>';
+  }).join('');
+  return '<div class="ov" id="ov-ws-close"><div class="md" style="max-width:480px">'
+    +'<div class="mdh"><div class="mdt">📋 İş Kapat</div>'
+    +'<button class="mdc" onclick="WS_CLOSE_MODAL=false;renderModals()">✕</button></div>'
+    +(openPlans.length===0
+      ?'<div style="padding:20px;text-align:center;color:var(--mt)">Kapatılacak açık plan yok.</div>'
+      :'<div class="fr"><label class="lbl">Kapatılacak İş *</label>'
+      +'<select class="inp" id="wsc-plan">'+planOpts+'</select></div>'
+      +'<div class="fr"><label class="lbl">Kapatma Durumu *</label>'
+      +'<select class="inp" id="wsc-status">'+statusOpts+'</select></div>'
+      +'<div class="fr"><label class="lbl">Kapatma Tarihi *</label>'
+      +'<input class="inp" type="date" id="wsc-date" value="'+today()+'"/></div>'
+      +'<div class="fr"><label class="lbl">Notlar (isteğe bağlı)</label>'
+      +'<textarea class="inp" id="wsc-notes" rows="2" placeholder="Tamamlanma açıklaması..."></textarea></div>'
+      +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)">'
+      +'<button class="btn bghs" onclick="WS_CLOSE_MODAL=false;renderModals()">İptal</button>'
+      +'<button class="btn bsuc" onclick="wsCloseByModal()">✅ İşi Kapat</button>'
+      +'</div>')
+    +'</div></div>';
+}
+function wsCloseByModal(){
+  var planId=(document.getElementById('wsc-plan')||{value:''}).value;
+  var ns=(document.getElementById('wsc-status')||{value:''}).value;
+  var closeDate=(document.getElementById('wsc-date')||{value:''}).value||today();
+  var notes=(document.getElementById('wsc-notes')||{value:''}).value.trim();
+  if(!planId){toast('İş seçiniz','err');return;}
+  if(!ns){toast('Durum seçiniz','err');return;}
+  var plan=(DB.waterPlans||[]).find(function(p){return p.id===planId;});
+  if(!plan){toast('Plan bulunamadı','err');return;}
+  var WS2=getWaterStatuses();
+  var stLbl=(WS2[ns]&&WS2[ns].lbl)||ns;
+  DB.waterPlans=DB.waterPlans.map(function(p){
+    if(p.id!==planId)return p;
+    return Object.assign({},p,{status:ns,closedAt:closeDate,closedBy:U?U.name:'',closeNotes:notes});
+  });
+  var wt=WATER_TYPES.find(function(w){return w.id===plan.typeId;})||{lbl:plan.typeId};
+  addLog('Su Sistemi Kapatıldı','#'+(plan.no||'?')+' — '+wt.lbl+' — '+stLbl,'',closeDate);
+  dbSave();WS_CLOSE_MODAL=false;WS_SEL_PLAN=planId;
+  toast('#'+(plan.no||'?')+' kapatıldı: '+stLbl+' ✓');renderModals();renderPage();
 }
 
 function wsClose(id,ns){
@@ -4779,6 +4861,7 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
