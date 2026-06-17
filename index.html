@@ -5238,6 +5238,96 @@ function saveScore(){
 })();
 
 
+// ═══════════════════════════════════════════════
+// CUSTOM PATCH v6 — Qmex kaldırıldı, Su sistemi teknisyen durum yetkisi düzeltildi
+// ═══════════════════════════════════════════════
+(function(){
+  function isTechUser(){return !!(window.U && U.role==='teknisyen');}
+  function canApproveWater(){return !!(window.U && (U.role==='admin'||U.role==='muhendis'||(typeof can==='function'&&can('ap'))));}
+  function removeQmexNav(){
+    document.querySelectorAll('.nb[data-p="qmex"]').forEach(function(x){x.remove();});
+    if(window.PAGE==='qmex'){window.PAGE='dash';}
+  }
+
+  // Qmex sayfasını ve menüsünü pasifleştir
+  window.pgQmex=function(){return '';};
+  var _renderPageV6=window.renderPage;
+  window.renderPage=renderPage=function(){
+    if(window.PAGE==='qmex') window.PAGE='dash';
+    _renderPageV6();
+    removeQmexNav();
+    document.querySelectorAll('.nb[data-p]').forEach(function(b){b.classList.toggle('on',b.dataset.p===window.PAGE);});
+  };
+  var _RV6=window.R;
+  window.R=R=function(){
+    if(window.PAGE==='qmex') window.PAGE='dash';
+    _RV6();
+    removeQmexNav();
+  };
+
+  // Su sistemi modalı: teknisyen sadece Planlandı veya Onay Bekliyor seçebilir.
+  // Mühendis/yönetici mevcut tam yetkili durum listesini kullanır.
+  var _tplWaterModalV6=window.tplWaterModal || tplWaterModal;
+  window.tplWaterModal=tplWaterModal=function(){
+    var html=_tplWaterModalV6();
+    if(!html || !isTechUser()) return html;
+    var p=window.WS_EDIT;
+    var cur=(p&&p.status)?p.status:'planli';
+    if(['planli','onay_bekliyor'].indexOf(cur)<0) cur='onay_bekliyor';
+    var techSelect='<select class="inp" id="ws-status">'
+      +'<option value="planli"'+(cur==='planli'?' selected':'')+'>Planlandı</option>'
+      +'<option value="onay_bekliyor"'+(cur==='onay_bekliyor'?' selected':'')+'>Onay Bekliyor</option>'
+      +'</select>';
+    // Yeni plan modalındaki tek seçenekli alanı değiştir
+    html=html.replace('<select class="inp" id="ws-status"><option value="onay_bekliyor">Onay Bekliyor</option></select>',techSelect);
+    html=html.replace('<select class="inp" id="ws-status"><option value="planli">Planlandı</option></select>',techSelect);
+    // Düzenleme modalındaki tam listeyi teknisyen için iki seçenekle sınırla
+    html=html.replace(/<select class="inp" id="ws-status">[\s\S]*?<\/select>/,techSelect);
+    return html;
+  };
+
+  // Su sistemi kayıt: teknisyen planli veya onay_bekliyor seçebilir; diğer durumlara zorlayamaz.
+  window.wsSave=function(){
+    var date=(document.getElementById('ws-date')||{value:''}).value;
+    var typeId=(document.getElementById('ws-type')||{value:''}).value;
+    if(!date){toast('Tarih seçiniz','err');return;}
+    if(!typeId){toast('İşlem türü seçiniz','err');return;}
+    var wsAll=DB.waterPlans||[];
+    var nextNo=wsAll.length>0?Math.max.apply(null,wsAll.map(function(p){return parseInt(p.no||0)||0;}))+1:1;
+    var oldP=window.WS_EDIT||{};
+    var newSt=(document.getElementById('ws-status')||{value:'planli'}).value||'planli';
+    if(isTechUser() && ['planli','onay_bekliyor'].indexOf(newSt)<0) newSt='onay_bekliyor';
+    if(!isTechUser() && !canApproveWater() && ['tamamlandi','iptal','reddedildi'].indexOf(newSt)>=0){
+      toast('Bu durum için mühendis veya yönetici yetkisi gerekli.','err');return;
+    }
+    var plan={
+      id:WS_EDIT?WS_EDIT.id:'WP-'+uid(),
+      no:WS_EDIT?(WS_EDIT.no||nextNo):nextNo,
+      date:date,
+      typeId:typeId,
+      techId:(document.getElementById('ws-tech')||{value:''}).value||'',
+      status:newSt,
+      notes:(document.getElementById('ws-notes')||{value:''}).value.trim(),
+      createdBy:oldP.createdBy||(U?U.id:''),
+      createdByName:oldP.createdByName||(U?U.name:''),
+      approvedBy:(newSt==='planli' && oldP.status==='onay_bekliyor' && canApproveWater())?(U?U.name:''):(oldP.approvedBy||''),
+      approvedAt:(newSt==='planli' && oldP.status==='onay_bekliyor' && canApproveWater())?nowStr():(oldP.approvedAt||''),
+      rejectReason:newSt==='onay_bekliyor'?'':(oldP.rejectReason||''),
+      closedAt:(newSt==='tamamlandi'||newSt==='iptal')?(oldP.closedAt||(document.getElementById('ws-closedate')&&document.getElementById('ws-closedate').value?document.getElementById('ws-closedate').value:today())):'',
+      closedBy:(newSt==='tamamlandi'||newSt==='iptal')?(oldP.closedBy||(U?U.name:'')):''
+    };
+    if(!DB.waterPlans)DB.waterPlans=[];
+    if(WS_EDIT) DB.waterPlans=DB.waterPlans.map(function(p){return p.id===plan.id?plan:p;});
+    else DB.waterPlans=DB.waterPlans.concat([plan]);
+    WS_SEL_DATE=date;
+    addLog('Su Sistemi '+(WS_EDIT?'Plan Güncellendi':'Plan Eklendi'),date+' — '+((WATER_TYPES.find(function(w){return w.id===typeId;})||{lbl:typeId}).lbl),'',newSt);
+    dbSave(); wsCloseModal(); renderPage(); toast('Su sistemi planı kaydedildi ✓');
+  };
+
+  setTimeout(removeQmexNav,0);
+})();
+
+
 // BOOT
 // Firebase başlat
 fbInit();
