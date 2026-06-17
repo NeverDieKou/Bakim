@@ -3134,7 +3134,8 @@ function pgSpareParts(){
       var q = SP_Q_VAL.toLowerCase();
       if((p.name||'').toLowerCase().indexOf(q)<0
        &&(p.code||'').toLowerCase().indexOf(q)<0
-       &&(p.location||'').toLowerCase().indexOf(q)<0) return false;
+       &&(p.location||'').toLowerCase().indexOf(q)<0
+       &&((function(){var e=(DB.equipment||[]).find(function(x){return x.id===p.eqId;});return ((p.eqId||'')+' '+((e&&e.name)||''));})()).toLowerCase().indexOf(q)<0) return false;
     }
     return true;
   });
@@ -3180,6 +3181,7 @@ function pgSpareParts(){
           +'<div style="font-size:10px;font-family:monospace;color:var(--mt);margin-bottom:3px">'+esc(p.code||p.id)+'</div>'
           +'<div style="font-size:14px;font-weight:800">'+esc(p.name)+'</div>'
           +'<div style="font-size:11px;color:var(--mt);margin-top:2px">'+esc(p.cat||'—')+' · 📍 '+esc(p.location||'—')+'</div>'
+          +(function(){var e=(DB.equipment||[]).find(function(x){return x.id===p.eqId;});return p.eqId?'<div style="font-size:11px;color:var(--bll);margin-top:3px">⚙ Bağlı ekipman: '+esc(p.eqId)+' — '+esc((e&&e.name)||'Tanımsız')+'</div>':'';})()
           +'</div>'
           +'<div style="text-align:right;flex-shrink:0;margin-left:10px">'
           +'<div style="font-size:28px;font-weight:900;color:'+stockCol+'">'+p.stock+'</div>'
@@ -3251,10 +3253,11 @@ function openSpareForm(id){
 
 function tplSpareForm(){
   var p = ET_SP;
-  var f = {name:'',cat:'',code:'',unit:'Adet',stock:0,minStock:5,location:''};
+  var f = {name:'',cat:'',code:'',unit:'Adet',stock:0,minStock:5,location:'',eqId:''};
   if(p) Object.keys(f).forEach(function(k){if(p[k]!==undefined)f[k]=p[k];});
   var catOpts = (DB.spareCats||[]).map(function(cat){return'<option value="'+cat+'"'+(f.cat===cat?' selected':'')+'>'+cat+'</option>';}).join('');
   var unitOpts = SP_UNITS.map(function(u){return'<option value="'+u+'"'+(f.unit===u?' selected':'')+'>'+u+'</option>';}).join('');
+  var eqOpts = '<option value="">— Bağlı ekipman yok / genel stok —</option>' + (DB.equipment||[]).map(function(e){return '<option value="'+e.id+'"'+(f.eqId===e.id?' selected':'')+'>'+esc(e.id+' — '+e.name)+'</option>';}).join('');
   return '<div class="ov" id="ov-spare"><div class="md" style="max-width:520px">'
     +'<div class="mdh"><div class="mdt">'+(p?'Parça Düzenle':'Yeni Yedek Parça')+'</div><button class="mdc" onclick="closeSpareModal()">✕</button></div>'
     +'<div class="fr"><label class="lbl">Parça Adı *</label><input class="inp" id="sp-name" value="'+esc(f.name)+'" placeholder="örn: HEPA Filtre H14"/></div>'
@@ -3268,6 +3271,7 @@ function tplSpareForm(){
     +'<div class="fr"><label class="lbl">Birim</label><select class="inp" id="sp-unit">'+unitOpts+'</select></div>'
     +'</div>'
     +'<div class="fr"><label class="lbl">Raf / Konum</label><input class="inp" id="sp-loc" value="'+esc(f.location||'')+'" placeholder="örn: A-3, Depo Raf 2"/></div>'
+    +'<div class="fr"><label class="lbl">Bağlı Olduğu Ekipman</label><select class="inp" id="sp-eq">'+eqOpts+'</select></div>'
     +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)">'
     +'<button class="btn bghs" onclick="closeSpareModal()">İptal</button>'
     +'<button class="btn bsuc" onclick="saveSparePart()">Kaydet</button>'
@@ -3278,7 +3282,7 @@ function saveSparePart(){
   var name = v('sp-name').trim();
   if(!name){toast('Parça adı zorunludur','err');return;}
   var ex = ET_SP;
-  var oldData = ex ? JSON.stringify({name:ex.name,stock:ex.stock,location:ex.location}) : null;
+  var oldData = ex ? JSON.stringify({name:ex.name,stock:ex.stock,location:ex.location,eqId:ex.eqId||''}) : null;
   var part = {
     id:       ex ? ex.id : 'SP-'+uid(),
     name:     name,
@@ -3288,12 +3292,13 @@ function saveSparePart(){
     minStock: parseInt(v('sp-min'))||5,
     unit:     v('sp-unit')||'Adet',
     location: v('sp-loc')||'',
+    eqId:     v('sp-eq')||'',
     createdAt: ex ? ex.createdAt : today(),
   };
   if(!DB.spareParts)DB.spareParts=[];
   if(ex){
     DB.spareParts=DB.spareParts.map(function(p){return p.id===part.id?part:p;});
-    addLog('Yedek Parça Düzenlendi', part.name, oldData, JSON.stringify({name:part.name,stock:part.stock,location:part.location}));
+    addLog('Yedek Parça Düzenlendi', part.name, oldData, JSON.stringify({name:part.name,stock:part.stock,location:part.location,eqId:part.eqId||''}));
     toast('Parça güncellendi');
   } else {
     DB.spareParts=DB.spareParts.concat([part]);
@@ -3672,18 +3677,18 @@ function downloadSpareTemplate(){
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instrData), 'Talimatlar');
 
   // Parçalar sayfası
-  var headers = ['Parça Adı *','Stok Kodu *','Kategori','Birim','Mevcut Stok Adedi *','Minimum Stok Adedi','Raf / Konum'];
+  var headers = ['Parça Adı *','Stok Kodu *','Kategori','Birim','Mevcut Stok Adedi *','Minimum Stok Adedi','Raf / Konum','Bağlı Ekipman ID'];
   var exampleRows = [
-    ['HEPA Filtre H14 592x592x75','FLT-001','HVAC Filtresi','Adet','4','2','Depo A-Raf1'],
-    ['Rulman 6205-2RS','MKN-001','Mekanik','Adet','10','3','Depo B-Raf2'],
-    ['Conta O-Ring Ø50mm','CNT-001','Conta/Sızdırmazlık','Adet','50','10','Depo A-Raf3'],
-    ['Hidrolik Yağ ISO 46 (20L)','YAG-001','Yağlama','Kutu','3','1','Depo C-Raf1'],
-    ['Elektrik Kontaktör 25A','ELK-001','Elektrik','Adet','5','2','Depo B-Raf1'],
+    ['HEPA Filtre H14 592x592x75','FLT-001','HVAC Filtresi','Adet','4','2','Depo A-Raf1','EQ-001'],
+    ['Rulman 6205-2RS','MKN-001','Mekanik','Adet','10','3','Depo B-Raf2','EQ-002'],
+    ['Conta O-Ring Ø50mm','CNT-001','Conta/Sızdırmazlık','Adet','50','10','Depo A-Raf3',''],
+    ['Hidrolik Yağ ISO 46 (20L)','YAG-001','Yağlama','Kutu','3','1','Depo C-Raf1',''],
+    ['Elektrik Kontaktör 25A','ELK-001','Elektrik','Adet','5','2','Depo B-Raf1','EQ-003'],
   ];
   var ws = XLSX.utils.aoa_to_sheet([headers].concat(exampleRows));
-  ws['!cols'] = [{wch:35},{wch:15},{wch:22},{wch:10},{wch:15},{wch:15},{wch:20}];
+  ws['!cols'] = [{wch:35},{wch:15},{wch:22},{wch:10},{wch:15},{wch:15},{wch:20},{wch:18}];
   // Başlık satırını kalın yap
-  ['A1','B1','C1','D1','E1','F1','G1'].forEach(function(cell){
+  ['A1','B1','C1','D1','E1','F1','G1','H1'].forEach(function(cell){
     if(ws[cell]) ws[cell].s = {font:{bold:true}};
   });
   XLSX.utils.book_append_sheet(wb, ws, 'Parçalar');
@@ -3731,6 +3736,7 @@ function uploadSpareExcel(inp){
       var idxStock = findCol(['mevcut stok','stok miktarı','stok adedi','stock qty','miktar','quantity']);
       var idxMin   = findCol(['minimum','min stok','min']);
       var idxLoc   = findCol(['raf','konum','location','loc']);
+      var idxEq    = findCol(['bağlı ekipman','bagli ekipman','ekipman id','equipment id','eqid','eq id']);
 
       if(idxName<0||idxCode<0){
         toast('Parça Adı ve Stok Kodu sütunları zorunludur. Şablonu kullanın.','err');
@@ -3751,18 +3757,19 @@ function uploadSpareExcel(inp){
         var cat     = String(row[idxCat]||'Genel').trim();
         var unit    = String(row[idxUnit]||'Adet').trim();
         var loc     = String(idxLoc>=0?row[idxLoc]||'':'').trim();
+        var eqId    = String(idxEq>=0?row[idxEq]||'':'').trim();
 
         // Aynı kod varsa güncelle
         var existing = DB.spareParts.find(function(p){return p.code===code;});
         if(existing){
-          Object.assign(existing,{name:name,cat:cat,unit:unit,stock:stock,minStock:minStock,location:loc});
+          Object.assign(existing,{name:name,cat:cat,unit:unit,stock:stock,minStock:minStock,location:loc,eqId:eqId});
           updated++;
         } else {
           DB.spareParts.push({
             id:'SP-'+uid(),
             name:name, code:code, cat:cat,
             unit:unit, stock:stock, minStock:minStock,
-            location:loc, createdAt:today()
+            location:loc, eqId:eqId, createdAt:today()
           });
           added++;
         }
