@@ -267,11 +267,11 @@ function fbInit() {
         }
         var pqr = window._pendingQR || sessionStorage.getItem('pendingQR');
         if(pqr) {
-          window._pendingQR = null;
-          sessionStorage.removeItem('pendingQR');
-          var eqFound = (DB.equipment||[]).find(function(x){return x.id===pqr;});
-          if(eqFound) {
-            setTimeout(function(){ showQRLanding(pqr); }, 100);
+          var _res = findEquipmentByQR(pqr);
+          if(_res.eq) {
+            window._pendingQR = null;
+            sessionStorage.removeItem('pendingQR');
+            setTimeout(function(){ showQRLanding(_res.eq.id); }, 100);
           }
         }
       }
@@ -490,15 +490,43 @@ var DB=dbLoad()||JSON.parse(JSON.stringify(SEED));
 var U=null,PAGE='dashboard',TAB={eq:'tl',wo:'info'},MODAL={},ET={},FLT={type:'all',sev:'all',status:'all',q:''},DID=null,QEID=null,WDOCS=[],CHARTS={};
 
 
+
+function normCode(v){
+  v = String(v || '').trim();
+  try { v = decodeURIComponent(v); } catch(e) {}
+  v = v.replace(/^\uFEFF/, '').trim();
+  // Tam URL geldiyse içinden eq / qr parametresini al
+  var m = v.match(/[?&](?:eq|equipment|id)=([^&#]+)/i);
+  if(m) { try { v = decodeURIComponent(m[1]); } catch(e) { v = m[1]; } }
+  m = v.match(/#(?:qr|eq)=([^:&?#]+)/i);
+  if(m) { try { v = decodeURIComponent(m[1]); } catch(e) { v = m[1]; } }
+  if(/^PHARMA_MS:/i.test(v)) v = v.replace(/^PHARMA_MS:/i, '');
+  // Eski/yanlış formatlarda URL'nin sonunda EQ-001 kalmışsa yakala
+  m = v.match(/(EQ[-_ ]?\d+)/i);
+  if(m) v = m[1];
+  v = v.trim().toUpperCase().replace(/[\s_]+/g,'-');
+  v = v.replace(/^EQ(\d+)$/, function(_,n){return 'EQ-' + n.padStart(3,'0');});
+  v = v.replace(/^EQ-(\d{1,2})$/, function(_,n){return 'EQ-' + n.padStart(3,'0');});
+  return v;
+}
+function findEquipmentByQR(raw){
+  var code = normCode(raw);
+  var list = DB.equipment || [];
+  var eq = list.find(function(e){ return normCode(e.id) === code; });
+  if(!eq){
+    // QR içeriği seri no veya isim olarak üretilmişse toleranslı eşleştir
+    eq = list.find(function(e){ return normCode(e.sn) === code || normCode(e.name) === code; });
+  }
+  return {code:code, eq:eq};
+}
 function processPendingRoute(){
   var pqr = window._pendingQR || sessionStorage.getItem('pendingQR');
   if(pqr){
-    pqr = String(pqr).trim();
-    var eqFound = (DB.equipment||[]).find(function(x){return x.id===pqr;});
-    if(eqFound){
+    var res = findEquipmentByQR(pqr);
+    if(res.eq){
       window._pendingQR=null;
       sessionStorage.removeItem('pendingQR');
-      showQRLanding(pqr);
+      showQRLanding(res.eq.id);
       return true;
     }
   }
@@ -1219,9 +1247,7 @@ function selectQR(id){
   });
 }
 function dlQR(eqId){
-  if(QR_IMAGES[eqId]){
-    var a=document.createElement('a');a.href=QR_IMAGES[eqId];a.download='QR-'+eqId+'.png';a.click();return;
-  }
+  // Eski gömülü QR görselleri kullanılmıyor; her zaman güncel URL ile dinamik QR indirilir.
   var el=document.getElementById('qr-disp');
   var cvs=el&&el.querySelector('canvas');
   if(cvs){var a=document.createElement('a');a.href=cvs.toDataURL('image/png');a.download='QR-'+eqId+'.png';a.click();return;}
@@ -1908,7 +1934,8 @@ var QR_EQ_ID = null;
 var QR_TAB = 'info'; // info | workorders | new_wo
 
 function showQRLanding(eqId) {
-  QR_EQ_ID = eqId;
+  var _r = findEquipmentByQR(eqId);
+  QR_EQ_ID = _r.eq ? _r.eq.id : normCode(eqId);
   QR_TAB = 'info';
   var app = document.getElementById('app');
   app.innerHTML = renderQRLanding();
@@ -1916,7 +1943,9 @@ function showQRLanding(eqId) {
 }
 
 function renderQRLanding() {
-  var eq = DB.equipment.find(function(e){ return e.id === QR_EQ_ID; });
+  var _qrRes = findEquipmentByQR(QR_EQ_ID);
+  var eq = _qrRes.eq;
+  if(eq) QR_EQ_ID = eq.id;
   if(!eq) return '<div id="qr-landing"><div class="qr-body" style="text-align:center;padding-top:60px"><div style="font-size:48px;margin-bottom:16px">❌</div><div style="font-size:18px;font-weight:700;color:var(--rdl)">Ekipman bulunamadı</div><div style="font-size:13px;color:var(--mt);margin-top:8px">ID: '+esc(QR_EQ_ID)+'</div><button class="btn bpri" style="margin-top:24px" onclick="U=null;R()">Ana Sayfaya Dön</button></div></div>';
 
   var wos = DB.workOrders.filter(function(w){ return w.eqId === eq.id; });
@@ -2267,38 +2296,38 @@ function scanFrame() {
 function handleQRResult(data) {
   closeQRScanner();
 
-  // Desteklenen format: PHARMA_MS:EQ-001
-  var eqId = null;
-  // Format 1: PHARMA_MS:EQ-001 (kısa)
-  if(data.startsWith('PHARMA_MS:')) {
-    eqId = data.replace('PHARMA_MS:','').trim();
-  }
-  // Format 2: https://...?eq=EQ-001 (yeni URL format)
+  var res = findEquipmentByQR(data);
+  var eqId = res.code;
   if(!eqId) {
-    var qMatch = data.match(/[?&]eq=([A-Z0-9\-]+)/);
-    if(qMatch) eqId = qMatch[1];
-  }
-  // Format 3: URL içinde #qr=EQ-001 (eski format fallback)
-  if(!eqId) {
-    var hashMatch = data.match(/#qr=([A-Z0-9\-]+)/);
-    if(hashMatch) eqId = hashMatch[1];
-  }
-
-  if(!eqId) {
-    toast('Tanınmayan QR kodu: ' + data.slice(0,30), 'warn');
+    toast('Tanınmayan QR kodu: ' + String(data||'').slice(0,30), 'warn');
     return;
   }
 
-  var eq = DB.equipment.find(function(e){ return e.id === eqId; });
-  if(!eq) {
+  if(!res.eq) {
     toast('Ekipman bulunamadı: ' + eqId, 'err');
+    showQRMissing(eqId, data);
     return;
   }
 
-  toast('✓ ' + eq.name + ' — QR okundu', 'ok');
-  QR_EQ_ID = eqId;
+  toast('✓ ' + res.eq.name + ' — QR okundu', 'ok');
+  QR_EQ_ID = res.eq.id;
   QR_TAB = 'info';
-  showQRLanding(eqId);
+  showQRLanding(res.eq.id);
+}
+
+function showQRMissing(eqId, raw){
+  var app = document.getElementById('app');
+  var sample = (DB.equipment||[]).slice(0,12).map(function(e){return '<button class="btn bghs bsm" onclick="showQRLanding(\''+e.id+'\')">'+esc(e.id)+' — '+esc(e.name)+'</button>';}).join(' ');
+  app.innerHTML = '<div id="qr-landing"><div class="qr-body" style="padding-top:35px">'
+    + '<div class="card" style="text-align:center">'
+    + '<div style="font-size:44px;margin-bottom:10px">⚠️</div>'
+    + '<div style="font-size:18px;font-weight:800;color:var(--orl)">QR verisi ekipman listesinde yok</div>'
+    + '<div style="font-size:12px;color:var(--mt);margin-top:8px">Okunan kod: <b>'+esc(eqId)+'</b></div>'
+    + '<div style="font-size:11px;color:var(--mt);margin-top:6px;word-break:break-all">Ham veri: '+esc(String(raw||'').slice(0,160))+'</div>'
+    + '</div>'
+    + '<div class="card"><div class="cardt">Kayıtlı ekipmanlardan birini aç</div><div style="display:flex;gap:8px;flex-wrap:wrap">'+sample+'</div></div>'
+    + '<button class="btn bpri" onclick="R()">Ana Sayfa</button>'
+    + '</div></div>';
 }
 
 function closeQRScanner() {
@@ -4314,7 +4343,11 @@ fbInit();
   var qParam  = urlParams ? urlParams.get('eq') : null;
   var spParam = urlParams ? urlParams.get('sp') : null;
   if(!qParam && window.location.hash && window.location.hash.indexOf('#qr=')===0) qParam = window.location.hash.replace('#qr=','').split(':')[0];
-  if(qParam)  { qParam=decodeURIComponent(qParam).trim(); window._pendingQR = qParam;  sessionStorage.setItem('pendingQR',  qParam);  }
+  if(!qParam){
+    var pathMatch = (window.location.pathname||'').match(/(EQ[-_ ]?\d+)/i);
+    if(pathMatch) qParam = pathMatch[1];
+  }
+  if(qParam)  { qParam=normCode(qParam); window._pendingQR = qParam;  sessionStorage.setItem('pendingQR',  qParam);  }
   if(spParam) { spParam=decodeURIComponent(spParam).trim(); window._pendingSP = spParam; sessionStorage.setItem('pendingSP', spParam); }
   // Önceki oturumdan kalan pending'leri de oku
   if(!qParam)  { var sq=sessionStorage.getItem('pendingQR');  if(sq)window._pendingQR=sq;  }
