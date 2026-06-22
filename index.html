@@ -185,6 +185,8 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -574,6 +576,7 @@ function renderModals(){
   if(MODAL_SCORE)r.innerHTML+=tplScoreModal();
   if(MODAL_CAPA)r.innerHTML+=tplCAPAModal();
   bindModals();
+  disableKapaliOption();
   if(MODAL.qr&&QEID)setTimeout(function(){drawQR(QEID);},80);
 }
 
@@ -1461,6 +1464,20 @@ function tplPendingModal(){
     +'</div></div>';
 }
 
+function sendToApproval(id){
+  var wo=DB.workOrders.find(function(w){return w.id===id;});
+  if(!wo){toast('İş emri bulunamadı','err');return;}
+  if(wo.techId!==U.id){toast('Bu iş size atanmamış','err');return;}
+  if(!confirm('"'+wo.title+'" iş emrini tamamladınız mı? Onaya gönderilecek.'))return;
+  DB.workOrders=DB.workOrders.map(function(w){
+    return w.id!==id?w:Object.assign({},w,{status:'bekliyor',sentToApprovalAt:nowStr(),sentToApprovalBy:U.name});
+  });
+  addLog('Onaya Gönderildi',wo.title+' ['+id+']',wo.status,'bekliyor');
+  dbSave();
+  toast('"'+wo.title+'" onaya gönderildi ✓');
+  R();
+}
+
 function approveWO(id){
   if(!can('ap')){toast('Onaylama yetkiniz yok.','err');return;}
   var wo=DB.workOrders.find(function(w){return w.id===id;});
@@ -1642,6 +1659,13 @@ function exportExcel(){
 // BIND
 function renderDocList(docs,canEdit){if(!docs.length)return'<div style="font-size:12px;color:var(--mt);padding:8px 0">Henüz doküman eklenmedi</div>';return docs.map(function(d,i){return'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:7px 10px;background:var(--bg3);border-radius:7px;border:1px solid var(--bd)">📄<span style="flex:1;font-size:12px;font-weight:600;color:var(--bll)">'+esc(d)+'</span>'+(canEdit?'<button data-i="'+i+'" class="rmdoc" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:16px">×</button>':'')+'</div>';}).join('');}
 function bindDocRemove(){document.querySelectorAll('.rmdoc').forEach(function(b){b.onclick=function(){var i=parseInt(b.dataset.i);WDOCS.splice(i,1);var el=document.getElementById('f-docs');if(el){el.innerHTML=renderDocList(WDOCS,true);bindDocRemove();}};});}
+function disableKapaliOption(){
+  var sel=document.getElementById('f-status');
+  if(!sel)return;
+  Array.from(sel.options).forEach(function(opt){
+    if(opt.value==='kapali'&&!can('cl'))opt.disabled=true;
+  });
+}
 function bindModals(){
   [['ov-wo','wo'],['ov-wodet','woDet'],['ov-eqdet','eqDet'],['ov-eqform','eqForm'],['ov-tech','tech'],['ov-user','user'],['ov-qr','qr'],['ov-schedule','schedule'],['ov-water','_ws']].forEach(function(p){var el=document.getElementById(p[0]);if(el)el.onclick=function(e){if(e.target===el)closeM(p[1]);};});
   var ba=document.getElementById('b-adddoc');if(ba)ba.onclick=function(){var inp=document.getElementById('f-di');if(!inp||!inp.value.trim())return;WDOCS.push(inp.value.trim());inp.value='';var el=document.getElementById('f-docs');if(el){el.innerHTML=renderDocList(WDOCS,true);bindDocRemove();}};
@@ -5279,6 +5303,8 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
+
 
 
 
