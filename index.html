@@ -194,6 +194,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -1061,7 +1062,7 @@ function tplWOModal(){
   var eqO=DB.equipment.map(function(e){return'<option value="'+e.id+'"'+(f.eqId===e.id?' selected':'')+'>'+esc(e.id)+' – '+esc(e.name)+'</option>';}).join('');
   var tO=Object.entries(WTYPES).map(function(e){return'<option value="'+e[0]+'"'+(f.type===e[0]?' selected':'')+'>'+e[1].ico+' '+e[1].lbl+'</option>';}).join('');
   var svO=Object.entries(SEVS).map(function(e){return'<option value="'+e[0]+'"'+(f.sev===e[0]?' selected':'')+'>'+e[1].lbl+'</option>';}).join('');
-  var stO=Object.entries(STATS).map(function(e){return'<option value="'+e[0]+'"'+(f.status===e[0]?' selected':'')+'>'+e[1].lbl+'</option>';}).join('');
+  var stO=Object.entries(STATS).filter(function(e){return can("cl")||e[0]!=="kapali";}).map(function(e){return'<option value="'+e[0]+'"'+(f.status===e[0]?' selected':'')+'>'+e[1].lbl+'</option>';}).join('');
   var tcO=DB.technicians.filter(function(t){return t.active;}).map(function(t){return'<option value="'+t.id+'"'+(f.techId===t.id?' selected':'')+'>'+esc(t.name)+'</option>';}).join('');
   return '<div class="ov" id="ov-wo"><div class="md"><div class="mdh"><div class="mdt">'+(isNew?'Yeni İş Emri':'İş Emrini Düzenle')+'</div><button class="mdc" onclick="closeM(\'wo\')">✕</button></div><div class="g2"><div class="fr"><label class="lbl">İş Tipi</label><select class="inp" id="f-type"'+dis+'><option value="">Seçiniz...</option>'+tO+'</select></div><div class="fr"><label class="lbl">Ekipman</label><select class="inp" id="f-eqid"'+dis+'><option value="">Seçiniz...</option>'+eqO+'</select></div></div><div class="fr"><label class="lbl">Başlık</label><input class="inp" id="f-title" value="'+esc(f.title)+'" placeholder="Açıklayıcı başlık..."'+dis+'/></div><div class="fr"><label class="lbl">Açıklama</label><textarea class="inp" id="f-desc" placeholder="Detaylı açıklama..."'+dis+'>'+esc(f.desc||'')+'</textarea></div><div class="g3"><div class="fr"><label class="lbl">Önem</label><select class="inp" id="f-sev"'+dis+'>'+svO+'</select></div><div class="fr"><label class="lbl">Durum</label><select class="inp" id="f-status"'+dis+'>'+stO+'</select></div><div class="fr"><label class="lbl">Tarih</label><input class="inp" type="date" id="f-date" value="'+f.date+'"'+dis+'/></div></div><div class="g3"><div class="fr"><label class="lbl">Son Tarih</label><input class="inp" type="date" id="f-due" value="'+esc(f.due||'')+'"'+dis+'/></div><div class="fr"><label class="lbl">Teknisyen</label><select class="inp" id="f-tech"'+dis+'><option value="">Seçiniz...</option>'+tcO+'</select></div><div class="fr"><label class="lbl">Kök Neden</label><input class="inp" id="f-root" value="'+esc(f.root||'')+'" placeholder="Arıza kök nedeni..."'+dis+'/></div></div><div class="g2"><div class="fr"><label class="lbl">İşçilik Saati</label><input class="inp" type="number" min="0" step="0.5" id="f-lh" value="'+String(f.lh||0)+'"'+dis+'/></div><div class="fr"><label class="lbl">Parça/Malzeme (₺)</label><input class="inp" type="number" min="0" id="f-pc" value="'+String(f.pc||0)+'"'+dis+'/></div></div><div class="chkr fr"><input type="checkbox" id="f-gmp"'+(f.gmp?' checked':'')+dis+'><label for="f-gmp">GMP / Validasyon etkisi var — deviation kaydı açılmalı</label></div><div class="fr"><label class="lbl">İlgili Dokümanlar</label>'+(ro?'':'<div style="display:flex;gap:8px;margin-bottom:8px"><input class="inp isml" id="f-di" placeholder="Dosya adı (örn: Protokol_v1.pdf)"/><button class="btn bout bxs" id="b-adddoc">+ Ekle</button></div>')+'<div id="f-docs">'+renderDocList(WDOCS,!ro)+'</div></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;padding-top:16px;border-top:1px solid var(--bd)"><button class="btn bghs" onclick="closeM(\'wo\')">İptal</button>'+(ro?'':'<button class="btn bsuc" onclick="saveWO()">İş Emrini Kaydet</button>')+'</div></div></div>';
 }
@@ -5310,6 +5311,7 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
