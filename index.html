@@ -196,6 +196,8 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -801,7 +803,23 @@ function pgWO(){
   var rows=fl.length===0?'<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--mt)">İş emri bulunamadı</td></tr>':fl.map(function(w){
     var eq=DB.equipment.find(function(e){return e.id===w.eqId;});var tc=DB.technicians.find(function(t){return t.id===w.techId;});var wt=WTYPES[w.type]||{ico:'?'};
     var dl=w.due?daysLeft(w.due):null;var ov=dl!==null&&dl<0&&w.status!=='kapali';
-    return '<tr onclick=(!can(\'cl\')&&w.techId===U.id&&(w.status===\'acik\'||w.status===\'devam\')?\'<button class="btn bpri bxs" style="margin-left:4px" onclick="sendToApproval(\\\'\'+w.id+\'\\\')">✔ Onaya Gönder</button>\':\'\')+"openWODet(\''+w.id+'\')"><td style="font-family:monospace;font-size:10px;color:var(--mt)">'+esc(w.id)+'</td><td><span title="'+esc(wt.lbl)+'" style="font-size:15px">'+wt.ico+'</span></td><td style="font-weight:600;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc((eq&&eq.name)||'—')+'</td><td style="max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(w.title)+'</td><td>'+sevBadge(w.sev,true)+'</td><td>'+staBadge(w.status,true)+'</td><td style="color:var(--mt);font-size:11px;white-space:nowrap">'+esc(w.date)+'</td><td style="font-size:11px;font-weight:600;white-space:nowrap;color:'+(ov?'var(--rdl)':dl!==null&&dl<=3&&w.status!=='kapali'?'var(--orl)':'var(--sub)')+'">'+(w.due?(ov?'⚠ '+Math.abs(dl)+' gün GEÇ':esc(w.due)):'—')+'</td><td style="font-size:11px;max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc((tc&&tc.name)||'—')+'</td><td>'+(w.gmp?'<span class="badge bxsm" style="color:var(--cyl);border-color:var(--cyl);background:rgba(34,211,238,.1)">GMP</span>':'')+'</td><td onclick="event.stopPropagation()">'+(can('w')?'<button class="btn bghs bxs" onclick="openWOModal(\''+w.id+'\',null)">Düzenle</button>':'')+(can('ap')&&w.status==='bekliyor'?'<button class="btn bsuc bxs" style="margin-left:4px" onclick="approveWO(\''+w.id+'\')">Onayla</button>':'')+'</td></tr>';
+    var canSendApproval=(!can('cl'))&&w.techId===U.id&&(w.status==='acik'||w.status==='devam');
+    return '<tr onclick="openWODet(\''+w.id+'\')" style="cursor:pointer"><td style="font-family:monospace;font-size:10px;color:var(--mt)">'+esc(w.id)+'</td>'
+      +'<td><span title="'+esc(wt.lbl)+'" style="font-size:15px">'+wt.ico+'</span></td>'
+      +'<td style="font-weight:600;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc((eq&&eq.name)||'—')+'</td>'
+      +'<td style="max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(w.title)+'</td>'
+      +'<td>'+sevBadge(w.sev,true)+'</td>'
+      +'<td>'+staBadge(w.status,true)+'</td>'
+      +'<td style="color:var(--mt);font-size:11px;white-space:nowrap">'+esc(w.date)+'</td>'
+      +'<td style="font-size:11px;font-weight:600;white-space:nowrap;color:'+(ov?'var(--rdl)':dl!==null&&dl<=3&&w.status!=='kapali'?'var(--orl)':'var(--sub)')+'">'+( w.due?(ov?'⚠ '+Math.abs(dl)+' gün GEÇ':esc(w.due)):'—')+'</td>'
+      +'<td style="font-size:11px;max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc((tc&&tc.name)||'—')+'</td>'
+      +'<td>'+(w.gmp?'<span class="badge bxsm" style="color:var(--cyl);border-color:var(--cyl);background:rgba(34,211,238,.1)">GMP</span>':'')+'</td>'
+      +'<td onclick="event.stopPropagation()" style="white-space:nowrap">'
+        +(canSendApproval?'<button class="btn bpri bxs" onclick="sendToApproval(\''+w.id+'\')" title="İşi bitirdim, onaya gönder">✔ Onaya</button> ':'')
+        +(can('w')?'<button class="btn bghs bxs" onclick="openWOModal(\''+w.id+'\',null)">Düzenle</button> ':'')
+        +(can('ap')&&w.status==='bekliyor'?'<button class="btn bsuc bxs" onclick="approveWO(\''+w.id+'\')">✅ Onayla</button> ':'')
+        +(can('ap')&&w.status==='bekliyor'?'<button class="btn bdng bxs" onclick="rejectWO(\''+w.id+'\')">❌</button>':'')
+      +'</td></tr>';
   }).join('');
   return pendBannerH+'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:20px;font-weight:800;letter-spacing:-.3px">İş Emirleri</div>'+(can('w')?'<button class="btn bpri bsm" onclick="openWOModal(null,null)">+ Yeni İş Emri</button>':'')+'</div><div class="card" style="padding:14px;margin-bottom:16px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input class="inp isml" id="fq" style="width:220px" placeholder="Başlık, ekipman veya WO no..." value="'+esc(FLT.q)+'"/><select class="inp isml" id="ft" style="width:180px"><option value="all">Tüm Türler</option>'+tOpts+'</select><select class="inp isml" id="fs" style="width:130px"><option value="all">Tüm Önem</option>'+sOpts+'</select><select class="inp isml" id="fst" style="width:160px"><option value="all">Tüm Durumlar</option>'+stOpts+'</select><span style="font-size:12px;color:var(--mt)">'+fl.length+' kayıt</span><button class="btn bghs bxs" onclick="FLT={type:\'all\',sev:\'all\',status:\'all\',q:\'\'};renderPage()">Temizle</button></div></div><div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>WO No</th><th>Tür</th><th>Ekipman</th><th>Başlık</th><th>Önem</th><th>Durum</th><th>Tarih</th><th>Son Tarih</th><th>Teknisyen</th><th>GMP</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
@@ -5315,6 +5333,8 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
+
 
 
 
