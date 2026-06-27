@@ -198,6 +198,9 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
+
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -246,7 +249,7 @@ function fbInit() {
       }
       // Gelen veriyi uygula
       var needRender = false;
-      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats','waterPlans','waterStatuses','scores','scoreFormula','capas'];
+      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats','waterPlans','waterStatuses','scores','scoreFormula','capas','sensorData','sensorAlerts'];
       keys.forEach(function(k) {
         if(data[k] !== undefined) {
           // Array olarak gelenleri düzelt
@@ -330,6 +333,8 @@ function fbSaveNow() {
     scores:       DB.scores       || {},
     scoreFormula: DB.scoreFormula || 'x',
     capas:        DB.capas        || [],
+    sensorData:   DB.sensorData   || {},
+    sensorAlerts: DB.sensorAlerts || [],
     waterStatuses: DB.waterStatuses || [],
     waterStatuses: DB.waterStatuses || [
       {id:'planli',     lbl:'Planlandı',   col:'#4f8ef7'},
@@ -487,6 +492,8 @@ function dbLoad(){
     if(!d.scores)d.scores={};
     if(!d.scoreFormula)d.scoreFormula='x';
     if(!d.capas)d.capas=[];
+    if(!d.sensorData)d.sensorData={};
+    if(!d.sensorAlerts)d.sensorAlerts=[];
     if(!d.waterStatuses)d.waterStatuses=[
       {id:'planli',lbl:'Planlandı',col:'#4f8ef7'},
       {id:'tamamlandi',lbl:'Tamamlandı',col:'#10b981'},
@@ -564,7 +571,7 @@ function renderPage(){
   var el=document.getElementById('main');if(!el)return;
   // Sayfa geçiş logu
   if(U&&PAGE)addLog('Sayfa: '+PAGE,'','','');
-  var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,kvalifikasyon:pgKval,watersystem:pgWaterSystem,scoreboard:pgScoreboard,capa:pgCAPA,spareparts:pgSpareParts,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings,logs:pgLogs};
+  var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,kvalifikasyon:pgKval,watersystem:pgWaterSystem,scoreboard:pgScoreboard,capa:pgCAPA,predictive:pgPredictive,spareparts:pgSpareParts,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings,logs:pgLogs};
   el.innerHTML=(map[PAGE]||pgDash)();bindPage();
 }
 function renderModals(){
@@ -661,7 +668,7 @@ function tplShell(){
   var urgent=DB.equipment.filter(function(e){var d=daysLeft(e.nextMaint);return d!==null&&d<=s.critDays&&d>=0;});
   var openN=DB.workOrders.filter(function(w){return w.status==='acik';}).length;
   var pendN=can('ap')?DB.workOrders.filter(function(w){return w.status==='bekliyor';}).length:0;
-  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlama'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'watersystem',ico:'💧',lbl:'Su Sistemi'},{id:'spareparts',ico:'🔩',lbl:'Yedek Parça'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Personeller'},{id:'scoreboard',ico:'🏆',lbl:'Puan Sıralaması'},{id:'capa',ico:'🔍',lbl:'CAPA / DÖF'}];
+  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlama'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'watersystem',ico:'💧',lbl:'Su Sistemi'},{id:'spareparts',ico:'🔩',lbl:'Yedek Parça'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Personeller'},{id:'scoreboard',ico:'🏆',lbl:'Puan Sıralaması'},{id:'capa',ico:'🔍',lbl:'CAPA / DÖF'},{id:'predictive',ico:'📡',lbl:'Kestirimci Bakım'}];
   if(can('u'))navDefs.push({id:'users',ico:'👥',lbl:'Kullanıcılar'});
   if(can('s'))navDefs.push({id:'logs',ico:'📜',lbl:'Aktivite Logu'});
   if(can('s'))navDefs.push({id:'settings',ico:'⚙️',lbl:'Ayarlar'});
@@ -670,6 +677,7 @@ function tplShell(){
     if(n.id==='workorders'&&openN>0) ex='<span style="background:var(--rdl);color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;font-weight:700;margin-left:auto">'+openN+'</span>';
     if(n.id==='spareparts'){var krt=(DB.spareParts||[]).filter(function(p){return p.stock<=p.minStock;}).length;if(krt>0)ex='<span style="background:var(--orl);color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;font-weight:700;margin-left:auto">'+krt+'</span>';}
     if(n.id==='scoreboard'&&!can('sc'))return '';
+    // predictive herkese acik
     return '<button class="nb'+(PAGE===n.id?' on':'')+'" onclick="PAGE=\''+n.id+'\';R()"><span class="nb-ico">'+n.ico+'</span><span class="nb-lbl">'+esc(n.lbl)+'</span>'+ex+'</button>';
   }).join('');
 
@@ -707,7 +715,7 @@ function tplShell(){
             var myOpen=DB.workOrders.filter(function(w){return w.techId===U.id&&w.status==='acik';}).length;
             var myDevam=DB.workOrders.filter(function(w){return w.techId===U.id&&w.status==='devam';}).length;
             var myKapali=DB.workOrders.filter(function(w){return w.techId===U.id&&w.status==='kapali';}).length;
-            var myPend=can('ap')?DB.workOrders.filter(function(w){return w.status==='bekliyor';}).length:0;
+            var myPend=can('ap')?(DB.workOrders.filter(function(w){return w.status==='bekliyor';}).length+(DB.waterPlans||[]).filter(function(p){return p.status==='bekliyor_onay';}).length):0;
             var rows=[];
             if(myOpen>0) rows.push('<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--bd)"><span style="color:var(--mt)">📋 Açık İş</span><span style="background:var(--rdl);color:#fff;border-radius:8px;padding:0 6px;font-weight:700">'+myOpen+'</span></div>');
             if(myDevam>0) rows.push('<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--bd)"><span style="color:var(--mt)">🔧 Devam</span><span style="background:var(--orl);color:#fff;border-radius:8px;padding:0 6px;font-weight:700">'+myDevam+'</span></div>');
@@ -1130,7 +1138,9 @@ function tplWODet(){
   }
   var actBtns=''
     +(can('w')?'<button class="btn bout bxs" style="margin-right:6px" onclick="closeM(\'woDet\');openWOModal(\''+w.id+'\',null)">Düzenle</button>':'')
+    +((!can('cl'))&&w.techId===U.id&&(w.status==='acik'||w.status==='devam')?'<button class="btn bpri bxs" style="margin-right:6px" onclick="closeM(\'woDet\');sendToApproval(\''+w.id+'\')">✔ Onaya Gönder</button>':'')
     +(can('cl')&&(w.status==='acik'||w.status==='devam')?'<button class="btn bsuc bxs" style="margin-right:6px" onclick="closeWODirect(\''+w.id+'\')">✓ Kapat</button>':'')
+    +(can('ap')&&w.status==='bekliyor'?'<button class="btn bdng bxs" style="margin-right:6px" onclick="closeM(\'woDet\');rejectWO(\''+w.id+'\')">❌ Reddet</button>':'')
     +(can('ap')&&w.status==='bekliyor'?'<button class="btn bsuc bxs" onclick="approveWO(\''+w.id+'\')">✓ Onayla</button>':'');
   return '<div class="ov" id="ov-wodet"><div class="md mdlg"><div class="mdh" style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">'+wt.ico+'</span><div><div style="font-size:10px;font-family:monospace;color:var(--mt);margin-bottom:2px">'+esc(w.id)+' · '+esc(wt.lbl)+'</div><div class="mdt">'+esc(w.title)+'</div></div></div><button class="mdc" onclick="closeM(\'woDet\')">✕</button></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">'+bdg+'</div><div class="tabs">'+tabH+'<div style="flex:1"></div>'+actBtns+'</div>'+content+'</div></div>';
 }
@@ -1459,6 +1469,9 @@ function tplPendingModal(){
   if(!MODAL_PENDING)return '';
   var pendList=DB.workOrders.filter(function(w){return w.status==='bekliyor';})
     .sort(function(a,b){return b.date.localeCompare(a.date);});
+  // Su sistemi bekleyen planları
+  var wsPendList=(DB.waterPlans||[]).filter(function(p){return p.status==='bekliyor_onay';})
+    .sort(function(a,b){return (a.no||0)-(b.no||0);});
   var itemsH=pendList.length===0
     ?'<div style="text-align:center;padding:30px;color:var(--mt)">Onay bekleyen iş emri yok ✓</div>'
     :pendList.map(function(wo){
@@ -1485,12 +1498,32 @@ function tplPendingModal(){
           +'<button class="btn bghs bxs" onclick="MODAL_PENDING=false;renderModals();openWODet(\''+wo.id+'\')">👁 Detay</button>'
           +'</div></div>';
       }).join('');
+  // Su sistemi onay bekleyen planlar HTML
+  var wsItemsH=wsPendList.length===0?''
+    :'<div style="margin-top:16px;border-top:1px solid var(--bdl);padding-top:14px">'
+      +'<div style="font-size:13px;font-weight:700;color:var(--bll);margin-bottom:10px">💧 Su Sistemi Bekleyen Planlar ('+wsPendList.length+')</div>'
+      +wsPendList.map(function(p){
+        var wt=WATER_TYPES.find(function(w){return w.id===p.typeId;})||{lbl:p.typeId,ico:'💧',col:'#888'};
+        var tc=DB.technicians.find(function(t){return t.id===p.techId;});
+        return '<div style="background:var(--bg3);border:1px solid var(--bdl);border-radius:10px;padding:12px;margin-bottom:8px">'
+          +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'
+          +'<div><span style="font-size:18px">'+wt.ico+'</span> <strong>#'+(p.no||'?')+'</strong> — '+esc(wt.lbl)+'</div>'
+          +'<div style="font-size:11px;color:var(--mt)">'+esc(p.date)+(tc?' · 👷 '+esc(tc.name):'')+'</div>'
+          +'</div>'
+          +(can('ap')?'<div style="display:flex;gap:6px;margin-top:8px">'
+            +'<button class="btn bsuc bsm" style="flex:1" onclick="wsApprove(this.dataset.id)" data-id="'+p.id+'">✅ Onayla (Planlandı)</button>'
+            +'<button class="btn bdng bsm" style="flex:1" onclick="wsReject(this.dataset.id)" data-id="'+p.id+'">❌ Reddet</button>'
+            +'</div>':'')
+          +'</div>';
+      }).join('')
+      +'</div>';
+
   return '<div class="ov" id="ov-pending"><div class="md mdlg">'
     +'<div class="mdh">'
-    +'<div class="mdt">⏳ Onay Bekleyen İş Emirleri <span style="background:var(--rdl);color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:6px">'+pendList.length+'</span></div>'
+    +'<div class="mdt">⏳ Onay Bekleyenler <span style="background:var(--rdl);color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:6px">'+(pendList.length+wsPendList.length)+'</span></div>'
     +'<button class="mdc" onclick="MODAL_PENDING=false;renderModals()">✕</button>'
     +'</div>'
-    +'<div style="max-height:70vh;overflow-y:auto">'+itemsH+'</div>'
+    +'<div style="max-height:70vh;overflow-y:auto">'+itemsH+wsItemsH+'</div>'
     +'</div></div>';
 }
 
@@ -4354,7 +4387,7 @@ function pgWaterSystem(){
                 +(p.closedBy?'<div><span style="color:var(--mt)">👤 Kapatan:</span> <strong>'+esc(p.closedBy)+'</strong></div>':'')
                 +(tc?'<div><span style="color:var(--mt)">👷 Sorumlu:</span> <strong>'+esc(tc.name)+'</strong></div>':'')
                 +'</div>'
-                +(p.status==='planli'&&can('w')
+                +((p.status==='planli'||p.status==='bekliyor_onay')&&can('ap')
                   ?'<div style="display:flex;gap:8px;margin-top:10px">'
                     +'<button class="btn bsuc bsm" style="flex:1" onclick="event.stopPropagation();wsClose(\''+p.id+'\',\'tamamlandi\')">✅ Tamamlandi Kapat</button>'
                     +'<button class="btn bghs bsm" style="flex:1" onclick="event.stopPropagation();wsClose(\''+p.id+'\',\'iptal\')">❌ Iptal Et</button>'
@@ -4519,7 +4552,7 @@ function tplWaterModal(){
     +DB.technicians.filter(function(t){return t.active;}).map(function(t){
       return '<option value="'+t.id+'"'+(f.techId===t.id?' selected':'')+'>'+esc(t.name)+'</option>';
     }).join('');
-  var statOpts=Object.entries(getWaterStatuses()).map(function(e){
+  var _wsAp=can('ap');statOpts=Object.entries(getWaterStatuses()).filter(function(e){return _wsAp||(e[0]==='planli'||e[0]==='bekliyor_onay');}).map(function(e){
     return '<option value="'+e[0]+'"'+(f.status===e[0]?' selected':'')+'>'+e[1].lbl+'</option>';
   }).join('');
   return '<div class="ov" id="ov-water"><div class="md" style="max-width:480px">'
@@ -5312,6 +5345,330 @@ function saveCAPA(){
   renderModals();renderPage();
 }
 
+// ══ KEStirimci BAKIM ═══════════════════════════════════════════════
+
+function _setSensorEq(id){window._sEqId=id;openSensorConfig();}
+
+function pgPredictive(){
+  var sdata  = DB.sensorData   || {};
+  var alerts = (DB.sensorAlerts|| []).slice().sort(function(a,b){return b.ts.localeCompare(a.ts);});
+  var eqs    = DB.equipment    || [];
+
+  // KPI
+  var totalR=0;
+  Object.values(sdata).forEach(function(eq){Object.values(eq).forEach(function(ch){if(ch.history)totalR+=ch.history.length;});});
+  var actAlerts  = alerts.filter(function(a){return a.status==='active';}).length;
+  var resAlerts  = alerts.filter(function(a){return a.status==='resolved';}).length;
+  var sensored   = Object.keys(sdata);
+
+  var kpiH = [
+    {lbl:'Bağlı Ekipman', v:sensored.length, col:'var(--bll)'},
+    {lbl:'Toplam Okuma',  v:totalR,           col:'var(--gnl)'},
+    {lbl:'Aktif Alarm',   v:actAlerts,        col:'var(--rdl)'},
+    {lbl:'Çözülen Alarm', v:resAlerts,        col:'var(--mt)'},
+  ].map(function(k){
+    return '<div class="sc" style="border-color:'+k.col+'25">'
+      +'<div class="sa" style="background:'+k.col+'"></div>'
+      +'<div class="sv" style="color:'+k.col+'">'+k.v+'</div>'
+      +'<div class="sl">'+k.lbl+'</div></div>';
+  }).join('');
+
+  // Ekipman kartları
+  var eqCardsH = '';
+  eqs.forEach(function(eq){
+    var eqData = sdata[eq.id] || {};
+    var channels = Object.keys(eqData);
+    if(!channels.length) return;
+
+    var chH = channels.map(function(ch){
+      var d   = eqData[ch];
+      var hist= d.history||[];
+      var last= hist.length ? hist[hist.length-1] : null;
+      var val = last ? last.v : '—';
+      var ts  = last ? last.ts.slice(0,16).replace('T',' ') : '—';
+      var unit= d.unit||'';
+
+      // Alarm rengi
+      function chkThr(v, op, thr){
+        if(v===null||thr===undefined)return false;
+        if(op==='gt') return v>thr; if(op==='lt') return v<thr;
+        if(op==='gte')return v>=thr; if(op==='lte')return v<=thr;
+        return false;
+      }
+      var crit = last && chkThr(last.v, d.critOp, d.critThreshold);
+      var warn = last && chkThr(last.v, d.warnOp, d.warnThreshold);
+      var col  = crit?'var(--rdl)':warn?'var(--orl)':'var(--gnl)';
+
+      // Sparkline SVG
+      var sparkH='';
+      if(hist.length>1){
+        var h10=hist.slice(-10);
+        var mn=Math.min.apply(null,h10.map(function(h){return h.v;}));
+        var mx=Math.max.apply(null,h10.map(function(h){return h.v;}));
+        var rng=mx-mn||1;
+        var pts=h10.map(function(h,i){
+          return Math.round(i/(h10.length-1)*58)+','+Math.round(20-((h.v-mn)/rng)*18);
+        }).join(' ');
+        sparkH='<svg width="62" height="22" style="flex-shrink:0">'
+          +'<polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="1.5"/></svg>';
+      }
+
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)">'
+        +'<div style="flex:1">'
+          +'<div style="font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase">'+esc(ch)+'</div>'
+          +'<div style="font-size:22px;font-weight:900;color:'+col+'">'+val
+            +'<span style="font-size:11px;font-weight:400;color:var(--mt)"> '+unit+'</span></div>'
+          +'<div style="font-size:10px;color:var(--mt)">'+ts+'</div>'
+        +'</div>'
+        +sparkH
+        +'<div style="width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0"></div>'
+      +'</div>';
+    }).join('');
+
+    var cfgBtn = can('s')
+      ? '<button class="btn bghs bxs" onclick="_setSensorEq(\''+eq.id+'\')">⚙ Ayar</button>'
+      : '';
+
+    eqCardsH += '<div class="card">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+        +'<div><div class="cardt" style="margin:0">'+esc(eq.name)+'</div>'
+          +'<div style="font-size:11px;color:var(--mt)">'+esc(eq.area||'')+'</div></div>'
+        +cfgBtn
+      +'</div>'
+      +chH
+    +'</div>';
+  });
+
+  // Veri yoksa yardım
+  if(!sensored.length){
+    eqCardsH='<div class="card" style="text-align:center;padding:30px">'
+      +'<div style="font-size:48px;margin-bottom:12px">📡</div>'
+      +'<div style="font-size:16px;font-weight:700;margin-bottom:8px">Henüz sensör verisi yok</div>'
+      +'<div style="font-size:13px;color:var(--mt);line-height:1.6;max-width:520px;margin:0 auto">'
+        +'ESP32 veya başka bir cihaz aşağıdaki Firebase endpoint\'ine HTTP POST göndererek veri iletebilir.<br><br>'
+        +'<code style="background:var(--bg3);padding:6px 12px;border-radius:6px;font-size:11px">'
+          +'POST /sensorData/{ekipmanId}/{kanal}/history.json<br>Body: {"v": 25.4, "ts": "2026-06-01T12:30:00"}'
+        +'</code>'
+      +'</div>'
+    +'</div>';
+  }
+
+  // Alarm listesi
+  var alertH='';
+  if(alerts.length){
+    alertH='<div class="card"><div class="cardt">🚨 Alarm Geçmişi</div>'
+      +alerts.slice(0,15).map(function(a){
+        var eq2=DB.equipment.find(function(e){return e.id===a.eqId;})||{name:a.eqId||'?'};
+        var resolveBtn=a.status==='active'&&can('w')
+          ?'<button class="btn bghs bxs" onclick="_resolveAlert(\''+a.id+'\')">✓</button>'
+          :'';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)">'
+          +'<div style="width:8px;height:8px;border-radius:50%;background:'+(a.status==='active'?'var(--rdl)':'var(--gnl)')+';flex-shrink:0"></div>'
+          +'<div style="flex:1;font-size:12px"><strong>'+esc(eq2.name)+'</strong> — '+esc(a.msg||'')+'</div>'
+          +'<div style="font-size:10px;color:var(--mt)">'+esc((a.ts||'').slice(0,16).replace('T',' '))+'</div>'
+          +resolveBtn
+        +'</div>';
+      }).join('')
+    +'</div>';
+  }
+
+  // ESP32 bağlantı kartı
+  var connectH='<div class="card"><div class="cardt">🔌 ESP32-S3 Bağlantısı</div>'
+    +'<div style="font-size:13px;color:var(--sub);margin-bottom:12px">'
+      +'ESP32-S3-N16R8 kartınızı Wi-Fi üzerinden Firebase\'e bağlayarak sıcaklık, nem, titreşim gibi verileri bu uygulamaya iletebilirsiniz.'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +'<button class="btn bghs bsm" onclick="showESP32Code()">📋 Arduino Kodu</button>'
+      +'<button class="btn bghs bsm" onclick="showAPIGuide()">📖 API Rehberi</button>'
+      +(can('s')?'<button class="btn bpri bsm" onclick="_setSensorEq(null)">⚙ Sensör Eşik Ayarı</button>':'')
+    +'</div></div>';
+
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">'
+    +'<div style="font-size:20px;font-weight:800">📡 Kestirimci Bakım</div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px">'+kpiH+'</div>'
+    +eqCardsH
+    +alertH
+    +connectH;
+}
+
+function _resolveAlert(id){
+  DB.sensorAlerts=(DB.sensorAlerts||[]).map(function(a){
+    return a.id===id?Object.assign({},a,{status:'resolved',resolvedAt:nowStr(),resolvedBy:U?U.name:''}):a;
+  });
+  dbSave();toast('Alarm çözüldü ✓');renderPage();
+}
+
+function showESP32Code(){
+  var FIREBASE = 'https://huseyinbakim-default-rtdb.europe-west1.firebasedatabase.app';
+  var lines=[
+    '#include <WiFi.h>',
+    '#include <HTTPClient.h>',
+    '',
+    'const char* SSID     = "WIFI_ADINIZ";',
+    'const char* PASSWORD = "WIFI_SIFRENIZ";',
+    'const char* FB_URL   = "'+FIREBASE+'";',
+    'const char* EQ_ID    = "ekipman-id-buraya";  // Ekipmanlar sekmesinden kopyalayin',
+    '',
+    '#include <OneWire.h>',
+    '#include <DallasTemperature.h>',
+    '#define TEMP_PIN 4       // DS18B20 data pini',
+    'OneWire ow(TEMP_PIN);',
+    'DallasTemperature sensors(&ow);',
+    '',
+    '// NTP - zaman damgasi icin',
+    '#include <time.h>',
+    '',
+    'void setup(){',
+    '  Serial.begin(115200);',
+    '  sensors.begin();',
+    '  WiFi.begin(SSID, PASSWORD);',
+    '  while(WiFi.status()!=WL_CONNECTED){delay(500);Serial.print(".");}',
+    '  Serial.println("\\nWiFi OK: "+WiFi.localIP().toString());',
+    '  configTime(10800,0,"pool.ntp.org");  // UTC+3 Turkiye',
+    '}',
+    '',
+    'String getISO(){',
+    '  struct tm t; getLocalTime(&t);',
+    '  char buf[25];',
+    '  strftime(buf,sizeof(buf),"%Y-%m-%dT%H:%M:%S",&t);',
+    '  return String(buf);',
+    '}',
+    '',
+    'void sendSensor(String channel, float value, String unit){',
+    '  if(WiFi.status()!=WL_CONNECTED)return;',
+    '  HTTPClient http;',
+    '  // History push (Firebase POST = yeni kayit)',
+    '  String url = String(FB_URL)+"/sensorData/"+EQ_ID+"/"+channel+"/history.json";',
+    '  http.begin(url);',
+    '  http.addHeader("Content-Type","application/json");',
+    '  String body = "{\\"v\\":"+String(value,2)+",\\"ts\\":\\""+getISO()+"\\"}"  ;',
+    '  int code = http.POST(body);',
+    '  Serial.println(channel+"="+String(value)+" HTTP:"+String(code));',
+    '  http.end();',
+    '  // Unit bilgisi (bir kez gondermek yeterli ama her seferinde uzerine yazar)',
+    '  HTTPClient http2;',
+    '  http2.begin(String(FB_URL)+"/sensorData/"+EQ_ID+"/"+channel+"/unit.json");',
+    '  http2.addHeader("Content-Type","application/json");',
+    '  http2.PUT("\\""+unit+"\\"");',
+    '  http2.end();',
+    '}',
+    '',
+    'void loop(){',
+    '  sensors.requestTemperatures();',
+    '  float temp = sensors.getTempCByIndex(0);',
+    '  if(temp != DEVICE_DISCONNECTED_C){',
+    '    sendSensor("sicaklik", temp, "C");',
+    '  }',
+    '  delay(30000);  // 30 saniyede bir',
+    '}',
+  ];
+  var code = lines.join('\n');
+  var modal=document.createElement('div');
+  modal.className='ov';
+  modal.style.zIndex='9999';
+  modal.innerHTML='<div class="md mdlg"><div class="mdh"><div class="mdt">📋 ESP32-S3 Arduino Kodu</div>'
+    +'<button class="mdc" onclick="this.closest(\'.ov\').remove()">✕</button></div>'
+    +'<div style="background:var(--bg0);border-radius:8px;padding:14px;overflow-x:auto;max-height:60vh;overflow-y:auto;margin-bottom:12px">'
+    +'<pre id="esp-code" style="margin:0;font-size:12px;line-height:1.6;color:var(--sub)">'+code+'</pre></div>'
+    +'<button class="btn bpri bsm" onclick="navigator.clipboard.writeText(document.getElementById(\'esp-code\').textContent).then(function(){toast(\'Kopyalandı ✓\')})">📋 Kopyala</button>'
+    +'</div>';
+  document.body.appendChild(modal);
+}
+
+function showAPIGuide(){
+  var FB='https://huseyinbakim-default-rtdb.europe-west1.firebasedatabase.app';
+  var modal=document.createElement('div');
+  modal.className='ov';
+  modal.style.zIndex='9999';
+  modal.innerHTML='<div class="md mdlg"><div class="mdh"><div class="mdt">📖 API Rehberi</div>'
+    +'<button class="mdc" onclick="this.closest(\'.ov\').remove()">✕</button></div>'
+    +'<div style="font-size:13px;line-height:1.9;color:var(--sub)">'
+    +'<p><strong style="color:var(--tx)">🔗 Firebase Base URL</strong><br>'
+    +'<code style="background:var(--bg3);padding:3px 8px;border-radius:4px;font-size:11px">'+FB+'</code></p>'
+    +'<p><strong style="color:var(--tx)">📤 Sensör Verisi Göndermek</strong><br>'
+    +'<code style="background:var(--bg3);padding:6px 10px;border-radius:6px;font-size:11px;display:block;margin-top:4px">'
+      +'POST /sensorData/{ekipmanId}/{kanal}/history.json<br>'
+      +'Content-Type: application/json<br>'
+      +'Body: {"v": 25.4, "ts": "2026-06-01T12:30:00"}'
+    +'</code></p>'
+    +'<p><strong style="color:var(--tx)">📋 Örnek Kanallar</strong><br>'
+    +'sicaklik, nem, titresim, basinc, akim, gerilim, co2</p>'
+    +'<p><strong style="color:var(--tx)">🔑 Ekipman ID</strong><br>'
+    +'Ekipmanlar sekmesinde her ekipmanın altında gösterilir.<br>'
+    +'Örn: <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">eq-abc123</code></p>'
+    +'<p><strong style="color:var(--tx)">⚡ Desteklenen Sensörler (ESP32-S3-N16R8)</strong></p>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<tr style="border-bottom:1px solid var(--bd)"><th style="text-align:left;padding:6px;color:var(--mt)">Sensör</th><th style="text-align:left;padding:6px;color:var(--mt)">Ölçüm</th><th style="text-align:left;padding:6px;color:var(--mt)">Kanal Adı</th></tr>'
+      +'<tr style="border-bottom:1px solid var(--bd)"><td style="padding:6px">DS18B20</td><td style="padding:6px">Sıcaklık (-55°C ~ +125°C)</td><td style="padding:6px"><code>sicaklik</code></td></tr>'
+      +'<tr style="border-bottom:1px solid var(--bd)"><td style="padding:6px">DHT22 / SHT31</td><td style="padding:6px">Sıcaklık + Nem</td><td style="padding:6px"><code>sicaklik</code>, <code>nem</code></td></tr>'
+      +'<tr style="border-bottom:1px solid var(--bd)"><td style="padding:6px">MPU6050</td><td style="padding:6px">Titreşim (ivme)</td><td style="padding:6px"><code>titresim</code></td></tr>'
+      +'<tr style="border-bottom:1px solid var(--bd)"><td style="padding:6px">ACS712</td><td style="padding:6px">Akım (5A/20A/30A)</td><td style="padding:6px"><code>akim</code></td></tr>'
+      +'<tr><td style="padding:6px">NTC Termistör</td><td style="padding:6px">Sıcaklık (analog)</td><td style="padding:6px"><code>sicaklik2</code></td></tr>'
+    +'</table>'
+    +'</div></div>';
+  document.body.appendChild(modal);
+}
+
+function openSensorConfig(){
+  var eqId = window._sEqId||null;
+  var eqOpts='<option value="">— Ekipman Seçin —</option>'
+    +DB.equipment.map(function(e){
+      return '<option value="'+e.id+'"'+(eqId===e.id?' selected':'')+'>'+esc(e.name)+'</option>';
+    }).join('');
+  var modal=document.createElement('div');
+  modal.className='ov';
+  modal.style.zIndex='9999';
+  modal.id='ov-sensor-cfg';
+  modal.innerHTML='<div class="md"><div class="mdh">'
+    +'<div class="mdt">⚙ Sensör Eşik Ayarı</div>'
+    +'<button class="mdc" onclick="document.getElementById(\'ov-sensor-cfg\').remove()">✕</button></div>'
+    +'<div class="fr"><label class="lbl">Ekipman</label>'
+    +'<select class="inp" id="sc-eq">'+eqOpts+'</select></div>'
+    +'<div class="fr"><label class="lbl">Kanal adı</label>'
+    +'<input class="inp" id="sc-ch" placeholder="sicaklik, nem, titresim..."/></div>'
+    +'<div class="fr"><label class="lbl">Birim</label>'
+    +'<input class="inp" id="sc-unit" placeholder="C, %, m/s2, A..."/></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+    +'<div class="fr"><label class="lbl">⚠ Uyarı Eşiği</label>'
+    +'<div style="display:flex;gap:6px">'
+    +'<select class="inp" id="sc-wop" style="width:70px"><option value="gt">&gt;</option><option value="lt">&lt;</option><option value="gte">≥</option><option value="lte">≤</option></select>'
+    +'<input class="inp" id="sc-wt" type="number" placeholder="70" style="flex:1"/>'
+    +'</div></div>'
+    +'<div class="fr"><label class="lbl">🔴 Kritik Eşiği</label>'
+    +'<div style="display:flex;gap:6px">'
+    +'<select class="inp" id="sc-cop" style="width:70px"><option value="gt">&gt;</option><option value="lt">&lt;</option><option value="gte">≥</option><option value="lte">≤</option></select>'
+    +'<input class="inp" id="sc-ct" type="number" placeholder="85" style="flex:1"/>'
+    +'</div></div></div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)">'
+    +'<button class="btn bghs" onclick="document.getElementById(\'ov-sensor-cfg\').remove()">İptal</button>'
+    +'<button class="btn bsuc" onclick="saveSensorConfig()">Kaydet</button>'
+    +'</div></div>';
+  document.body.appendChild(modal);
+}
+
+function saveSensorConfig(){
+  var eqId=(document.getElementById('sc-eq')||{value:''}).value;
+  var ch=(document.getElementById('sc-ch')||{value:''}).value.trim().toLowerCase().replace(/\s+/g,'_');
+  var unit=(document.getElementById('sc-unit')||{value:''}).value.trim();
+  var wOp=(document.getElementById('sc-wop')||{value:'gt'}).value;
+  var wT=parseFloat((document.getElementById('sc-wt')||{value:''}).value);
+  var cOp=(document.getElementById('sc-cop')||{value:'gt'}).value;
+  var cT=parseFloat((document.getElementById('sc-ct')||{value:''}).value);
+  if(!eqId||!ch){toast('Ekipman ve kanal zorunlu','err');return;}
+  if(!DB.sensorData)DB.sensorData={};
+  if(!DB.sensorData[eqId])DB.sensorData[eqId]={};
+  if(!DB.sensorData[eqId][ch])DB.sensorData[eqId][ch]={history:[]};
+  var cfg=DB.sensorData[eqId][ch];
+  if(unit)cfg.unit=unit;
+  if(!isNaN(wT)){cfg.warnThreshold=wT;cfg.warnOp=wOp;}
+  if(!isNaN(cT)){cfg.critThreshold=cT;cfg.critOp=cOp;}
+  dbSave();
+  var el=document.getElementById('ov-sensor-cfg');if(el)el.remove();
+  toast('Eşikler kaydedildi ✓');renderPage();
+}
+
+
 // BOOT
 // Firebase başlat
 fbInit();
@@ -5333,6 +5690,9 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
+
+
 
 
 
