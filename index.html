@@ -276,7 +276,6 @@ pre{white-space:pre-wrap;word-break:break-all;}
 <body>
 <div id="toast"></div>
 <div id="app"></div>
-<div id="modals-root"></div>
 <script>
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
@@ -768,17 +767,17 @@ function tplShell(){
     if(n.id==='spareparts'){var krt=(DB.spareParts||[]).filter(function(p){return p.stock<=p.minStock;}).length;if(krt>0)ex='<span style="background:var(--orl);color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;font-weight:700;margin-left:auto">'+krt+'</span>';}
     if(n.id==='scoreboard'&&!can('sc'))return '';
     // predictive herkese acik
-    return '<button class="nb'+(PAGE===n.id?' on':'')+'" onclick="PAGE=\''+n.id+'\';R()"><span class="nb-ico">'+n.ico+'</span><span class="nb-lbl">'+esc(n.lbl)+'</span>'+ex+'</button>';
+    return '<button class="nb'+(PAGE===n.id?' on':'')+'" data-p="'+n.id+'" type="button"><span class="nb-ico">'+n.ico+'</span><span class="nb-lbl">'+esc(n.lbl)+'</span>'+ex+'</button>';
   }).join('');
 
   var pageTitle=(function(){var n=navDefs.find(function(x){return x.id===PAGE;});return n?(n.ico+' '+esc(n.lbl)):'';})();
 
   var mobNav='<nav id="mob-nav">'
-    +'<button class="'+(PAGE==='dashboard'?'on':'')+'" onclick="PAGE=\'dashboard\';R()"><span class="mi">▦</span>Gösterge</button>'
-    +'<button class="'+(PAGE==='workorders'?'on':'')+'" onclick="PAGE=\'workorders\';R()"><span class="mi">📋</span>İş Em.</button>'
+    +'<button class="'+(PAGE==='dashboard'?'on':'')+'" data-p="dashboard" type="button"><span class="mi">▦</span>Gösterge</button>'
+    +'<button class="'+(PAGE==='workorders'?'on':'')+'" data-p="workorders"><span class="mi">📋</span>İş Em.</button>'
     +'<button onclick="openQRScanner()"><span class="mi">📷</span>QR</button>'
-    +'<button class="'+(PAGE==='equipment'?'on':'')+'" onclick="PAGE=\'equipment\';R()"><span class="mi">⚙</span>Ekipman</button>'
-    +'<button class="'+(PAGE==='reports'?'on':'')+'" onclick="PAGE=\'reports\';R()"><span class="mi">📊</span>Rapor</button>'
+    +'<button class="'+(PAGE==='equipment'?'on':'')+'" data-p="equipment"><span class="mi">⚙</span>Ekipman</button>'
+    +'<button class="'+(PAGE==='reports'?'on':'')+'" data-p="reports"><span class="mi">📊</span>Rapor</button>'
     +'</nav>';
 
   return '<div id="wrap">'
@@ -834,7 +833,7 @@ function tplShell(){
       +'<div id="bar">'
         +'<div style="font-size:14px;font-weight:600;color:var(--sub)">'+pageTitle+'</div>'
         +'<div id="tr">'
-          +(urgent.length?'<button class="btn bdng bsm" onclick="PAGE=\'schedule\';R()">⚠ '+urgent.length+' Kritik Bakım</button>':'')
+          +(urgent.length?'<button class="btn bdng bsm" data-p="schedule">⚠ '+urgent.length+' Kritik Bakım</button>':'')
           +(can('w')?'<button class="btn bpri bsm" onclick="openWOModal(null,null)">+ İş Emri</button>':'')
           +'<div style="width:1px;height:24px;background:var(--bd);margin:0 4px"></div>'
           +'<div id="sync-ind" style="font-size:11px;color:var(--mt)">☁</div>'
@@ -848,12 +847,15 @@ function tplShell(){
 }
 
 function bindNav(){
-  document.querySelectorAll('.nb[data-p]').forEach(function(b){b.onclick=function(){PAGE=b.dataset.p;R();};});
-  var lb=document.getElementById('b-logout');if(lb)lb.onclick=function(){addLog('Çıkış','Oturum kapatıldı','','');dbSave();U=null;R();};
+  document.querySelectorAll('.nb[data-p]').forEach(function(b){
+    b.onclick=function(e){e.preventDefault();PAGE=this.dataset.p;R();};
+  });
+  var lb=document.getElementById('b-logout');
+  if(lb)lb.onclick=function(){addLog('Çıkış','Oturum kapatıldı','','');dbSave();U=null;R();};
   // Mobile nav active state
-  ['dashboard','workorders','equipment','schedule','reports'].forEach(function(p){
-    var mb=document.getElementById('mn-'+p);
-    if(mb){mb.className=PAGE===p?'on':'';}
+  document.querySelectorAll('#mob-nav button[data-p]').forEach(function(b){
+    b.className=PAGE===b.dataset.p?'on':'';
+    b.onclick=function(e){e.preventDefault();PAGE=this.dataset.p;R();};
   });
 }
 
