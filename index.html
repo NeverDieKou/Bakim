@@ -210,6 +210,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -345,6 +346,8 @@ function fbSaveNow() {
     sensorData:   DB.sensorData   || {},
     sensorAlerts: DB.sensorAlerts || [],
     energyLogs:   DB.energyLogs   || [],
+    setTargets:   DB.setTargets   || {},
+    setProduction:DB.setProduction|| [],
     alarmNotify:  DB.alarmNotify  || {},
     waterStatuses: DB.waterStatuses || [],
     waterStatuses: DB.waterStatuses || [
@@ -506,6 +509,8 @@ function dbLoad(){
     if(!d.sensorData)d.sensorData={};
     if(!d.sensorAlerts)d.sensorAlerts=[];
     if(!d.energyLogs)d.energyLogs=[];
+    if(!d.setTargets)d.setTargets={};
+    if(!d.setProduction)d.setProduction=[];
     if(!d.alarmNotify)d.alarmNotify={enabled:false,email:'',emailjsServiceId:'',emailjsTemplateId:'',emailjsPublicKey:'',cooldownMin:30};
     if(!d.waterStatuses)d.waterStatuses=[
       {id:'planli',lbl:'Planlandı',col:'#4f8ef7'},
@@ -584,7 +589,7 @@ function renderPage(){
   var el=document.getElementById('main');if(!el)return;
   // Sayfa geçiş logu
   if(U&&PAGE)addLog('Sayfa: '+PAGE,'','','');
-  var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,kvalifikasyon:pgKval,watersystem:pgWaterSystem,scoreboard:pgScoreboard,capa:pgCAPA,predictive:pgPredictive,energy:pgEnergy,spareparts:pgSpareParts,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings,logs:pgLogs};
+  var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,kvalifikasyon:pgKval,watersystem:pgWaterSystem,scoreboard:pgScoreboard,capa:pgCAPA,predictive:pgPredictive,energy:pgEnergy,set:pgSET,spareparts:pgSpareParts,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings,logs:pgLogs};
   el.innerHTML=(map[PAGE]||pgDash)();bindPage();
 }
 function renderModals(){
@@ -688,7 +693,7 @@ function tplShell(){
   var urgent=DB.equipment.filter(function(e){var d=daysLeft(e.nextMaint);return d!==null&&d<=s.critDays&&d>=0;});
   var openN=DB.workOrders.filter(function(w){return w.status==='acik';}).length;
   var pendN=can('ap')?DB.workOrders.filter(function(w){return w.status==='bekliyor';}).length:0;
-  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlama'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'watersystem',ico:'💧',lbl:'Su Sistemi'},{id:'spareparts',ico:'🔩',lbl:'Yedek Parça'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Personeller'},{id:'scoreboard',ico:'🏆',lbl:'Puan Sıralaması'},{id:'capa',ico:'🔍',lbl:'CAPA / DÖF'},{id:'predictive',ico:'📡',lbl:'Kestirimci Bakım'},{id:'energy',ico:'⚡',lbl:'Enerji Takibi'}];
+  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlama'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'watersystem',ico:'💧',lbl:'Su Sistemi'},{id:'spareparts',ico:'🔩',lbl:'Yedek Parça'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Personeller'},{id:'scoreboard',ico:'🏆',lbl:'Puan Sıralaması'},{id:'capa',ico:'🔍',lbl:'CAPA / DÖF'},{id:'predictive',ico:'📡',lbl:'Kestirimci Bakım'},{id:'energy',ico:'⚡',lbl:'Enerji Takibi'},{id:'set',ico:'📐',lbl:'SET Analizi'}];
   if(can('u'))navDefs.push({id:'users',ico:'👥',lbl:'Kullanıcılar'});
   if(can('s'))navDefs.push({id:'logs',ico:'📜',lbl:'Aktivite Logu'});
   if(can('s'))navDefs.push({id:'settings',ico:'⚙️',lbl:'Ayarlar'});
@@ -6286,36 +6291,49 @@ function tplEnergyModal(){
   var typeOpts=Object.entries(ENERGY_TYPES).map(function(e){
     return '<option value="'+e[0]+'"'+(l.type===e[0]?' selected':'')+'>'+e[1].ico+' '+e[1].lbl+' ('+e[1].unit+')</option>';
   }).join('');
-  var selType=l.type&&ENERGY_TYPES[l.type]?ENERGY_TYPES[l.type]:{unit:''};
-  return '<div class="ov" id="ov-energy"><div class="md" style="max-width:460px">'
+  var selType=(l.type&&ENERGY_TYPES[l.type])||{unit:''};
+  var modal=document.createElement('div');
+  modal.className='ov';modal.id='ov-energy';
+  modal.innerHTML='<div class="md" style="max-width:480px">'
     +'<div class="mdh"><div class="mdt">'+(ENERGY_EDIT?'Enerji Kaydı Düzenle':'Yeni Enerji Verisi')+'</div>'
     +'<button class="mdc" onclick="MODAL_ENERGY=false;ENERGY_EDIT=null;renderModals()">✕</button></div>'
+
     +'<div class="g2">'
-    +'<div class="fr"><label class="lbl">Enerji Türü *</label><select class="inp" id="en-type" onchange="energyTypeChange(this.value)">'+typeOpts+'</select></div>'
-    +'<div class="fr"><label class="lbl">Tarih *</label><input class="inp" type="date" id="en-date" value="'+(l.date||today())+'"/></div>'
+      +'<div class="fr"><label class="lbl">Enerji Türü *</label>'
+        +'<select class="inp" id="en-type" onchange="energyTypeChange(this.value)">'+typeOpts+'</select></div>'
+      +'<div class="fr"><label class="lbl">Tarih *</label>'
+        +'<input class="inp" type="date" id="en-date" value="'+(l.date||today())+'"/></div>'
     +'</div>'
+
     +'<div class="g2">'
-    +'<div class="fr"><label class="lbl">Miktar *</label>'
-    +'<div style="display:flex;gap:6px;align-items:center">'
-    +'<input class="inp" type="number" id="en-val" value="'+(l.val||'')+'" placeholder="0" style="flex:1" min="0" step="0.01" oninput="calcEnergyCost()"/>'
-    +'<span id="en-unit-lbl" style="font-size:12px;color:var(--mt);white-space:nowrap;min-width:30px">'+(selType.unit||'')+'</span>'
-    +'</div></div>'
-    +'<div class="fr"><label class="lbl">Birim Fiyat (₺)</label>'
-    +'<div style="display:flex;gap:6px;align-items:center">'
-    +'<input class="inp" type="number" id="en-unitprice" value="'+(l.unitprice||'')+'" placeholder="0.00" min="0" step="0.001" oninput="calcEnergyCost()"/>'
-    +'<span style="font-size:12px;color:var(--mt);white-space:nowrap">/'+'" id="en-unit-lbl2" style="font-size:12px;color:var(--mt);white-space:nowrap">'+(selType.unit||'')+'</span>'
-    +'</div></div>'
+      +'<div class="fr"><label class="lbl">Miktar *</label>'
+        +'<div style="display:flex;gap:8px;align-items:center">'
+          +'<input class="inp" type="number" id="en-val" value="'+(l.val||'')+'" placeholder="0.00" min="0" step="0.01" oninput="calcEnergyCost()" style="flex:1"/>'
+          +'<span id="en-unit-lbl" style="font-size:13px;color:var(--bll);font-weight:700;min-width:36px;flex-shrink:0">'+(selType.unit||'')+'</span>'
+        +'</div>'
+      +'</div>'
+      +'<div class="fr"><label class="lbl">Birim Fiyat (₺)</label>'
+        +'<div style="display:flex;gap:8px;align-items:center">'
+          +'<input class="inp" type="number" id="en-unitprice" value="'+(l.unitprice||'')+'" placeholder="0.000" min="0" step="0.001" oninput="calcEnergyCost()" style="flex:1"/>'
+          +'<span style="font-size:11px;color:var(--mt);white-space:nowrap;flex-shrink:0">₺/<span id="en-unit-lbl2">'+(selType.unit||'')+'</span></span>'
+        +'</div>'
+      +'</div>'
     +'</div>'
-    +'<div class="fr"><label class="lbl">Toplam Maliyet (₺) <span style="font-size:10px;color:var(--mt);font-weight:400">— otomatik hesaplanır</span></label>'
-    +'<input class="inp" type="number" id="en-cost" value="'+(l.cost||'')+'" placeholder="0.00" min="0" step="0.01" readonly style="background:var(--bg3);color:var(--gnl);font-weight:700"/></div>'
+
+    +'<div class="fr"><label class="lbl">Toplam Maliyet (₺) <span style="font-size:10px;color:var(--mt);font-weight:400">— miktar × birim fiyat</span></label>'
+      +'<input class="inp" type="number" id="en-cost" value="'+(l.cost||'')+'" placeholder="0.00" readonly style="background:var(--bg3);color:var(--gnl);font-weight:800;font-size:15px"/></div>'
+
     +'<div class="fr"><label class="lbl">Fatura / Sayaç No</label>'
-    +'<input class="inp" id="en-ref" value="'+esc(l.ref||'')+'" placeholder="Fatura no veya sayaç okuması..."/></div>'
+      +'<input class="inp" id="en-ref" value="'+esc(l.ref||'')+'" placeholder="Fatura no veya sayaç okuması..."/></div>'
     +'<div class="fr"><label class="lbl">Not</label>'
-    +'<input class="inp" id="en-note" value="'+esc(l.note||'')+'" placeholder="Açıklama..."/></div>'
+      +'<input class="inp" id="en-note" value="'+esc(l.note||'')+'" placeholder="Açıklama..."/></div>'
+
     +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)">'
-    +'<button class="btn bghs" onclick="MODAL_ENERGY=false;ENERGY_EDIT=null;renderModals()">İptal</button>'
-    +'<button class="btn bsuc" onclick="saveEnergyLog()">Kaydet</button>'
-    +'</div></div></div>';
+      +'<button class="btn bghs" onclick="MODAL_ENERGY=false;ENERGY_EDIT=null;renderModals()">İptal</button>'
+      +'<button class="btn bsuc" onclick="saveEnergyLog()">Kaydet</button>'
+    +'</div>'
+  +'</div>';
+  return modal.outerHTML;
 }
 function energyTypeChange(val){
   var e=ENERGY_TYPES[val];
@@ -6361,6 +6379,286 @@ function saveEnergyLog(){
 }
 
 
+// ══ SET — SPESİFİK ENERJİ TÜKETİMİ ════════════════════════════
+// SET = Tüketim / Üretim Miktarı (ör: kWh/kg, m³/adet, vb.)
+var MODAL_SET_PROD = false;
+var SET_PROD_EDIT  = null;
+var SET_FLT_YEAR   = '';
+
+function pgSET(){
+  var eLogs  = DB.energyLogs    || [];
+  var prods  = DB.setProduction || [];
+  var targets= DB.setTargets    || {};
+  var years  = [...new Set(
+    eLogs.map(function(l){return (l.date||'').slice(0,4);})
+    .concat(prods.map(function(p){return (p.date||'').slice(0,4);}))
+  )].filter(Boolean).sort().reverse();
+  if(!SET_FLT_YEAR && years.length) SET_FLT_YEAR=years[0];
+  if(!SET_FLT_YEAR) SET_FLT_YEAR=today().slice(0,4);
+  if(years.indexOf(SET_FLT_YEAR)<0 && years.length) years.unshift(SET_FLT_YEAR);
+
+  var yearOpts = years.map(function(y){
+    return '<option value="'+y+'"'+(SET_FLT_YEAR===y?' selected':'')+'>'+y+'</option>';
+  }).join('');
+
+  var months    = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+  var monthNames= ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  var mShort    = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+
+  var yELogs = eLogs.filter(function(l){return (l.date||'').startsWith(SET_FLT_YEAR);});
+  var yProds = prods.filter(function(p){return (p.date||'').startsWith(SET_FLT_YEAR);});
+  var activeETypes = Object.keys(ENERGY_TYPES).filter(function(et){
+    return yELogs.some(function(l){return l.type===et;});
+  });
+
+  // ── Üretim birimi (ton, adet, kg, batch vb.)
+  var prodUnit = targets.prodUnit || 'kg';
+  var setUnits = {};
+  activeETypes.forEach(function(et){
+    setUnits[et] = ENERGY_TYPES[et].unit + '/' + prodUnit;
+  });
+
+  // ── Aylık veriler
+  var tableData = months.map(function(m, mi){
+    var mStr = SET_FLT_YEAR + '-' + m;
+    var mELogs = yELogs.filter(function(l){return (l.date||'').startsWith(mStr);});
+    var mProds = yProds.filter(function(p){return (p.date||'').startsWith(mStr);});
+    var totalProd = mProds.reduce(function(a,p){return a+(parseFloat(p.val)||0);}, 0);
+    var energyByType = {};
+    activeETypes.forEach(function(et){
+      energyByType[et] = mELogs.filter(function(l){return l.type===et;})
+        .reduce(function(a,l){return a+(parseFloat(l.val)||0);}, 0);
+    });
+    var hasProd  = totalProd > 0;
+    var hasEnergy= activeETypes.some(function(et){return energyByType[et]>0;});
+    return {
+      m: m, mi: mi, mStr: mStr,
+      prod: totalProd, energy: energyByType,
+      hasProd: hasProd, hasData: hasProd && hasEnergy,
+    };
+  });
+
+  // ── SET hedefleri
+  var targetsH = '<div class="card" style="margin-bottom:14px">'
+    +'<div class="cardt">🎯 SET Hedefleri <span style="font-size:10px;color:var(--mt);font-weight:400">— isteğe bağlı</span>'
+    +(can('s')?'<button class="btn bghs bxs" onclick="openSETTargets()" style="margin-left:auto">Hedef Ayarla</button>':'')
+    +'</div>'
+    +'<div style="display:flex;gap:12px;flex-wrap:wrap">'
+    +activeETypes.map(function(et){
+      var e=ENERGY_TYPES[et];
+      var tgt=targets[et];
+      return '<div style="background:var(--bg3);border-radius:8px;padding:10px 14px;font-size:12px">'
+        +'<div style="color:var(--mt);margin-bottom:3px">'+e.ico+' '+e.lbl+'</div>'
+        +'<div style="font-weight:700;color:'+(tgt?'var(--bll)':'var(--mt)')+'">'+
+          (tgt ? tgt+' '+setUnits[et] : 'Hedef yok') + '</div>'
+      +'</div>';
+    }).join('')
+    +(activeETypes.length===0?'<div style="color:var(--mt);font-size:12px">Önce Enerji Takibi sayfasından enerji verisi girin.</div>':'')
+    +'</div></div>';
+
+  // ── Üretim girişi butonu
+  var prodH = '<div class="card" style="margin-bottom:14px">'
+    +'<div class="cardt">🏭 Aylık Üretim Miktarı ('+prodUnit+')'
+    +(can('w')?'<button class="btn bpri bxs" onclick="openSETProdModal(null)" style="margin-left:auto">+ Üretim Gir</button>':'')
+    +'</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    +months.map(function(m,mi){
+      var mStr=SET_FLT_YEAR+'-'+m;
+      var mProds=yProds.filter(function(p){return (p.date||'').startsWith(mStr);});
+      var total=mProds.reduce(function(a,p){return a+(parseFloat(p.val)||0);},0);
+      return '<div style="background:var(--bg'+(total>0?'2':'3)')+';border:1px solid var('+(total>0?'--bl':'--bd')+'20);border-radius:8px;padding:10px 12px;min-width:90px;text-align:center;cursor:pointer" onclick="openSETProdModal(\''+mStr+'\')">'
+        +'<div style="font-size:11px;color:var(--mt);margin-bottom:3px">'+mShort[mi]+'</div>'
+        +'<div style="font-size:16px;font-weight:800;color:'+(total>0?'var(--bll)':'var(--mt)')+'">'+( total>0?total.toLocaleString('tr'):'-')+'</div>'
+        +'<div style="font-size:10px;color:var(--mt)">'+prodUnit+'</div>'
+      +'</div>';
+    }).join('')
+    +'</div></div>';
+
+  // ── SET Tablosu
+  var tableRows = tableData.filter(function(d){return d.hasData||d.prod>0;});
+  var tableH = '';
+  if(activeETypes.length > 0){
+    var thead='<thead><tr>'
+      +'<th style="text-align:left;padding:10px 8px;font-size:11px;color:var(--mt);border-bottom:1px solid var(--bd)">Ay</th>'
+      +'<th style="text-align:right;padding:10px 8px;font-size:11px;color:var(--mt);border-bottom:1px solid var(--bd)">Üretim ('+prodUnit+')</th>'
+      +activeETypes.map(function(et){
+        var e=ENERGY_TYPES[et];
+        return '<th style="text-align:right;padding:10px 8px;font-size:11px;color:var(--mt);border-bottom:1px solid var(--bd)">'
+          +e.ico+' '+e.lbl+'<br><span style="font-weight:400;font-size:9px;color:var(--sub)">('+e.unit+')</span></th>'
+          +'<th style="text-align:right;padding:10px 8px;font-size:11px;color:'+e.col+';border-bottom:1px solid var(--bd)">SET<br><span style="font-weight:400;font-size:9px;color:var(--sub)">('+setUnits[et]+')</span></th>';
+      }).join('')
+    +'</tr></thead>';
+
+    var tbody='<tbody>'+tableData.map(function(d){
+      if(!d.prod && !activeETypes.some(function(et){return d.energy[et]>0;})) return '';
+      var cells = activeETypes.map(function(et){
+        var e=ENERGY_TYPES[et];
+        var ev=d.energy[et]||0;
+        var set=d.prod>0&&ev>0 ? (ev/d.prod) : null;
+        var tgt=targets[et];
+        var setColor='var(--tx)';
+        if(set!==null&&tgt){setColor=set<=tgt?'var(--gnl)':'var(--rdl)';}
+        return '<td style="padding:8px;text-align:right;font-size:12px">'+(ev>0?ev.toLocaleString('tr'):'-')+'</td>'
+          +'<td style="padding:8px;text-align:right;font-size:12px;font-weight:700;color:'+(set!==null?setColor:'var(--mt)')+'">'
+            +(set!==null?set.toFixed(3):d.prod>0&&ev===0?'—':'<span style="color:var(--mt);font-weight:400">veri yok</span>')
+            +(set!==null&&tgt?(set<=tgt?' ✓':' ⚠'):'')
+          +'</td>';
+      }).join('');
+      return '<tr style="border-bottom:1px solid var(--bd)">'
+        +'<td style="padding:8px;font-size:12px;font-weight:600">'+monthNames[d.mi]+'</td>'
+        +'<td style="padding:8px;text-align:right;font-size:12px;font-weight:700">'+(d.prod>0?d.prod.toLocaleString('tr'):'-')+'</td>'
+        +cells
+      +'</tr>';
+    }).join('')+'</tbody>';
+
+    // Yıllık toplam
+    var tfootCells=activeETypes.map(function(et){
+      var totalE=tableData.reduce(function(a,d){return a+(d.energy[et]||0);},0);
+      var totalP=tableData.reduce(function(a,d){return a+d.prod;},0);
+      var avgSET=totalP>0&&totalE>0?totalE/totalP:null;
+      var e=ENERGY_TYPES[et];
+      var tgt=targets[et];
+      var sc=avgSET!==null&&tgt?(avgSET<=tgt?'var(--gnl)':'var(--rdl)'):'var(--bll)';
+      return '<td style="padding:8px;text-align:right;font-size:12px;font-weight:700">'+(totalE>0?totalE.toLocaleString('tr'):'-')+'</td>'
+        +'<td style="padding:8px;text-align:right;font-size:13px;font-weight:900;color:'+(avgSET!==null?sc:'var(--mt)')+'">'+(avgSET!==null?avgSET.toFixed(3):'-')+'</td>';
+    }).join('');
+    var totalProd=tableData.reduce(function(a,d){return a+d.prod;},0);
+    var tfoot='<tfoot><tr style="border-top:2px solid var(--bd);background:var(--bg3)">'
+      +'<td style="padding:8px;font-size:12px;font-weight:800">YIL TOPLAMI</td>'
+      +'<td style="padding:8px;text-align:right;font-size:12px;font-weight:800">'+(totalProd>0?totalProd.toLocaleString('tr'):'-')+'</td>'
+      +tfootCells
+    +'</tr></tfoot>';
+
+    tableH='<div class="card" style="overflow-x:auto">'
+      +'<div class="cardt">'+SET_FLT_YEAR+' SET Analizi Tablosu'
+      +'<span style="font-size:11px;color:var(--mt);font-weight:400;margin-left:8px">✓ = hedefe ulaşıldı &nbsp; ⚠ = hedef aşıldı</span></div>'
+      +'<table style="width:100%;border-collapse:collapse">'+thead+tbody+tfoot+'</table>'
+    +'</div>';
+  }
+
+  // ── Graf (SET trendi)
+  var chartH='';
+  if(activeETypes.length>0){
+    chartH='<div class="card" style="margin-bottom:14px"><div class="cardt">'+SET_FLT_YEAR+' SET Trendi</div>'
+      +'<div style="height:220px"><canvas id="ch-set"></canvas></div></div>';
+  }
+
+  setTimeout(function(){
+    var cv=document.getElementById('ch-set');
+    if(!cv||!activeETypes.length)return;
+    if(cv._chart){cv._chart.destroy();cv._chart=null;}
+    var datasets=[];
+    activeETypes.forEach(function(et){
+      var e=ENERGY_TYPES[et];
+      var setVals=tableData.map(function(d){
+        return d.prod>0&&(d.energy[et]||0)>0?(d.energy[et]/d.prod):null;
+      });
+      datasets.push({label:'SET '+e.lbl+' ('+setUnits[et]+')',data:setVals,borderColor:e.col,backgroundColor:'transparent',borderWidth:2,tension:0.3,pointRadius:4,spanGaps:true});
+      var tgt=targets[et];
+      if(tgt){
+        datasets.push({label:'Hedef '+e.lbl,data:months.map(function(){return parseFloat(tgt);}),borderColor:e.col,borderDash:[5,3],borderWidth:1,pointRadius:0,fill:false,backgroundColor:'transparent'});
+      }
+    });
+    cv._chart=new Chart(cv,{type:'line',data:{labels:mShort,datasets:datasets},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{labels:{color:'#94a3b8',font:{size:10},boxWidth:12,padding:8}},
+          tooltip:{backgroundColor:'rgba(15,23,42,.95)',callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': '+(ctx.parsed.y!==null?ctx.parsed.y.toFixed(3):'-');}}}},
+        scales:{x:{ticks:{color:'#64748b',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}},
+          y:{ticks:{color:'#64748b',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'},beginAtZero:true}}}});
+  },100);
+
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">'
+    +'<div>'
+      +'<div style="font-size:20px;font-weight:800">📐 SET — Spesifik Enerji Tüketimi</div>'
+      +'<div style="font-size:12px;color:var(--mt);margin-top:3px">SET = Enerji Tüketimi ÷ Üretim Miktarı</div>'
+    +'</div>'
+    +'<select class="inp isml" onchange="SET_FLT_YEAR=this.value;renderPage()" style="width:90px">'+yearOpts+'</select>'
+    +'</div>'
+    +targetsH+prodH
+    +(chartH?chartH:'')
+    +(tableH?tableH:'<div class="card">'+emptyHTML('SET hesaplamak için önce Enerji Takibi ve Üretim verisi girin.')+'</div>');
+}
+
+var MODAL_SET_TARGETS=false;
+function openSETTargets(){
+  MODAL_SET_TARGETS=true;renderModals();
+}
+function tplSETTargets(){
+  if(!MODAL_SET_TARGETS)return '';
+  var t=DB.setTargets||{};
+  var prodUnit=t.prodUnit||'kg';
+  var activeETypes=Object.keys(ENERGY_TYPES).filter(function(et){
+    return (DB.energyLogs||[]).some(function(l){return l.type===et;});
+  });
+  var fieldsH=activeETypes.map(function(et){
+    var e=ENERGY_TYPES[et];
+    return '<div class="fr"><label class="lbl">'+e.ico+' '+e.lbl+' Hedef SET ('+e.unit+'/'+prodUnit+')</label>'
+      +'<input class="inp" type="number" id="st-'+et+'" value="'+(t[et]||'')+'" placeholder="Hedef değer girin" min="0" step="0.001"/></div>';
+  }).join('');
+  return '<div class="ov" id="ov-set-tgt"><div class="md" style="max-width:440px">'
+    +'<div class="mdh"><div class="mdt">🎯 SET Hedeflerini Ayarla</div>'
+    +'<button class="mdc" onclick="MODAL_SET_TARGETS=false;renderModals()">✕</button></div>'
+    +'<div class="fr"><label class="lbl">Üretim Birimi</label>'
+    +'<input class="inp" id="st-produnit" value="'+esc(prodUnit)+'" placeholder="kg, adet, batch, ton..."/></div>'
+    +(fieldsH||'<div style="color:var(--mt);font-size:12px;padding:10px">Önce Enerji Takibi sayfasından enerji verisi girin.</div>')
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)">'
+    +'<button class="btn bghs" onclick="MODAL_SET_TARGETS=false;renderModals()">İptal</button>'
+    +'<button class="btn bsuc" onclick="saveSETTargets()">Kaydet</button>'
+    +'</div></div></div>';
+}
+function saveSETTargets(){
+  var t=DB.setTargets||{};
+  var pu=(document.getElementById('st-produnit')||{value:'kg'}).value.trim()||'kg';
+  t.prodUnit=pu;
+  Object.keys(ENERGY_TYPES).forEach(function(et){
+    var el=document.getElementById('st-'+et);
+    if(el&&el.value!==''){t[et]=parseFloat(el.value)||0;}
+    else delete t[et];
+  });
+  DB.setTargets=t;
+  dbSave();MODAL_SET_TARGETS=false;toast('SET hedefleri kaydedildi ✓');renderModals();renderPage();
+}
+
+function openSETProdModal(dateStr){
+  SET_PROD_EDIT=dateStr||null;
+  MODAL_SET_PROD=true;renderModals();
+}
+function tplSETProdModal(){
+  if(!MODAL_SET_PROD)return '';
+  var prodUnit=(DB.setTargets||{}).prodUnit||'kg';
+  var mStr=SET_PROD_EDIT||today().slice(0,7);
+  var existing=(DB.setProduction||[]).filter(function(p){return (p.date||'').startsWith(mStr);});
+  var curVal=existing.reduce(function(a,p){return a+(parseFloat(p.val)||0);},0);
+  return '<div class="ov" id="ov-set-prod"><div class="md" style="max-width:400px">'
+    +'<div class="mdh"><div class="mdt">🏭 Üretim Miktarı Gir</div>'
+    +'<button class="mdc" onclick="MODAL_SET_PROD=false;renderModals()">✕</button></div>'
+    +'<div class="fr"><label class="lbl">Dönem</label>'
+    +'<input class="inp" type="month" id="sp-month" value="'+mStr+'"/></div>'
+    +'<div class="fr"><label class="lbl">Üretim Miktarı ('+prodUnit+')'+(curVal>0?' — mevcut: '+curVal.toLocaleString('tr')+' '+prodUnit:'')+'</label>'
+    +'<input class="inp" type="number" id="sp-val" value="'+(curVal||'')+'" placeholder="0" min="0" step="0.01"/></div>'
+    +'<div class="fr"><label class="lbl">Not</label>'
+    +'<input class="inp" id="sp-note" placeholder="Aylık üretim notu..."/></div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)">'
+    +'<button class="btn bghs" onclick="MODAL_SET_PROD=false;renderModals()">İptal</button>'
+    +'<button class="btn bsuc" onclick="saveSETProd()">Kaydet</button>'
+    +'</div></div></div>';
+}
+function saveSETProd(){
+  var mStr=(document.getElementById('sp-month')||{value:''}).value;
+  var val=parseFloat((document.getElementById('sp-val')||{value:''}).value)||0;
+  var note=(document.getElementById('sp-note')||{value:''}).value.trim();
+  if(!mStr){toast('Dönem seçin','err');return;}
+  if(val<0){toast('Geçerli miktar girin','err');return;}
+  if(!DB.setProduction)DB.setProduction=[];
+  // Aynı ay varsa güncelle
+  DB.setProduction=DB.setProduction.filter(function(p){return !(p.date||'').startsWith(mStr);});
+  if(val>0)DB.setProduction.push({id:'SP-'+uid(),date:mStr+'-01',val:val,note:note,by:U?U.name:'',ts:nowStr()});
+  SET_FLT_YEAR=mStr.slice(0,4);
+  dbSave();MODAL_SET_PROD=false;
+  toast('Üretim verisi kaydedildi ✓');renderModals();renderPage();
+}
+
+
 // BOOT
 // Firebase başlat
 fbInit();
@@ -6382,6 +6680,7 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
