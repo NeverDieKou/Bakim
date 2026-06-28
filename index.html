@@ -214,6 +214,8 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -257,7 +259,9 @@ function fbInit() {
       var data = snap.val();
       if(!data) {
         // Firebase boş — yerel veriyi yükle ve kaydet
+        if(!DB.users||!DB.users.length) DB.users = SEED.users;
         fbSaveNow();
+        if(!document.getElementById('lgw')) R();
         return;
       }
       // Gelen veriyi uygula
@@ -305,6 +309,8 @@ function fbInit() {
       }
       // localStorage'a da kaydet (offline fallback)
       try { localStorage.setItem(SK, JSON.stringify(DB)); } catch(e) {}
+      // Giriş ekranı henüz render edilmemişse R() ile başlat
+      if(!U && !document.getElementById('lgw')) R();
     }, function(err) {
       console.warn('Firebase okuma hatası:', err.message);
       showSyncStatus('error');
@@ -493,7 +499,7 @@ function dbLoad(){
     var r=localStorage.getItem(SK);if(!r)return null;
     var d=JSON.parse(r);
     if(!d.eqDocs)d.eqDocs={};
-    if(!d.users)d.users=SEED.users;
+    if(!d.users||!d.users.length)d.users=SEED.users;
     if(!d.schedule)d.schedule=SEED.schedule;
     if(!d.workOrders&&d.records)d.workOrders=d.records;
     if(!d.workOrders)d.workOrders=[];
@@ -645,7 +651,7 @@ function bindLogin(){
     var u=(document.getElementById('l-u')||{value:''}).value.trim();
     var p=(document.getElementById('l-p')||{value:''}).value;
     var rem=(document.getElementById('l-rem')||{checked:false}).checked;
-    var f=DB.users.find(function(x){return x.un===u&&(x.pw===p||x.password===p)&&x.active;});
+    var f=(DB.users||SEED.users||[]).find(function(x){return x.un===u&&(x.pw===p||x.password===p)&&x.active;});
     if(f){
       // Beni hatırla
       try{
@@ -7210,6 +7216,8 @@ function saveSETProd(){
 // BOOT
 // Firebase başlat
 fbInit();
+// İlk render — Firebase gelmeden önce login ekranını göster
+R();
 
 // QR link ile gelindiyse (?eq=EQ-001)
 qrCaptureTarget();
@@ -7228,6 +7236,8 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
+
 
 
 
