@@ -209,6 +209,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -832,7 +833,7 @@ function pgDash(){
   }).join('');
 
   // ── MALİYET & ENERJİ KARTI ────────────────────────────────
-  var costH='<div class="card"><div class="cardt">💰 Bakım Maliyeti</div>'
+  var costH='<div class="card"><div class="cardt">💰 Bakım Maliyeti<button class="btn bghs bxs" onclick="PAGE=\'reports\';R()" style="margin-left:auto">Raporlar →</button></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
     +[
       {lbl:'Bu Ay',v:'₺'+fmtC(monCost),col:'var(--bll)'},
@@ -1052,8 +1053,8 @@ function pgDash(){
     +'</div>'
     +alertBanner
     // KPI kartları
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">'+kpi1.slice(0,4).map(function(k){return '<div class="sc" style="border-color:'+k.col+'28;'+(k.click?'cursor:pointer;':'')+'"'+(k.click?' onclick="'+k.click+'"':'')+' ><div class="sa" style="background:'+k.col+'"></div><div class="sv" style="color:'+k.col+'">'+k.v+'</div><div class="sl">'+k.lbl+'</div></div>';}).join('')+'</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">'+kpi1.slice(4).map(function(k){return '<div class="sc" style="border-color:'+k.col+'28;'+(k.click?'cursor:pointer;':'')+'"'+(k.click?' onclick="'+k.click+'"':'')+' ><div class="sa" style="background:'+k.col+'"></div><div class="sv" style="color:'+k.col+'">'+k.v+'</div><div class="sl">'+k.lbl+'</div></div>';}).join('')+'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">'+kpi1.slice(0,4).map(function(k){return '<div class="sc" style="border-color:'+k.col+'28;'+(k.click||k.page?'cursor:pointer;':'')+'"'+(k.click?' onclick="'+k.click+'"':k.page?' onclick="PAGE=\''+k.page+'\';R()"':'')+' ><div class="sa" style="background:'+k.col+'"></div><div class="sv" style="color:'+k.col+'">'+k.v+'</div><div class="sl">'+k.lbl+(k.link?'<br><span style="font-size:9px;color:'+k.col+';opacity:.7;font-weight:600">'+k.link+'</span>':'')+'</div></div>';}).join('')+'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">'+kpi1.slice(4).map(function(k){return '<div class="sc" style="border-color:'+k.col+'28;'+(k.click||k.page?'cursor:pointer;':'')+'"'+(k.click?' onclick="'+k.click+'"':k.page?' onclick="PAGE=\''+k.page+'\';R()"':'')+' ><div class="sa" style="background:'+k.col+'"></div><div class="sv" style="color:'+k.col+'">'+k.v+'</div><div class="sl">'+k.lbl+(k.link?'<br><span style="font-size:9px;color:'+k.col+';opacity:.7;font-weight:600">'+k.link+'</span>':'')+'</div></div>';}).join('')+'</div>'
     // Maliyet + Enerji + Grafikler
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">'
       +costH+energyH
@@ -1066,12 +1067,12 @@ function pgDash(){
     +'</div>'
     // Top 10'lar
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">'
-      +'<div class="card"><div class="cardt">🔴 Top 10 Arıza <span style="font-size:10px;color:var(--mt);font-weight:400">(ekipman bazlı)</span></div>'+top10ArizaH+'</div>'
-      +'<div class="card"><div class="cardt">💰 Top 10 Maliyet <span style="font-size:10px;color:var(--mt);font-weight:400">(ekipman bazlı)</span></div>'+top10CostH+'</div>'
+      +'<div class="card"><div class="cardt">🔴 Top 10 Arıza <span style="font-size:10px;color:var(--mt);font-weight:400">(ekipman bazlı)</span><button class="btn bghs bxs" onclick="PAGE=\'workorders\';FLT.type=\'ariza\';R()" style="margin-left:auto">Arızalar →</button></div>'+top10ArizaH+'</div>'
+      +'<div class="card"><div class="cardt">💰 Top 10 Maliyet <span style="font-size:10px;color:var(--mt);font-weight:400">(ekipman bazlı)</span><button class="btn bghs bxs" onclick="PAGE=\'reports\';R()" style="margin-left:auto">Raporlar →</button></div>'+top10CostH+'</div>'
     +'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">'
-      +'<div class="card"><div class="cardt">⏱ Top 10 Duruş <span style="font-size:10px;color:var(--mt);font-weight:400">(arıza süresi toplamı)</span></div>'+top10DurH+'</div>'
-      +'<div class="card"><div class="cardt">📋 Top 10 Ekipman <span style="font-size:10px;color:var(--mt);font-weight:400">(toplam iş emri)</span></div>'+top10EqH+'</div>'
+      +'<div class="card"><div class="cardt">⏱ Top 10 Duruş <span style="font-size:10px;color:var(--mt);font-weight:400">(arıza süresi toplamı)</span><button class="btn bghs bxs" onclick="PAGE=\'workorders\';FLT.type=\'ariza\';R()" style="margin-left:auto">Arızalar →</button></div>'+top10DurH+'</div>'
+      +'<div class="card"><div class="cardt">📋 Top 10 Ekipman <span style="font-size:10px;color:var(--mt);font-weight:400">(toplam iş emri)</span><button class="btn bghs bxs" onclick="PAGE=\'equipment\';R()" style="margin-left:auto">Ekipmanlar →</button></div>'+top10EqH+'</div>'
     +'</div>'
     // Son işler + Ekipman durumu
     +'<div style="display:grid;grid-template-columns:3fr 2fr;gap:14px">'
@@ -6381,6 +6382,7 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
