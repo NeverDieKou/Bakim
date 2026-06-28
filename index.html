@@ -216,6 +216,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -266,7 +267,7 @@ function fbInit() {
       }
       // Gelen veriyi uygula
       var needRender = false;
-      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats','waterPlans','waterStatuses','scores','scoreFormula','capas','sensorData','sensorAlerts','energyLogs'];
+      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats','waterPlans','waterStatuses','scores','scoreFormula','capas','sensorData','sensorAlerts','energyLogs','setTargets','setProduction'];
       keys.forEach(function(k) {
         if(data[k] !== undefined) {
           // Array olarak gelenleri düzelt
@@ -355,6 +356,8 @@ function fbSaveNow() {
     sensorData:   DB.sensorData   || {},
     sensorAlerts: DB.sensorAlerts || [],
     energyLogs:   DB.energyLogs   || [],
+    setTargets:   DB.setTargets   || {},
+    setProduction:DB.setProduction|| [],
     setTargets:   DB.setTargets   || {},
     setProduction:DB.setProduction|| [],
     alarmNotify:  DB.alarmNotify  || {},
@@ -7236,6 +7239,7 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
