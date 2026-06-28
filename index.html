@@ -211,6 +211,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -1284,16 +1285,259 @@ function deleteSchedule(id){
 }
 
 function pgReports(){
-  var wos=DB.workOrders;
-  var totalLH=wos.reduce(function(s,w){return s+(parseFloat(w.lh)||0);},0);
-  var totalPC=wos.reduce(function(s,w){return s+(parseFloat(w.pc)||0);},0);
-  var mttrArr=wos.filter(function(w){return w.status==='kapali'&&w.type==='ariza'&&w.closedAt&&w.date;});
-  var mttr=mttrArr.length?(mttrArr.reduce(function(s,w){return s+(new Date(w.closedAt)-new Date(w.date))/3600000;},0)/mttrArr.length).toFixed(1):'—';
-  var compRate=wos.length?Math.round(wos.filter(function(w){return w.status==='kapali';}).length/wos.length*100)+'%':'—';
-  var gmpOpen=wos.filter(function(w){return w.gmp&&w.status!=='kapali';});
-  var kpiH=[{lbl:'Toplam İşçilik',v:totalLH.toFixed(1)+' s',col:'var(--bll)'},{lbl:'Parça/Malzeme',v:totalPC.toLocaleString('tr-TR')+' ₺',col:'var(--orl)'},{lbl:'Ort. MTTR (Arıza)',v:(mttr==='—'?mttr:mttr+' saat'),col:'var(--cyl)'},{lbl:'Tamamlanma Oranı',v:compRate,col:'var(--gnl)'}].map(function(s){return'<div class="sc" style="border-color:'+s.col+'25"><div class="sa" style="background:'+s.col+'"></div><div class="sv" style="color:'+s.col+';font-size:22px">'+s.v+'</div><div class="sl">'+s.lbl+'</div></div>';}).join('');
-  var gmpH=gmpOpen.length===0?'<div class="empty"><div style="font-size:36px;margin-bottom:10px">✅</div><div style="font-size:14px;font-weight:600;color:var(--gnl)">Açık GMP iş emri yok</div></div>':gmpOpen.map(function(w){var eq=DB.equipment.find(function(e){return e.id===w.eqId;});return'<div style="padding:10px 0;border-bottom:1px solid var(--bd)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><div style="font-size:13px;font-weight:600">'+esc(w.title)+'</div><div style="display:flex;gap:5px">'+sevBadge(w.sev,true)+' '+staBadge(w.status,true)+'</div></div><div style="font-size:11px;color:var(--mt)">'+esc((eq&&eq.name)||'—')+' · '+esc(w.date)+' · '+esc(w.id)+'</div></div>';}).join('');
-  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Raporlar &amp; Analizler</div><div style="display:flex;gap:8px"><button class="btn bpur bsm" onclick="generatePPTX()">📑 PPT Rapor</button><button class="btn bsuc bsm" onclick="exportExcel()">📊 Excel İndir</button><button class="btn bout bsm" onclick="exportJSON()">📋 JSON Yedek</button></div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px">'+kpiH+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px"><div class="card"><div class="cardt">Aylık İş Emri Trendi</div><canvas id="ch-trend" height="200"></canvas></div><div class="card"><div class="cardt">Türe Göre Dağılım</div><canvas id="ch-type" height="200"></canvas></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:18px"><div class="card"><div class="cardt">Ekipman Bazlı</div><canvas id="ch-eq" height="200"></canvas></div><div class="card"><div class="cardt">GMP Açık İş Emirleri '+(gmpOpen.length>0?'<span class="badge bxsm" style="color:var(--cyl);border-color:var(--cyl)">'+gmpOpen.length+'</span>':'')+'</div>'+gmpH+'</div></div>';
+  var wos=DB.workOrders, eqs=DB.equipment;
+  var LABOUR_RATE=50; // ₺/saat
+
+  function woCost(w){return (parseFloat(w.lh)||0)*LABOUR_RATE+(parseFloat(w.pc)||0);}
+  function fmtC(v){return v>=1000000?(v/1000000).toFixed(2)+'M':v>=1000?(v/1000).toFixed(1)+'K':Math.round(v).toLocaleString('tr');}
+
+  // ── TEMEL KPİLER ─────────────────────────────────────────
+  var totalLH   = wos.reduce(function(s,w){return s+(parseFloat(w.lh)||0);},0);
+  var totalPC   = wos.reduce(function(s,w){return s+(parseFloat(w.pc)||0);},0);
+  var totalCost = wos.reduce(function(s,w){return s+woCost(w);},0);
+  var mttrArr   = wos.filter(function(w){return w.status==='kapali'&&w.type==='ariza'&&w.closedAt&&w.date;});
+  var mttr      = mttrArr.length?(mttrArr.reduce(function(s,w){return s+(new Date(w.closedAt)-new Date(w.date))/3600000;},0)/mttrArr.length).toFixed(1):'—';
+  var compRate  = wos.length?Math.round(wos.filter(function(w){return w.status==='kapali';}).length/wos.length*100)+'%':'—';
+  var gmpOpen   = wos.filter(function(w){return w.gmp&&w.status!=='kapali';});
+
+  var kpiH=[
+    {lbl:'Toplam Maliyet',   v:'₺'+fmtC(totalCost),  col:'var(--bll)'},
+    {lbl:'İşçilik Maliyeti', v:'₺'+fmtC(totalLH*LABOUR_RATE),col:'var(--orl)'},
+    {lbl:'Parça/Malzeme',    v:'₺'+fmtC(totalPC),     col:'var(--cyl)'},
+    {lbl:'Tamamlanma Oranı', v:compRate,               col:'var(--gnl)'},
+  ].map(function(s){
+    return '<div class="sc" style="border-color:'+s.col+'25"><div class="sa" style="background:'+s.col+'"></div>'
+      +'<div class="sv" style="color:'+s.col+';font-size:20px">'+s.v+'</div><div class="sl">'+s.lbl+'</div></div>';
+  }).join('');
+
+  // ── MALİYET DAĞILIMI — İşçilik vs Parça ─────────────────
+  var labourPct = totalCost>0?Math.round(totalLH*LABOUR_RATE/totalCost*100):0;
+  var partPct   = totalCost>0?Math.round(totalPC/totalCost*100):0;
+  var splitH='<div class="card" style="margin-bottom:16px">'
+    +'<div class="cardt">💰 Maliyet Dağılımı</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'
+    // Pasta
+    +'<div>'
+      +'<div style="display:flex;height:12px;border-radius:6px;overflow:hidden;margin-bottom:12px">'
+        +'<div style="width:'+labourPct+'%;background:var(--orl);transition:width .5s"></div>'
+        +'<div style="width:'+partPct+'%;background:var(--cyl);transition:width .5s"></div>'
+      +'</div>'
+      +'<div style="display:flex;flex-direction:column;gap:8px">'
+        +'<div style="display:flex;justify-content:space-between;font-size:13px">'
+          +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--orl);margin-right:6px"></span>İşçilik ('+LABOUR_RATE+'₺/sa)</span>'
+          +'<div style="text-align:right"><strong>₺'+fmtC(totalLH*LABOUR_RATE)+'</strong> <span style="color:var(--mt);font-size:11px">%'+labourPct+'</span></div>'
+        +'</div>'
+        +'<div style="display:flex;justify-content:space-between;font-size:13px">'
+          +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--cyl);margin-right:6px"></span>Parça/Malzeme</span>'
+          +'<div style="text-align:right"><strong>₺'+fmtC(totalPC)+'</strong> <span style="color:var(--mt);font-size:11px">%'+partPct+'</span></div>'
+        +'</div>'
+        +'<div style="display:flex;justify-content:space-between;font-size:13px;border-top:1px solid var(--bd);padding-top:8px">'
+          +'<span style="font-weight:700">Toplam</span>'
+          +'<strong style="color:var(--bll)">₺'+fmtC(totalCost)+'</strong>'
+        +'</div>'
+      +'</div>'
+    +'</div>'
+    // Tür bazlı dağılım
+    +'<div>'
+      +'<div style="font-size:11px;color:var(--mt);font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">İş Türüne Göre Maliyet</div>'
+      +Object.entries(WTYPES).map(function(e){
+        var typeCost=wos.filter(function(w){return w.type===e[0];}).reduce(function(a,w){return a+woCost(w);},0);
+        if(!typeCost)return '';
+        var pct=Math.round(typeCost/totalCost*100);
+        return '<div style="margin-bottom:8px">'
+          +'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">'
+            +'<span>'+e[1].ico+' '+e[1].lbl+'</span>'
+            +'<span style="font-weight:700">₺'+fmtC(typeCost)+' <span style="color:var(--mt);font-weight:400">%'+pct+'</span></span>'
+          +'</div>'
+          +'<div style="background:var(--bg3);border-radius:3px;height:4px">'
+            +'<div style="background:var(--bll);height:100%;width:'+pct+'%;border-radius:3px"></div>'
+          +'</div>'
+        +'</div>';
+      }).join('')
+    +'</div>'
+    +'</div>'
+  +'</div>';
+
+  // ── ENERJİ FATURALARI MALİYETİ ────────────────────────────
+  var energyLogs=DB.energyLogs||[];
+  var totalEnergyCost=energyLogs.reduce(function(a,l){return a+(parseFloat(l.cost)||0);},0);
+  var energyByType={};
+  energyLogs.forEach(function(l){
+    if(!energyByType[l.type])energyByType[l.type]={cost:0,val:0,cnt:0};
+    energyByType[l.type].cost+=(parseFloat(l.cost)||0);
+    energyByType[l.type].val +=(parseFloat(l.val) ||0);
+    energyByType[l.type].cnt++;
+  });
+  var energyCostH='<div class="card" style="margin-bottom:16px">'
+    +'<div class="cardt">⚡ Enerji Faturaları Maliyeti '
+      +(totalEnergyCost>0?'<strong style="color:var(--gnl)">₺'+fmtC(totalEnergyCost)+'</strong>':'<span style="color:var(--mt);font-weight:400">veri yok</span>')
+      +'<button class="btn bghs bxs" onclick="PAGE=\'energy\';R()" style="margin-left:auto">Enerji Takibi →</button>'
+    +'</div>'
+    +(totalEnergyCost>0
+      ?'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">'
+        +Object.entries(energyByType).map(function(e){
+          var et=ENERGY_TYPES[e[0]]||{ico:'?',lbl:e[0],unit:'',col:'var(--sub)'};
+          return '<div style="background:var(--bg3);border:1px solid '+et.col+'22;border-radius:9px;padding:12px">'
+            +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+              +'<span style="font-size:13px">'+et.ico+' '+et.lbl+'</span>'
+              +'<span style="font-size:10px;color:var(--mt)">'+e[1].cnt+' fatura</span>'
+            +'</div>'
+            +'<div style="font-size:18px;font-weight:800;color:'+et.col+'">₺'+fmtC(e[1].cost)+'</div>'
+            +'<div style="font-size:11px;color:var(--mt);margin-top:2px">'+e[1].val.toLocaleString('tr')+' '+et.unit+'</div>'
+          +'</div>';
+        }).join('')+'</div>'
+      :'<div style="padding:10px;font-size:12px;color:var(--mt)">Enerji maliyeti görmek için Enerji Takibi sayfasından fatura verisi girin.</div>')
+  +'</div>';
+
+  // ── ARIZA MALİYETLERİ ─────────────────────────────────────
+  var arizaWOs=wos.filter(function(w){return w.type==='ariza';})
+    .map(function(w){
+      var eq=eqs.find(function(e){return e.id===w.eqId;})||{name:'—',area:''};
+      var cost=woCost(w);
+      var labour=(parseFloat(w.lh)||0)*LABOUR_RATE;
+      var parts=(parseFloat(w.pc)||0);
+      return Object.assign({},w,{_eq:eq,_cost:cost,_labour:labour,_parts:parts});
+    })
+    .filter(function(w){return w._cost>0;})
+    .sort(function(a,b){return b._cost-a._cost;});
+
+  var totalArizaCost=arizaWOs.reduce(function(a,w){return a+w._cost;},0);
+
+  var arizaH='<div class="card" style="margin-bottom:16px">'
+    +'<div class="cardt">🔴 Arıza Maliyetleri '
+      +'<strong style="color:var(--rdl)">₺'+fmtC(totalArizaCost)+'</strong>'
+      +'<button class="btn bghs bxs" onclick="FLT.type=\'ariza\';PAGE=\'workorders\';R()" style="margin-left:auto">Arızalar →</button>'
+    +'</div>'
+    +(arizaWOs.length===0
+      ?'<div style="padding:10px;font-size:12px;color:var(--mt)">Maliyeti olan arıza kaydı yok.</div>'
+      :'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'
+        +'<thead><tr>'
+          +'<th style="text-align:left;padding:8px;font-size:11px;color:var(--mt);border-bottom:1px solid var(--bd)">İş Emri</th>'
+          +'<th style="text-align:left;padding:8px;font-size:11px;color:var(--mt);border-bottom:1px solid var(--bd)">Ekipman</th>'
+          +'<th style="text-align:right;padding:8px;font-size:11px;color:var(--mt);border-bottom:1px solid var(--bd)">İşçilik</th>'
+          +'<th style="text-align:right;padding:8px;font-size:11px;color:var(--mt);border-bottom:1px solid var(--bd)">Parça</th>'
+          +'<th style="text-align:right;padding:8px;font-size:11px;color:var(--mt);border-bottom:1px solid var(--bd)">Toplam</th>'
+          +'<th style="text-align:left;padding:8px;font-size:11px;color:var(--mt);border-bottom:1px solid var(--bd)">Tarih</th>'
+        +'</tr></thead>'
+        +'<tbody>'
+        +arizaWOs.slice(0,20).map(function(w,i){
+          var pct=totalArizaCost>0?Math.round(w._cost/totalArizaCost*100):0;
+          var rowBg=i===0?'rgba(239,68,68,.05)':i<3?'rgba(245,158,11,.03)':'';
+          return '<tr style="border-bottom:1px solid var(--bd);background:'+rowBg+'">'
+            +'<td style="padding:8px">'
+              +(i<3?'<span style="font-size:10px;margin-right:4px">'+(['🥇','🥈','🥉'][i])+'</span>':'')
+              +'<div style="font-size:12px;font-weight:600;cursor:pointer;color:var(--bll)" onclick="openWODet(\''+w.id+'\')">'+esc(w.title.slice(0,35))+'</div>'
+              +'<div style="font-size:10px;color:var(--mt)">'+esc(w.id)+'</div>'
+            +'</td>'
+            +'<td style="padding:8px;font-size:12px">'+esc(w._eq.name)+'<br><span style="font-size:10px;color:var(--mt)">'+esc(w._eq.area||'')+'</span></td>'
+            +'<td style="padding:8px;text-align:right;font-size:12px">'+(w._labour>0?'₺'+fmtC(w._labour)+' <span style="color:var(--mt);font-size:10px">'+(parseFloat(w.lh)||0)+'s</span>':'-')+'</td>'
+            +'<td style="padding:8px;text-align:right;font-size:12px">'+(w._parts>0?'₺'+fmtC(w._parts):'-')+'</td>'
+            +'<td style="padding:8px;text-align:right">'
+              +'<div style="font-size:13px;font-weight:800;color:var(--rdl)">₺'+fmtC(w._cost)+'</div>'
+              +'<div style="font-size:9px;color:var(--mt)">%'+pct+' toplam</div>'
+            +'</td>'
+            +'<td style="padding:8px;font-size:11px;color:var(--mt)">'+esc(w.date)+'</td>'
+          +'</tr>';
+        }).join('')
+        +'</tbody>'
+        +'<tfoot><tr style="border-top:2px solid var(--bd);background:var(--bg3)">'
+          +'<td colspan="2" style="padding:8px;font-size:12px;font-weight:800">TOPLAM ('+arizaWOs.length+' arıza)</td>'
+          +'<td style="padding:8px;text-align:right;font-size:12px;font-weight:700">₺'+fmtC(arizaWOs.reduce(function(a,w){return a+w._labour;},0))+'</td>'
+          +'<td style="padding:8px;text-align:right;font-size:12px;font-weight:700">₺'+fmtC(arizaWOs.reduce(function(a,w){return a+w._parts;},0))+'</td>'
+          +'<td style="padding:8px;text-align:right;font-size:13px;font-weight:900;color:var(--rdl)">₺'+fmtC(totalArizaCost)+'</td>'
+          +'<td></td>'
+        +'</tr></tfoot>'
+      +'</table></div>')
+  +'</div>';
+
+  // ── GENEL MALİYET ÖZETİ ────────────────────────────────────
+  var grandTotal=totalCost+totalEnergyCost;
+  var summaryH='<div class="card" style="margin-bottom:16px;border:1px solid rgba(79,142,247,.2)">'
+    +'<div class="cardt" style="color:var(--bll)">📊 Toplam Tesis Maliyeti</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'
+    +[
+      {lbl:'Bakım İşçilik+Parça', v:'₺'+fmtC(totalCost), col:'var(--orl)'},
+      {lbl:'Enerji Faturaları',   v:'₺'+fmtC(totalEnergyCost), col:'var(--gnl)'},
+      {lbl:'GENEL TOPLAM',        v:'₺'+fmtC(grandTotal), col:'var(--bll)'},
+    ].map(function(k){
+      return '<div style="background:var(--bg3);border-radius:9px;padding:14px;text-align:center">'
+        +'<div style="font-size:22px;font-weight:900;color:'+k.col+'">'+k.v+'</div>'
+        +'<div style="font-size:11px;color:var(--mt);margin-top:4px">'+k.lbl+'</div>'
+      +'</div>';
+    }).join('')
+    +'</div></div>';
+
+  // ── GMP AÇIK İŞLER ────────────────────────────────────────
+  var gmpH=gmpOpen.length===0
+    ?'<div class="empty"><div style="font-size:36px;margin-bottom:10px">✅</div><div style="font-size:14px;font-weight:600;color:var(--gnl)">Açık GMP iş emri yok</div></div>'
+    :gmpOpen.map(function(w){
+      var eq=eqs.find(function(e){return e.id===w.eqId;});
+      return '<div style="padding:10px 0;border-bottom:1px solid var(--bd)">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
+          +'<div style="font-size:13px;font-weight:600">'+esc(w.title)+'</div>'
+          +'<div style="display:flex;gap:5px">'+sevBadge(w.sev,true)+' '+staBadge(w.status,true)+'</div>'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--mt)">'+esc((eq&&eq.name)||'—')+' · '+esc(w.date)+' · '+esc(w.id)+'</div>'
+      +'</div>';
+    }).join('');
+
+  // ── GRAFİK ───────────────────────────────────────────────
+  setTimeout(function(){
+    var months2=[];
+    for(var i=11;i>=0;i--){var d=new Date();d.setMonth(d.getMonth()-i);months2.push(d.toISOString().slice(0,7));}
+    var labels2=months2.map(function(m){var d=new Date(m+'-01');return d.toLocaleDateString('tr',{month:'short',year:'2-digit'});});
+
+    var c1=document.getElementById('ch-trend');
+    if(c1){if(c1._chart)c1._chart.destroy();
+      c1._chart=new Chart(c1,{type:'bar',
+        data:{labels:labels2,datasets:[
+          {label:'Kapatılan',data:months2.map(function(m){return wos.filter(function(w){return (w.closedAt||w.date||'').startsWith(m);}).length;}),backgroundColor:'rgba(79,142,247,.7)',borderRadius:4},
+          {label:'Açılan',data:months2.map(function(m){return wos.filter(function(w){return (w.date||'').startsWith(m);}).length;}),backgroundColor:'rgba(239,68,68,.4)',borderRadius:4},
+        ]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#94a3b8',font:{size:10}}}},
+          scales:{x:{ticks:{color:'#64748b',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#64748b',font:{size:10},precision:0},grid:{color:'rgba(255,255,255,.04)'}}}}
+      });
+    }
+    // Aylık maliyet trendi
+    var c2=document.getElementById('ch-cost-trend');
+    if(c2){if(c2._chart)c2._chart.destroy();
+      c2._chart=new Chart(c2,{type:'line',
+        data:{labels:labels2,datasets:[
+          {label:'Bakım Maliyeti (₺)',data:months2.map(function(m){return wos.filter(function(w){return (w.date||'').startsWith(m);}).reduce(function(a,w){return a+woCost(w);},0);}),borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',fill:true,tension:0.3,borderWidth:2},
+          {label:'Enerji Maliyeti (₺)',data:months2.map(function(m){return (DB.energyLogs||[]).filter(function(l){return (l.date||'').startsWith(m);}).reduce(function(a,l){return a+(parseFloat(l.cost)||0);},0);}),borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.08)',fill:true,tension:0.3,borderWidth:2},
+        ]},
+        options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+          plugins:{legend:{labels:{color:'#94a3b8',font:{size:10}}},tooltip:{backgroundColor:'rgba(15,23,42,.95)',callbacks:{label:function(ctx){return ' ₺'+Math.round(ctx.parsed.y).toLocaleString('tr');}}}},
+          scales:{x:{ticks:{color:'#64748b',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#64748b',font:{size:10},callback:function(v){return '₺'+Math.round(v/1000)+'K';}},grid:{color:'rgba(255,255,255,.04)'}}}}
+      });
+    }
+    var c3=document.getElementById('ch-type');
+    if(c3){if(c3._chart)c3._chart.destroy();
+      var types3=Object.entries(WTYPES);
+      c3._chart=new Chart(c3,{type:'doughnut',data:{labels:types3.map(function(t){return t[1].lbl;}),datasets:[{data:types3.map(function(t){return wos.filter(function(w){return w.type===t[0];}).reduce(function(a,w){return a+woCost(w);},0);}),backgroundColor:['rgba(239,68,68,.8)','rgba(79,142,247,.8)','rgba(16,185,129,.8)','rgba(245,158,11,.8)','rgba(167,139,250,.8)','rgba(34,211,238,.8)'],borderWidth:2,borderColor:'var(--bg2)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:10},boxWidth:10,padding:6}},tooltip:{callbacks:{label:function(ctx){return ' ₺'+Math.round(ctx.parsed).toLocaleString('tr');}}}}}});
+    }
+  },80);
+
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">'
+    +'<div style="font-size:20px;font-weight:800">📊 Raporlar &amp; Maliyet Analizi</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +'<button class="btn bpur bsm" onclick="generatePPTX()">📑 PPT Rapor</button>'
+      +'<button class="btn bsuc bsm" onclick="exportExcel()">📊 Excel İndir</button>'
+      +'<button class="btn bout bsm" onclick="exportJSON()">📋 JSON Yedek</button>'
+    +'</div></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">'+kpiH+'</div>'
+    +summaryH
+    +splitH
+    +energyCostH
+    +arizaH
+    +'<div style="display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:16px">'
+      +'<div class="card"><div class="cardt">Aylık Maliyet Trendi (son 12 ay)</div><div style="height:180px"><canvas id="ch-cost-trend"></canvas></div></div>'
+      +'<div class="card"><div class="cardt">Türe Göre Maliyet Dağılımı</div><div style="height:180px"><canvas id="ch-type"></canvas></div></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:3fr 2fr;gap:16px">'
+      +'<div class="card"><div class="cardt">Aylık İş Emri Trendi</div><div style="height:160px"><canvas id="ch-trend"></canvas></div></div>'
+      +'<div class="card"><div class="cardt">⚠ GMP Açık İş Emirleri'+(gmpOpen.length>0?' <span class="badge bxsm" style="color:var(--cyl);border-color:var(--cyl)">'+gmpOpen.length+'</span>':'')+'</div>'+gmpH+'</div>'
+    +'</div>';
 }
 
 function pgTech(){
@@ -6680,6 +6924,7 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
