@@ -27,6 +27,7 @@ a{color:var(--bll);text-decoration:none;}
 #main{margin-left:220px;flex:1;padding:20px 24px;min-height:100vh;}
 /* Login */
 #lgw{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg0);}
+.lgw{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg0);}
 .lgb{background:var(--bg2);border:1px solid var(--bd);border-radius:16px;padding:36px 32px;width:100%;max-width:400px;}
 /* Cards */
 .card{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:14px;}
@@ -98,6 +99,10 @@ th{color:var(--mt);font-weight:700;font-size:11px;}
 }
 /* Collapse modals on mobile */
 @media(max-width:700px){.md{padding:16px;}.g2,.g3{grid-template-columns:1fr;}}
+
+/* Login specific */
+#lgw{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg0);}
+.lgb{background:var(--bg2);border:1px solid var(--bd);border-radius:16px;padding:36px 32px;width:100%;max-width:400px;}
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -552,44 +557,36 @@ function bindLogin(){
     var u=(document.getElementById('l-u')||{value:''}).value.trim();
     var p=(document.getElementById('l-p')||{value:''}).value;
     var rem=(document.getElementById('l-rem')||{checked:false}).checked;
-    var f=(DB.users||SEED.users||[]).find(function(x){return x.un===u&&(x.pw===p||x.password===p)&&x.active;});
+    // Hem DB.users hem de SEED.users'ı dene
+    var userList = (DB.users&&DB.users.length?DB.users:null) || SEED.users || [];
+    var f = userList.find(function(x){
+      return x.un===u && (x.pw===p||x.password===p) && x.active;
+    });
     if(f){
-      // Beni hatırla
       try{
-        if(rem)localStorage.setItem('pharma_remember',JSON.stringify({u:u,p:p}));
+        if(rem) localStorage.setItem('pharma_remember',JSON.stringify({u:u,p:p}));
         else localStorage.removeItem('pharma_remember');
       }catch(e){}
-      U=f;
-      addLog('Giriş','Kullanıcı girişi yapıldı','','');
-      // URL ile gelen QR parametresini login sonrası tekrar garanti altına al
+      U = f;
+      // sessionStorage'ı temizle (eski QR verilerini sil)
       try{
-        var up = new URLSearchParams(window.location.search);
-        var qe = up.get('eq');
-        var qt = up.get('tab') || up.get('page');
-        if(qe){
-          window._pendingQR = qe;
-          sessionStorage.setItem('pendingQR', qe);
-          sessionStorage.setItem('pendingQRTab', (qt==='new_wo'||qt==='new'?'new_wo':'workorders'));
-        }
+        sessionStorage.removeItem('pendingQR');
+        sessionStorage.removeItem('pendingQRTab');
+        sessionStorage.removeItem('pendingSP');
+        window._pendingQR = null;
+        window._pendingSP = null;
       }catch(e){}
-      // Hash QR kontrolü
-      var h=window.location.hash;
-      if(h&&h.startsWith('#qr=')){
-        var eid=h.replace('#qr=','').split(':')[0];
-        window.location.hash='';
-        sessionStorage.setItem('pendingQR',eid);
-        sessionStorage.setItem('pendingQRTab','workorders');
-        window._pendingQR=eid;
-      }
-      // QR ile gelindiyse ana sayfaya değil doğrudan ilgili ekranı aç
-      if(typeof spCaptureTarget==='function') spCaptureTarget();
-      if(typeof spForceOpenTarget==='function' && spForceOpenTarget()) return;
-      qrCaptureTarget();
-      if(qrForceOpenTarget && qrForceOpenTarget()) return;
-      if(openQRWorkorderAfterLogin && openQRWorkorderAfterLogin()) return;
-      R();
+      addLog('Giriş','Kullanıcı girişi: '+f.name,'','');
+      PAGE = 'dashboard';
+      var app = document.getElementById('app');
+      app.innerHTML = tplShell();
+      bindNav();
+      renderPage();
+      renderModals();
+    } else {
+      var err = document.getElementById('l-err');
+      if(err) err.style.display = 'block';
     }
-    else{var err=document.getElementById('l-err');if(err)err.style.display='block';}
   }
   var btn=document.getElementById('l-btn');if(btn)btn.onclick=doLogin;
   var lp=document.getElementById('l-p');if(lp)lp.onkeydown=function(e){if(e.key==='Enter')doLogin();};
