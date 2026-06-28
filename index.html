@@ -208,6 +208,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -604,7 +605,13 @@ function renderModals(){
   if(MODAL_PENDING)r.innerHTML+=tplPendingModal();
   if(MODAL_SCORE)r.innerHTML+=tplScoreModal();
   if(MODAL_CAPA)r.innerHTML+=tplCAPAModal();
-  if(MODAL_ENERGY)r.innerHTML+=tplEnergyModal();
+  if(MODAL_ENERGY){r.innerHTML+=tplEnergyModal();
+    // Modal açılınca seçili türün unit'ini göster ve maliyeti hesapla
+    setTimeout(function(){
+      var sel=document.getElementById('en-type');
+      if(sel){energyTypeChange(sel.value);}
+    },0);
+  }
   bindModals();
   disableKapaliOption();
   if(MODAL.qr&&QEID)setTimeout(function(){drawQR(QEID);},80);
@@ -6212,7 +6219,10 @@ function pgEnergy(){
           +'<td style="padding:7px 8px;font-size:12px"><span style="color:'+e.col+'">'+e.ico+' '+e.lbl+'</span></td>'
           +'<td style="padding:7px 8px;font-size:12px;text-align:right;font-weight:700;color:'+e.col+'">'+parseFloat(l.val).toLocaleString('tr')+'<span style="color:var(--mt);font-weight:400"> '+e.unit+'</span></td>'
           +'<td style="padding:7px 8px;font-size:12px;text-align:right">'+(l.unitprice?parseFloat(l.unitprice).toLocaleString('tr',{minimumFractionDigits:3})+'<span style="color:var(--mt);font-size:10px">/'+((ENERGY_TYPES[l.type]||{unit:''}).unit)+'</span>':'-')+'</td>'
-          +'<td style="padding:7px 8px;font-size:12px;text-align:right">'+(l.cost?'₺'+parseFloat(l.cost).toLocaleString('tr'):'-')+'</td>'
+          +'<td style="padding:7px 8px;font-size:12px;text-align:right">'
+          +(l.unitprice?'<div style="font-size:10px;color:var(--mt)">Birim: ₺'+parseFloat(l.unitprice).toFixed(3)+'</div>':'')
+          +(l.cost?'<strong>₺'+parseFloat(l.cost).toLocaleString('tr')+'</strong>':'-')
+          +'</td>'
           +'<td style="padding:7px 8px;font-size:11px;color:var(--mt)">'+esc(l.note||'')+'</td>'
           +'<td style="padding:7px 8px;white-space:nowrap">'
             +(can('w')?'<button class="btn bghs bxs" onclick="openEnergyModal(\''+l.id+'\')">✏</button>':'')
@@ -6371,6 +6381,7 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
