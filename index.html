@@ -207,6 +207,7 @@ textarea.inp{resize:vertical;min-height:70px}
 
 
 
+
 'use strict';
 var VER='3.0.0', SK='pharma_ms_v1';
 var BASE_URL='https://neverdiekou.github.io/Bakim/';
@@ -6199,7 +6200,8 @@ function pgEnergy(){
         +'<th style="text-align:left;padding:8px;font-size:11px;color:var(--mt)">Tarih</th>'
         +'<th style="text-align:left;padding:8px;font-size:11px;color:var(--mt)">Tür</th>'
         +'<th style="text-align:right;padding:8px;font-size:11px;color:var(--mt)">Miktar</th>'
-        +'<th style="text-align:right;padding:8px;font-size:11px;color:var(--mt)">Maliyet</th>'
+        +'<th style="text-align:right;padding:8px;font-size:11px;color:var(--mt)">Birim Fiyat</th>'
+        +'<th style="text-align:right;padding:8px;font-size:11px;color:var(--mt)">Maliyet (₺)</th>'
         +'<th style="text-align:left;padding:8px;font-size:11px;color:var(--mt)">Not</th>'
         +'<th style="padding:8px;font-size:11px;color:var(--mt)"></th>'
       +'</tr></thead><tbody>'
@@ -6209,6 +6211,7 @@ function pgEnergy(){
           +'<td style="padding:7px 8px;font-size:12px">'+esc(l.date)+'</td>'
           +'<td style="padding:7px 8px;font-size:12px"><span style="color:'+e.col+'">'+e.ico+' '+e.lbl+'</span></td>'
           +'<td style="padding:7px 8px;font-size:12px;text-align:right;font-weight:700;color:'+e.col+'">'+parseFloat(l.val).toLocaleString('tr')+'<span style="color:var(--mt);font-weight:400"> '+e.unit+'</span></td>'
+          +'<td style="padding:7px 8px;font-size:12px;text-align:right">'+(l.unitprice?parseFloat(l.unitprice).toLocaleString('tr',{minimumFractionDigits:3})+'<span style="color:var(--mt);font-size:10px">/'+((ENERGY_TYPES[l.type]||{unit:''}).unit)+'</span>':'-')+'</td>'
           +'<td style="padding:7px 8px;font-size:12px;text-align:right">'+(l.cost?'₺'+parseFloat(l.cost).toLocaleString('tr'):'-')+'</td>'
           +'<td style="padding:7px 8px;font-size:11px;color:var(--mt)">'+esc(l.note||'')+'</td>'
           +'<td style="padding:7px 8px;white-space:nowrap">'
@@ -6277,18 +6280,23 @@ function tplEnergyModal(){
     +'<div class="mdh"><div class="mdt">'+(ENERGY_EDIT?'Enerji Kaydı Düzenle':'Yeni Enerji Verisi')+'</div>'
     +'<button class="mdc" onclick="MODAL_ENERGY=false;ENERGY_EDIT=null;renderModals()">✕</button></div>'
     +'<div class="g2">'
-    +'<div class="fr"><label class="lbl">Enerji Türü *</label><select class="inp" id="en-type">'+typeOpts+'</select></div>'
+    +'<div class="fr"><label class="lbl">Enerji Türü *</label><select class="inp" id="en-type" onchange="energyTypeChange(this.value)">'+typeOpts+'</select></div>'
     +'<div class="fr"><label class="lbl">Tarih *</label><input class="inp" type="date" id="en-date" value="'+(l.date||today())+'"/></div>'
     +'</div>'
     +'<div class="g2">'
     +'<div class="fr"><label class="lbl">Miktar *</label>'
     +'<div style="display:flex;gap:6px;align-items:center">'
-    +'<input class="inp" type="number" id="en-val" value="'+(l.val||'')+'" placeholder="0" style="flex:1" min="0" step="0.01"/>'
+    +'<input class="inp" type="number" id="en-val" value="'+(l.val||'')+'" placeholder="0" style="flex:1" min="0" step="0.01" oninput="calcEnergyCost()"/>'
     +'<span id="en-unit-lbl" style="font-size:12px;color:var(--mt);white-space:nowrap;min-width:30px">'+(selType.unit||'')+'</span>'
     +'</div></div>'
-    +'<div class="fr"><label class="lbl">Maliyet (₺)</label>'
-    +'<input class="inp" type="number" id="en-cost" value="'+(l.cost||'')+'" placeholder="0.00" min="0" step="0.01"/></div>'
+    +'<div class="fr"><label class="lbl">Birim Fiyat (₺)</label>'
+    +'<div style="display:flex;gap:6px;align-items:center">'
+    +'<input class="inp" type="number" id="en-unitprice" value="'+(l.unitprice||'')+'" placeholder="0.00" min="0" step="0.001" oninput="calcEnergyCost()"/>'
+    +'<span style="font-size:12px;color:var(--mt);white-space:nowrap">/'+'" id="en-unit-lbl2" style="font-size:12px;color:var(--mt);white-space:nowrap">'+(selType.unit||'')+'</span>'
+    +'</div></div>'
     +'</div>'
+    +'<div class="fr"><label class="lbl">Toplam Maliyet (₺) <span style="font-size:10px;color:var(--mt);font-weight:400">— otomatik hesaplanır</span></label>'
+    +'<input class="inp" type="number" id="en-cost" value="'+(l.cost||'')+'" placeholder="0.00" min="0" step="0.01" readonly style="background:var(--bg3);color:var(--gnl);font-weight:700"/></div>'
     +'<div class="fr"><label class="lbl">Fatura / Sayaç No</label>'
     +'<input class="inp" id="en-ref" value="'+esc(l.ref||'')+'" placeholder="Fatura no veya sayaç okuması..."/></div>'
     +'<div class="fr"><label class="lbl">Not</label>'
@@ -6298,19 +6306,38 @@ function tplEnergyModal(){
     +'<button class="btn bsuc" onclick="saveEnergyLog()">Kaydet</button>'
     +'</div></div></div>';
 }
+function energyTypeChange(val){
+  var e=ENERGY_TYPES[val];
+  if(e){
+    var u=document.getElementById('en-unit-lbl');
+    if(u)u.textContent=e.unit;
+    var u2=document.getElementById('en-unit-lbl2');
+    if(u2)u2.textContent=e.unit;
+  }
+  calcEnergyCost();
+}
+function calcEnergyCost(){
+  var val  = parseFloat((document.getElementById('en-val')     ||{value:''}).value)||0;
+  var uprc = parseFloat((document.getElementById('en-unitprice')||{value:''}).value)||0;
+  var cost = val*uprc;
+  var costEl = document.getElementById('en-cost');
+  if(costEl) costEl.value = cost>0 ? cost.toFixed(2) : '';
+}
 function saveEnergyLog(){
   var type=(document.getElementById('en-type')||{value:''}).value;
   var date=(document.getElementById('en-date')||{value:''}).value;
   var val =parseFloat((document.getElementById('en-val')||{value:''}).value);
-  var cost=parseFloat((document.getElementById('en-cost')||{value:''}).value)||0;
+  var unitprice=parseFloat((document.getElementById('en-unitprice')||{value:''}).value)||0;
+  var cost=parseFloat((document.getElementById('en-cost')||{value:''}).value)||(val*unitprice);
   var ref =(document.getElementById('en-ref')||{value:''}).value.trim();
   var note=(document.getElementById('en-note')||{value:''}).value.trim();
   if(!type){toast('Enerji türü seçin','err');return;}
   if(!date){toast('Tarih girin','err');return;}
   if(isNaN(val)||val<0){toast('Geçerli miktar girin','err');return;}
   var log={
-    id:    ENERGY_EDIT?ENERGY_EDIT.id:'EN-'+uid(),
-    type:  type, date: date, val: val, cost: cost, ref: ref, note: note,
+    id:       ENERGY_EDIT?ENERGY_EDIT.id:'EN-'+uid(),
+    type:     type, date: date, val: val,
+    unitprice:unitprice, cost: cost, ref: ref, note: note,
     by:    U?U.name:'', ts: nowStr(),
   };
   if(!DB.energyLogs)DB.energyLogs=[];
@@ -6344,6 +6371,7 @@ qrCaptureTarget();
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
 R();
+
 
 
 
