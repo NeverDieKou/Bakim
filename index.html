@@ -104,6 +104,64 @@ th{color:var(--mt);font-weight:700;font-size:11px;}
 #lgw{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg0);}
 .lgb{background:var(--bg2);border:1px solid var(--bd);border-radius:16px;padding:36px 32px;width:100%;max-width:400px;}
 
+
+/* ── Sidebar alt ve nav ──────────────────────────────── */
+#nav{flex:1;padding:8px;}
+#nav button{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;border:none;background:transparent;color:var(--sub);font-size:12px;font-weight:500;border-radius:8px;cursor:pointer;margin-bottom:2px;transition:all .15s;text-align:left;}
+#nav button:hover{background:var(--bg3);color:var(--tx);}
+#nav button.on{background:rgba(79,142,247,.15);color:var(--bll);font-weight:700;}
+#sidebar-bottom{padding:10px 12px;border-top:1px solid var(--bd);margin-top:auto;}
+
+/* ── İçerik alanı ────────────────────────────────────── */
+#content-area{flex:1;display:flex;flex-direction:column;min-width:0;}
+#bar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--bg2);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:50;gap:10px;flex-wrap:wrap;}
+#main-content{flex:1;padding:20px 24px;overflow-y:auto;}
+#tr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+
+/* ── CSS değişken ekleri ─────────────────────────────── */
+:root{
+  --bld:#1d4ed8;--blh:#1e40af;
+  --gnld:#059669;--rld:#dc2626;--orlds:#d97706;
+}
+
+/* ── Senkron durumu ──────────────────────────────────── */
+#sync-bar{position:fixed;bottom:10px;right:10px;background:var(--bg3);border:1px solid var(--bd);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--mt);z-index:2000;display:flex;align-items:center;gap:6px;}
+
+/* ── Mobil nav ───────────────────────────────────────── */
+#mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--bd);z-index:200;padding:4px;}
+.mi{font-size:18px;line-height:1;}
+
+/* ── Yardımcılar ─────────────────────────────────────── */
+.emptyH,.empty{text-align:center;padding:40px 20px;color:var(--mt);}
+.emptyH div:first-child,.empty div:first-child{font-size:40px;margin-bottom:10px;}
+.tags{display:flex;flex-wrap:wrap;gap:6px;}
+.tag{background:var(--bg3);border:1px solid var(--bdl);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--sub);}
+
+/* ── Tablo ───────────────────────────────────────────── */
+.tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.tbl th{background:var(--bg3);color:var(--mt);font-weight:700;padding:8px;text-align:left;font-size:11px;border-bottom:1px solid var(--bd);}
+.tbl td{padding:8px;border-bottom:1px solid var(--bd);vertical-align:middle;}
+.tbl tr:hover td{background:rgba(255,255,255,.02);}
+
+/* ── Sekmeler ────────────────────────────────────────── */
+.tab-bar{display:flex;gap:4px;border-bottom:1px solid var(--bd);margin-bottom:16px;flex-wrap:wrap;}
+.tab-bar button{padding:8px 14px;border:none;background:transparent;color:var(--sub);font-size:13px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px;}
+.tab-bar button.on{color:var(--bll);border-bottom-color:var(--bll);font-weight:700;}
+.tab-bar button:hover{color:var(--tx);}
+
+/* ── Progress bar ────────────────────────────────────── */
+.progress-bg{background:var(--bg3);border-radius:4px;height:6px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:4px;transition:width .3s;}
+
+@media(max-width:700px){
+  #sidebar{display:none;}
+  #main{margin-left:0;}
+  #content-area{margin-left:0;}
+  #mob-nav{display:flex;}
+  #main-content{padding:12px 14px;padding-bottom:70px;}
+  #bar{padding:10px 14px;}
+  .g2,.g3{grid-template-columns:1fr!important;}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
