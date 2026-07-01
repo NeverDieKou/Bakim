@@ -6622,7 +6622,11 @@ function pgPredictive(){
               +'<div style="margin-left:auto;color:var(--mt)">Son '+hist.length+' okuma</div>'
             +'</div>';
           })():'')
-          +'<div style="position:relative;height:160px"><canvas id="'+canvasId+'"></canvas></div>'
+          +(hist.length>1
+            ?'<div style="position:relative;height:160px"><canvas id="'+canvasId+'"></canvas></div>'
+            :hist.length===1
+              ?'<div style="text-align:center;padding:16px;color:var(--mt);font-size:11px;background:var(--bg3);border-radius:8px">📊 Grafik için en az 2 okuma gerekli — şu an 1 okuma var</div>'
+              :'<div style="text-align:center;padding:16px;color:var(--orl);font-size:11px;background:rgba(245,158,11,.08);border:1px dashed rgba(245,158,11,.35);border-radius:8px">📭 Bu kanal için henüz hiç veri gelmedi.<br><span style="color:var(--mt)">ESP32\'nizin çalıştığından ve doğru URL/Ekipman ID\'ye gönderim yaptığından emin olun.</span></div>')
         +'</div>';
       }).join('');
 
