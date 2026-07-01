@@ -6471,7 +6471,7 @@ function saveCAPA(){
 
 // ══ KEStirimci BAKIM ═══════════════════════════════════════════════
 
-function _setSensorEq(id,ch){window._sEqId=id;openSensorConfig(id,ch||'');}
+function _setSensorEq(id,ch){if(!can('s')){toast('Bu işlem için Yönetici yetkisi gerekli','err');return;}window._sEqId=id;openSensorConfig(id,ch||'');}
 function deleteSensorChannel(eqId,ch){
   if(!can('d')){toast('Yetki yok','err');return;}
   var eq=DB.equipment.find(function(e){return e.id===eqId;});
@@ -6494,6 +6494,113 @@ function fmtNum(v){
   var s=String(n);
   return s;
 }
+
+// ══ KEStirimci BAKIM — GERİYE DÖNÜK YEDEKLEME ═════════════════════
+function backupSensorData(eqId){
+  if(typeof XLSX==='undefined'){toast('Excel kütüphanesi yükleniyor, tekrar deneyin...','warn');return;}
+  var sdata = DB.sensorData||{};
+  var eqIds = eqId ? [eqId] : Object.keys(sdata);
+  if(!eqIds.length){toast('Yedeklenecek sensör verisi yok','warn');return;}
+
+  var rows=[];
+  eqIds.forEach(function(eid){
+    var eq=DB.equipment.find(function(e){return e.id===eid;});
+    var eqName=(eq&&eq.name)||eid;
+    var eqArea=(eq&&eq.area)||'';
+    var channels=sdata[eid]||{};
+    Object.keys(channels).forEach(function(ch){
+      var d=channels[ch];
+      var hist=toHistArr(d.history);
+      if(!hist.length){
+        rows.push({
+          'Ekipman ID':eid,'Ekipman Adı':eqName,'Bölge':eqArea,'Kanal':ch,'Birim':d.unit||'',
+          'Tarih':'','Değer':'','Uyarı Eşiği':d.warnThreshold!==undefined?d.warnThreshold:'',
+          'Kritik Eşiği':d.critThreshold!==undefined?d.critThreshold:'',
+        });
+        return;
+      }
+      hist.forEach(function(h){
+        rows.push({
+          'Ekipman ID':eid,'Ekipman Adı':eqName,'Bölge':eqArea,'Kanal':ch,'Birim':d.unit||'',
+          'Tarih':(h.ts||'').replace('T',' '),'Değer':h.v,
+          'Uyarı Eşiği':d.warnThreshold!==undefined?d.warnThreshold:'',
+          'Kritik Eşiği':d.critThreshold!==undefined?d.critThreshold:'',
+        });
+      });
+    });
+  });
+
+  if(!rows.length){toast('Yedeklenecek okuma bulunamadı','warn');return;}
+
+  // Tarihe göre sırala (en eski en üstte - kronolojik yedek)
+  rows.sort(function(a,b){
+    if(a['Ekipman ID']!==b['Ekipman ID'])return a['Ekipman ID']<b['Ekipman ID']?-1:1;
+    if(a['Kanal']!==b['Kanal'])return a['Kanal']<b['Kanal']?-1:1;
+    return String(a['Tarih']).localeCompare(String(b['Tarih']));
+  });
+
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb,ws,'Sensör Verisi');
+
+  // Alarm geçmişini de ikinci sayfa olarak ekle
+  var alerts=(DB.sensorAlerts||[]).filter(function(a){return !eqId||a.eqId===eqId;});
+  if(alerts.length){
+    var alertRows=alerts.map(function(a){
+      var eq2=DB.equipment.find(function(e){return e.id===a.eqId;});
+      return {
+        'Ekipman ID':a.eqId,'Ekipman Adı':(eq2&&eq2.name)||a.eqId,'Kanal':a.ch||'',
+        'Mesaj':a.msg||'','Değer':a.val!==undefined?a.val:'','Birim':a.unit||'',
+        'Tarih':(a.ts||'').replace('T',' '),'Durum':a.status==='active'?'Aktif':'Çözüldü',
+      };
+    });
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(alertRows),'Alarm Geçmişi');
+  }
+
+  var eqLabel = eqId ? (DB.equipment.find(function(e){return e.id===eqId;})||{}).name||eqId : 'TumEkipmanlar';
+  var safeLabel = String(eqLabel).replace(/[^\w\-]+/g,'_').slice(0,30);
+  var fn = 'Kestirimci_Yedek_'+safeLabel+'_'+today()+'.xlsx';
+  XLSX.writeFile(wb, fn);
+  toast('Yedek indirildi: '+fn+' ('+rows.length+' kayıt)');
+  addLog('Kestirimci Bakım Yedeği Alındı', eqLabel+' — '+rows.length+' kayıt','','');
+}
+
+function backupSensorDataJSON(eqId){
+  var sdata = DB.sensorData||{};
+  var payload;
+  var eqLabel;
+  if(eqId){
+    var eq=DB.equipment.find(function(e){return e.id===eqId;});
+    eqLabel=(eq&&eq.name)||eqId;
+    payload = {
+      exportDate: nowStr(),
+      equipment: {id:eqId, name:eqLabel, area:(eq&&eq.area)||''},
+      sensorData: sdata[eqId]||{},
+      alerts: (DB.sensorAlerts||[]).filter(function(a){return a.eqId===eqId;}),
+    };
+  } else {
+    eqLabel='TumEkipmanlar';
+    payload = {
+      exportDate: nowStr(),
+      sensorData: sdata,
+      alerts: DB.sensorAlerts||[],
+      equipment: DB.equipment.map(function(e){return {id:e.id,name:e.name,area:e.area};}),
+    };
+  }
+  var blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var safeLabel = String(eqLabel).replace(/[^\w\-]+/g,'_').slice(0,30);
+  a.href = url;
+  a.download = 'Kestirimci_Yedek_'+safeLabel+'_'+today()+'.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(url);}, 1000);
+  toast('JSON yedek indirildi ✓');
+  addLog('Kestirimci Bakım JSON Yedeği Alındı', eqLabel,'','');
+}
+
 function toHistArr(h){
   if(!h) return [];
   if(Array.isArray(h)) return h;
@@ -6567,6 +6674,7 @@ function pgPredictive(){
       +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
         +(eqActAlerts.length?'<span style="background:var(--rdl);color:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700">🔴 '+eqActAlerts.length+' Aktif Alarm</span>':'')
         +(can('s')?'<button class="btn bghs bsm" onclick="_setSensorEq(\''+selEq.id+'\')">⚙ Kanal Ekle / Eşik Ayarla</button>':'')
+        +'<button class="btn bghs bsm" onclick="backupSensorData(\''+selEq.id+'\')">📥 Bu Ekipmanı Yedekle</button>'
         +'<button class="btn bghs bsm" onclick="showESP32Code()">📋 Arduino Kodu</button>'
       +'</div>'
     +'</div>';
@@ -6766,6 +6874,10 @@ function pgPredictive(){
 
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">'
     +'<div style="font-size:20px;font-weight:800">📡 Kestirimci Bakım</div>'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      +'<button class="btn bghs bsm" onclick="backupSensorData(null)">📦 Tüm Verileri Yedekle (Excel)</button>'
+      +'<button class="btn bghs bsm" onclick="backupSensorDataJSON(null)">🗄 JSON Yedek</button>'
+    +'</div>'
     +notifyH
   +'</div>'
   +'<div style="display:flex;gap:16px;align-items:flex-start">'
@@ -6902,6 +7014,7 @@ function showAPIGuide(){
 }
 
 function openSensorConfig(preEqId,preCh){
+  if(!can('s')){toast('Bu işlem için Yönetici yetkisi gerekli','err');return;}
   var eqId = preEqId||window._sEqId||null;
   var preFillCh = preCh||'';
   var eqOpts='<option value="">— Ekipman Seçin —</option>'
@@ -6942,6 +7055,7 @@ function openSensorConfig(preEqId,preCh){
 }
 
 function saveSensorConfig(){
+  if(!can('s')){toast('Bu işlem için Yönetici yetkisi gerekli','err');return;}
   var eqId=(document.getElementById('sc-eq')||{value:''}).value;
   var ch=(document.getElementById('sc-ch')||{value:''}).value.trim().toLowerCase().replace(/\s+/g,'_');
   var unit=(document.getElementById('sc-unit')||{value:''}).value.trim();
