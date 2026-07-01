@@ -6801,10 +6801,13 @@ function showESP32Code(){
   modal.innerHTML='<div class="md mdlg"><div class="mdh"><div class="mdt">📋 ESP32-S3 Arduino Kodu</div>'
     +'<button class="mdc" onclick="this.closest(\'.ov\').remove()">✕</button></div>'
     +'<div style="background:var(--bg0);border-radius:8px;padding:14px;overflow-x:auto;max-height:60vh;overflow-y:auto;margin-bottom:12px">'
-    +'<pre id="esp-code" style="margin:0;font-size:12px;line-height:1.6;color:var(--sub)">'+code+'</pre></div>'
+    +'<pre id="esp-code" style="margin:0;font-size:12px;line-height:1.6;color:var(--sub);white-space:pre"></pre></div>'
     +'<button class="btn bpri bsm" onclick="navigator.clipboard.writeText(document.getElementById(\'esp-code\').textContent).then(function(){toast(\'Kopyalandı ✓\')})">📋 Kopyala</button>'
     +'</div>';
   document.body.appendChild(modal);
+  // XSS ve HTML-tag yutulma sorununu önlemek için kodu textContent ile yaz (escape gerekmez)
+  var codeEl=modal.querySelector('#esp-code');
+  if(codeEl) codeEl.textContent = code;
 }
 
 function showAPIGuide(){
