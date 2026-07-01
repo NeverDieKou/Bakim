@@ -6473,6 +6473,12 @@ function saveCAPA(){
 
 function _setSensorEq(id,ch){window._sEqId=id;openSensorConfig(id,ch||'');}
 
+function fmtNum(v){
+  if(v===null||v===undefined||v==='—'||isNaN(v))return v;
+  var n=Math.round(parseFloat(v)*100)/100;
+  var s=String(n);
+  return s;
+}
 function toHistArr(h){
   if(!h) return [];
   if(Array.isArray(h)) return h;
@@ -6574,7 +6580,7 @@ function pgPredictive(){
         var d   = eqData[ch];
         var hist= toHistArr(d.history).slice(-60);
         var last= hist.length?hist[hist.length-1]:null;
-        var val = last!==null?last.v:'—';
+        var val = last!==null?fmtNum(last.v):'—';
         var unit= d.unit||'';
         var canvasId='sc-'+selEq.id+'-'+ch;
 
@@ -6644,7 +6650,7 @@ function pgPredictive(){
             +'<div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:'+(isAct?'var(--rdl)':'var(--gnl)')+'"></div>'
             +'<div style="flex:1">'
               +'<div style="font-size:12px;font-weight:600">'+esc(a.ch||a.msg||'Alarm')+'</div>'
-              +'<div style="font-size:10px;color:var(--mt)">'+esc((a.ts||'').slice(0,16).replace('T',' '))+(a.val!==undefined?' · '+a.val+' '+(a.unit||''):'')+'</div>'
+              +'<div style="font-size:10px;color:var(--mt)">'+esc((a.ts||'').slice(0,16).replace('T',' '))+(a.val!==undefined?' · '+fmtNum(a.val)+' '+(a.unit||''):'')+'</div>'
             +'</div>'
             +(isAct&&can('w')?'<button class="btn bghs bxs" onclick="_resolveAlert(\''+a.id+'\')">✓ Çöz</button>':'')
             +'<span style="font-size:10px;font-weight:700;color:'+(isAct?'var(--rdl)':'var(--gnl)')+'">'+( isAct?'AKTİF':'ÇÖZÜLDÜ')+'</span>'
@@ -6729,7 +6735,7 @@ function pgPredictive(){
             tooltip:{
               backgroundColor:'rgba(15,23,42,.96)',
               titleColor:'#e2e8f0',bodyColor:'#94a3b8',
-              callbacks:{label:function(ctx){return ' '+ctx.parsed.y+(d.unit?' '+d.unit:'');}}
+              callbacks:{label:function(ctx){return ' '+fmtNum(ctx.parsed.y)+(d.unit?' '+d.unit:'');}}
             },
             annotation:{annotations:annotations},
           },
