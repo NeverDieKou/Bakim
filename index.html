@@ -3156,7 +3156,7 @@ function _buildPPTX(selYear, selMonth){
   kpiBox(s12,0.25,1.2,2.9,1.6,connectedEqs,      'Bağlı Ekipman',    C.accent,'sensör verisi olan');
   kpiBox(s12,3.4, 1.2,2.9,1.6,activeAlerts.length,'Aktif Alarm',      C.danger,'');
   kpiBox(s12,6.55,1.2,2.9,1.6,resolvedAlerts.length,'Çözülen Alarm',  C.accent2,'');
-  var totalReadings=Object.values(sdata).reduce(function(a,eq){return a+Object.values(eq).reduce(function(a2,ch){return a2+(ch.history?ch.history.length:0);},0);},0);
+  var totalReadings=Object.values(sdata).reduce(function(a,eq){return a+Object.values(eq).reduce(function(a2,ch){return a2+toHistArr(ch.history).length;},0);},0);
   kpiBox(s12,9.7, 1.2,2.9,1.6,totalReadings,      'Toplam Okuma',    C.purple,'');
   if(activeAlerts.length>0){
     s12.addText('Aktif Alarmlar',{x:0.3,y:3.05,w:12,h:0.35,fontSize:12,bold:true,color:C.danger,fontFace:'Calibri'});
@@ -6452,6 +6452,16 @@ function saveCAPA(){
 
 function _setSensorEq(id,ch){window._sEqId=id;openSensorConfig(id,ch||'');}
 
+function toHistArr(h){
+  if(!h) return [];
+  if(Array.isArray(h)) return h;
+  if(typeof h==='object'){
+    var arr=Object.values(h);
+    arr.sort(function(a,b){return String((a&&a.ts)||'').localeCompare(String((b&&b.ts)||''));});
+    return arr;
+  }
+  return [];
+}
 function pgPredictive(){
   var sdata  = DB.sensorData   || {};
   var alerts = (DB.sensorAlerts|| []).slice().sort(function(a,b){return b.ts.localeCompare(a.ts);});
@@ -6470,7 +6480,7 @@ function pgPredictive(){
     var lastTs   = '';
     if(hasData){
       var allHist=[];
-      chs.forEach(function(ch){if(eqData[ch].history)allHist=allHist.concat(eqData[ch].history);});
+      chs.forEach(function(ch){if(eqData[ch].history)allHist=allHist.concat(toHistArr(eqData[ch].history));});
       if(allHist.length)lastTs=allHist.sort(function(a,b){return b.ts.localeCompare(a.ts);})[0].ts.slice(0,16).replace('T',' ');
     }
     var isActive= eq.id===selId;
@@ -6541,7 +6551,7 @@ function pgPredictive(){
       // Kanal grafik kartları
       var chCardsH = chs.map(function(ch){
         var d   = eqData[ch];
-        var hist= (d.history||[]).slice(-60);
+        var hist= toHistArr(d.history).slice(-60);
         var last= hist.length?hist[hist.length-1]:null;
         var val = last!==null?last.v:'—';
         var unit= d.unit||'';
@@ -6644,7 +6654,7 @@ function pgPredictive(){
     var eqData2=sdata[selEq.id]||{};
     Object.keys(eqData2).forEach(function(ch){
       var d=eqData2[ch];
-      var hist=(d.history||[]).slice(-60);
+      var hist=toHistArr(d.history).slice(-60);
       if(hist.length<2)return;
       var canvas=document.getElementById('sc-'+selEq.id+'-'+ch);
       if(!canvas)return;
