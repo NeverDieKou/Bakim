@@ -6553,7 +6553,7 @@ function pgPredictive(){
     // Firebase bağlantı bilgisi
     var firebaseH = '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:11px;color:var(--mt);font-family:monospace">'
       +'<span style="color:var(--bll);font-weight:700">ESP32 Gönderim URL\'i:</span> '
-      +'https://huseyinbakim-default-rtdb.europe-west1.firebasedatabase.app'
+      +'https://huseyinbakim-default-rtdb.europe-west1.firebasedatabase.app/pharma_ms_data'
       +'/sensorData/<span style="color:var(--orl);font-weight:700">'+esc(selEq.id)+'</span>/{kanal}/history.json'
     +'</div>';
 
@@ -6766,7 +6766,7 @@ function _resolveAlert(id){
 }
 
 function showESP32Code(){
-  var FIREBASE = 'https://huseyinbakim-default-rtdb.europe-west1.firebasedatabase.app';
+  var FIREBASE = 'https://huseyinbakim-default-rtdb.europe-west1.firebasedatabase.app/pharma_ms_data';
   var lines=[
     '#include <WiFi.h>',
     '#include <HTTPClient.h>',
@@ -6846,7 +6846,7 @@ function showESP32Code(){
 }
 
 function showAPIGuide(){
-  var FB='https://huseyinbakim-default-rtdb.europe-west1.firebasedatabase.app';
+  var FB='https://huseyinbakim-default-rtdb.europe-west1.firebasedatabase.app/pharma_ms_data';
   var modal=document.createElement('div');
   modal.className='ov';
   modal.style.zIndex='9999';
