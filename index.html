@@ -545,6 +545,14 @@ function R(){
     return;
   }
 
+  // Giriş yapılmış — bu sayfa yüklemesinde QR/SP hedefi bir kez kontrol edilir.
+  // (Yedek parça QR'ı öncelikli, sonra ekipman QR'ı.)
+  if(!window._qrSpChecked){
+    window._qrSpChecked = true;
+    if(typeof spForceOpenTarget==='function' && spForceOpenTarget()) return;
+    if(typeof qrForceOpenTarget==='function' && qrForceOpenTarget()) return;
+  }
+
   QR_ACTIVE=false;
   app.innerHTML=tplShell();bindNav();renderPage();renderModals();
 }
@@ -625,25 +633,10 @@ function bindLogin(){
         else localStorage.removeItem('pharma_remember');
       }catch(e){}
       U = f;
-      // Tüm QR/SP session verilerini temizle
-      try{
-        sessionStorage.removeItem('pendingQR');
-        sessionStorage.removeItem('pendingQRTab');
-        sessionStorage.removeItem('pendingSP');
-        localStorage.removeItem('pharma_qr_target');
-        localStorage.removeItem('pharma_sp_target');
-        window._pendingQR = null;
-        window._pendingSP = null;
-        window._pendingQRTab = null;
-        window.QR_PENDING_TAB = null;
-      }catch(e){}
       addLog('Giriş','Kullanıcı girişi: '+f.name,'','');
       PAGE = 'dashboard';
-      var app = document.getElementById('app');
-      app.innerHTML = tplShell();
-      bindNav();
-      renderPage();
-      renderModals();
+      // QR/SP hedefi varsa R() bunu otomatik yakalayıp ilgili ekranı açacak
+      R();
     } else {
       var err = document.getElementById('l-err');
       if(err) err.style.display = 'block';
@@ -751,18 +744,6 @@ function tplShell(){
 }
 
 function bindNav(){
-  // localStorage/sessionStorage temizle - QR redirect engeli
-  try{
-    localStorage.removeItem('pharma_qr_target');
-    localStorage.removeItem('pharma_sp_target');
-    sessionStorage.removeItem('pendingQR');
-    sessionStorage.removeItem('pendingQRTab');
-    sessionStorage.removeItem('pendingSP');
-    window._pendingQR=null;
-    window._pendingSP=null;
-    window.QR_PENDING_TAB=null;
-    window.QR_ACTIVE=false;
-  }catch(e){}
   // Sidebar nav butonları
   document.querySelectorAll('.nb[data-p]').forEach(function(b){
     b.onclick=function(e){e.preventDefault();e.stopPropagation();PAGE=b.dataset.p;R();return false;};
@@ -777,7 +758,7 @@ function bindNav(){
   }
   // Logout
   var lb=document.getElementById('b-logout');
-  if(lb)lb.onclick=function(){addLog('Çıkış','Oturum kapatıldı','','');dbSave();U=null;PAGE='dashboard';R();};
+  if(lb)lb.onclick=function(){addLog('Çıkış','Oturum kapatıldı','','');dbSave();U=null;PAGE='dashboard';window._qrSpChecked=false;R();};
   // Mobil nav
   document.querySelectorAll('#mob-nav button[data-p]').forEach(function(b){
     b.className=PAGE===b.dataset.p?'on':'';
