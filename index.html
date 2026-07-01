@@ -6472,6 +6472,21 @@ function saveCAPA(){
 // ══ KEStirimci BAKIM ═══════════════════════════════════════════════
 
 function _setSensorEq(id,ch){window._sEqId=id;openSensorConfig(id,ch||'');}
+function deleteSensorChannel(eqId,ch){
+  if(!can('d')){toast('Yetki yok','err');return;}
+  var eq=DB.equipment.find(function(e){return e.id===eqId;});
+  if(!confirm('"'+ch+'" kanalını ve tüm geçmiş verisini silmek istediğinize emin misiniz?\n\nEkipman: '+((eq&&eq.name)||eqId)+'\n\nBu işlem geri alınamaz.'))return;
+  if(DB.sensorData&&DB.sensorData[eqId]){
+    delete DB.sensorData[eqId][ch];
+    if(Object.keys(DB.sensorData[eqId]).length===0) delete DB.sensorData[eqId];
+  }
+  // Bu kanala ait alarmları da temizle
+  DB.sensorAlerts=(DB.sensorAlerts||[]).filter(function(a){return !(a.eqId===eqId&&a.ch===ch);});
+  var ov=document.getElementById('ov-sensor-cfg');if(ov)ov.remove();
+  dbSave();
+  toast('Kanal silindi: '+ch,'warn');
+  renderPage();
+}
 
 function fmtNum(v){
   if(v===null||v===undefined||v==='—'||isNaN(v))return v;
@@ -6614,6 +6629,7 @@ function pgPredictive(){
             +'<div style="text-align:right">'
               +(thrTagsH?'<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;margin-bottom:8px">'+thrTagsH+'</div>':'')
               +(can('s')?'<button class="btn bghs bxs" onclick="_setSensorEq(\''+selEq.id+'\',\''+ch+'\')">✏ Eşik</button>':'')
+              +(can('d')?'<button class="btn bdng bxs" style="margin-left:4px" onclick="deleteSensorChannel(\''+selEq.id+'\',\''+ch+'\')">🗑 Sil</button>':'')
             +'</div>'
           +'</div>'
           // İstatistikler (min/max/ort)
@@ -6901,8 +6917,8 @@ function openSensorConfig(preEqId,preCh){
     +'<button class="mdc" onclick="document.getElementById(\'ov-sensor-cfg\').remove()">✕</button></div>'
     +'<div class="fr"><label class="lbl">Ekipman</label>'
     +'<select class="inp" id="sc-eq">'+eqOpts+'</select></div>'
-    +'<div class="fr"><label class="lbl">Kanal adı</label>'
-    +'<input class="inp" id="sc-ch" value="'+esc(preFillCh)+'" placeholder="sicaklik, nem, titresim..."/></div>'
+    +'<div class="fr"><label class="lbl">Kanal adı'+(preFillCh?' <span style="font-weight:400;color:var(--mt);text-transform:none">(değiştirilemez)</span>':'')+'</label>'
+    +'<input class="inp" id="sc-ch" value="'+esc(preFillCh)+'" placeholder="sicaklik, nem, titresim..."'+(preFillCh?' readonly style="opacity:.7"':'')+'/></div>'
     +'<div class="fr"><label class="lbl">Birim</label>'
     +'<input class="inp" id="sc-unit" placeholder="C, %, m/s2, A..."/></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
@@ -6916,10 +6932,12 @@ function openSensorConfig(preEqId,preCh){
     +'<select class="inp" id="sc-cop" style="width:70px"><option value="gt">&gt;</option><option value="lt">&lt;</option><option value="gte">≥</option><option value="lte">≤</option></select>'
     +'<input class="inp" id="sc-ct" type="number" placeholder="85" style="flex:1"/>'
     +'</div></div></div>'
-    +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)">'
+    +'<div style="display:flex;gap:8px;justify-content:'+(preFillCh?'space-between':'flex-end')+';padding-top:14px;border-top:1px solid var(--bd)">'
+    +(preFillCh?('<button class="btn bdng" onclick="deleteSensorChannel(\''+eqId+'\',\''+preFillCh+'\')">🗑 Kanalı Sil</button>'):'')
+    +'<div style="display:flex;gap:8px">'
     +'<button class="btn bghs" onclick="document.getElementById(\'ov-sensor-cfg\').remove()">İptal</button>'
     +'<button class="btn bsuc" onclick="saveSensorConfig()">Kaydet</button>'
-    +'</div></div>';
+    +'</div></div></div>';
   document.body.appendChild(modal);
 }
 
