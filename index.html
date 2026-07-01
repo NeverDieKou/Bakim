@@ -575,7 +575,7 @@ function renderPage(){
     el=tmp||app2;
   }
   if(U&&PAGE)addLog('Sayfa: '+PAGE,'','','');
-  var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,kvalifikasyon:pgKval,watersystem:pgWaterSystem,scoreboard:pgScoreboard,capa:pgCAPA,predictive:pgPredictive,energy:pgEnergy,set:pgSET,spareparts:pgSpareParts,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings,logs:pgLogs};
+  var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,calibration:pgCalibration,kvalifikasyon:pgKval,watersystem:pgWaterSystem,scoreboard:pgScoreboard,capa:pgCAPA,predictive:pgPredictive,energy:pgEnergy,set:pgSET,spareparts:pgSpareParts,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings,logs:pgLogs};
   el.innerHTML=(map[PAGE]||pgDash)();bindPage();
 }
 function renderModals(){
@@ -664,7 +664,7 @@ function tplShell(){
   var urgent=DB.equipment.filter(function(e){var d=daysLeft(e.nextMaint);return d!==null&&d<=s.critDays&&d>=0;});
   var openN=DB.workOrders.filter(function(w){return w.status==='acik';}).length;
   var pendN=can('ap')?DB.workOrders.filter(function(w){return w.status==='bekliyor';}).length:0;
-  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlama'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'watersystem',ico:'💧',lbl:'Su Sistemi'},{id:'spareparts',ico:'🔩',lbl:'Yedek Parça'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Personeller'},{id:'scoreboard',ico:'🏆',lbl:'Puan Sıralaması'},{id:'capa',ico:'🔍',lbl:'CAPA / DÖF'},{id:'predictive',ico:'📡',lbl:'Kestirimci Bakım'},{id:'energy',ico:'⚡',lbl:'Enerji Takibi'},{id:'set',ico:'📐',lbl:'SET Analizi'}];
+  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlı Bakım'},{id:'calibration',ico:'📐',lbl:'Kalibrasyon'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'watersystem',ico:'💧',lbl:'Su Sistemi'},{id:'spareparts',ico:'🔩',lbl:'Yedek Parça'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Personeller'},{id:'scoreboard',ico:'🏆',lbl:'Puan Sıralaması'},{id:'capa',ico:'🔍',lbl:'CAPA / DÖF'},{id:'predictive',ico:'📡',lbl:'Kestirimci Bakım'},{id:'energy',ico:'⚡',lbl:'Enerji Takibi'},{id:'set',ico:'📐',lbl:'SET Analizi'}];
   if(can('u'))navDefs.push({id:'users',ico:'👥',lbl:'Kullanıcılar'});
   if(can('s'))navDefs.push({id:'logs',ico:'📜',lbl:'Aktivite Logu'});
   if(can('s'))navDefs.push({id:'settings',ico:'⚙️',lbl:'Ayarlar'});
@@ -1258,6 +1258,136 @@ function pgSched(){
 }
 
 
+// ══ KALİBRASYON TAKİP SAYFASI ═══════════════════════════════════
+function pgCalibration(){
+  var eqs=DB.equipment||[];
+  var sub=DB.eqSubComponents||{};
+
+  // Tüm ekipmanların kalibrasyon kayıtlarını topla (eqId -> [cal,...])
+  var calsByEq={};
+  eqs.forEach(function(eq){
+    var list=(sub[eq.id]&&sub[eq.id].calibrations)||[];
+    if(list.length>0) calsByEq[eq.id]=list;
+  });
+  var eqIds=Object.keys(calsByEq);
+
+  // Takvim çubuğu — tüm kalibrasyonlar arasından en yakın sonraki tarihi olanlar (90 gün ufku)
+  var allCals=[];
+  eqIds.forEach(function(eqId){
+    var eq=eqs.find(function(e){return e.id===eqId;});
+    calsByEq[eqId].forEach(function(c){
+      if(c.nextCal) allCals.push({eq:eq,cal:c});
+    });
+  });
+  allCals.sort(function(a,b){return new Date(a.cal.nextCal)-new Date(b.cal.nextCal);});
+
+  var upH=allCals.map(function(x){
+    var d=daysLeft(x.cal.nextCal);
+    var col=d<0?'var(--rdl)':d<=14?'var(--orl)':'var(--gnl)';
+    var pct=Math.min(100,Math.max(0,((new Date(x.cal.nextCal)-new Date())/86400000/90)*100));
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+      +'<div style="width:170px;flex-shrink:0"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(x.cal.name)+'</div><div style="font-size:10px;color:var(--mt)">'+esc((x.eq&&x.eq.name)||'—')+'</div></div>'
+      +'<div style="flex:1;height:22px;background:var(--bg3);border-radius:4px;position:relative;overflow:hidden;border:1px solid var(--bd)">'
+      +'<div style="position:absolute;left:'+pct+'%;top:0;bottom:0;width:3px;background:'+col+'"></div>'
+      +'<div style="position:absolute;inset:0;display:flex;align-items:center;padding-left:8px;font-size:10px;color:var(--mt)">'+esc(x.cal.nextCal)+'</div>'
+      +'</div>'
+      +'<div style="width:90px;text-align:right;font-size:12px;font-weight:700;color:'+col+';white-space:nowrap">'+(d<0?Math.abs(d)+' gün GEÇ':d===0?'BUGÜN':d+' gün')+'</div>'
+      +'</div>';
+  }).join('');
+
+  // Seçili ekipman yoksa ilkini seç
+  if(!CAL_EQ && eqIds.length>0) CAL_EQ=eqIds[0];
+  if(CAL_EQ && eqIds.indexOf(CAL_EQ)<0) CAL_EQ=eqIds[0]||null;
+
+  // Sol liste: kalibrasyonu olan ekipmanlar
+  var eqListH = eqIds.length===0
+    ? '<div style="font-size:12px;color:var(--mt);padding:8px">Henüz kalibrasyon kaydı yok — Ekipmanlar sekmesinden Alt Komponentler üzerinden ekleyin</div>'
+    : eqIds.map(function(eqId){
+        var eqObj=eqs.find(function(e){return e.id===eqId;});
+        var list=calsByEq[eqId];
+        var cnt=list.length;
+        var isActive=CAL_EQ===eqId;
+        var nextDates=list.filter(function(c){return c.nextCal;}).map(function(c){return c.nextCal;}).sort();
+        var nearestNext=nextDates[0]||null;
+        var nd=nearestNext?daysLeft(nearestNext):null;
+        var nc=nd===null?'var(--mt)':nd<0?'var(--rdl)':nd<=7?'var(--orl)':'var(--gnl)';
+        return '<div onclick="CAL_EQ=\''+eqId+'\';renderPage()" style="'
+          +'display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:9px;cursor:pointer;margin-bottom:4px;'
+          +'background:'+(isActive?'rgba(79,142,247,.15)':'transparent')+';'
+          +'border:1px solid '+(isActive?'var(--bl)':'transparent')+'">'
+          +'<span style="font-size:18px">📐</span>'
+          +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:13px;font-weight:'+(isActive?'800':'600')+';color:'+(isActive?'var(--bll)':'var(--tx)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc((eqObj&&eqObj.name)||eqId)+'</div>'
+          +'<div style="font-size:10px;color:var(--mt)">'+cnt+' kalibrasyon'+(nearestNext?' · <span style="color:'+nc+';font-weight:700">'+(nd<0?Math.abs(nd)+' gün GEÇ':nd===0?'BUGÜN':nd+' gün')+'</span>':'')+'</div>'
+          +'</div>'
+          +(isActive?'<span style="color:var(--bll);font-size:16px">›</span>':'')
+          +'</div>';
+      }).join('');
+
+  // Sağ: seçili ekipmanın kalibrasyon kartları
+  var detailH='';
+  if(!CAL_EQ || eqIds.length===0){
+    detailH=emptyHTML('Henüz kalibrasyon kaydı yok. Ekipman detayında "Alt Komponentler" sekmesinden kalibrasyon ekleyebilirsiniz.');
+  } else {
+    var selEqObj=eqs.find(function(e){return e.id===CAL_EQ;});
+    var selCals=calsByEq[CAL_EQ]||[];
+
+    var calCards=selCals.slice().sort(function(a,b){
+      return (a.nextCal||'9999')<(b.nextCal||'9999')?-1:1;
+    }).map(function(c){
+      var d=c.nextCal?daysLeft(c.nextCal):null;
+      var dc=d===null?'var(--mt)':d<0?'var(--rdl)':d<=30?'var(--orl)':'var(--gnl)';
+      var dLbl=d===null?'Tarih girilmemiş':d<0?Math.abs(d)+' gün GEÇTİ':d===0?'BUGÜN':d+' gün kaldı';
+      return '<div style="background:var(--bg3);border:1px solid var(--bdl);border-radius:10px;padding:14px;margin-bottom:10px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+        +'<div style="display:flex;align-items:center;gap:8px;flex:1">'
+        +'<span style="font-size:18px">📐</span>'
+        +'<div>'
+        +'<div style="font-size:13px;font-weight:700">'+esc(c.name)+'</div>'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">'
+        +(c.certNo?'<span style="background:var(--bg4);border:1px solid var(--bd);border-radius:12px;padding:1px 10px;font-size:11px;color:var(--mt)">🏷 '+esc(c.certNo)+'</span>':'')
+        +(c.lastCal?'<span style="background:var(--bg4);border:1px solid var(--bd);border-radius:12px;padding:1px 10px;font-size:11px;color:var(--mt)">Son: '+esc(c.lastCal)+'</span>':'')
+        +'</div></div></div>'
+        +'<div style="text-align:right;flex-shrink:0">'
+        +'<div style="font-size:12px;font-weight:800;color:'+dc+'">'+dLbl+'</div>'
+        +(c.nextCal?'<div style="font-size:11px;color:var(--mt);margin-top:2px">📅 '+esc(c.nextCal)+'</div>':'')
+        +'</div></div>'
+        +'</div>';
+    }).join('');
+
+    detailH='<div style="background:var(--bg2);border:1px solid var(--bdl);border-radius:12px;overflow:hidden">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--bd);background:var(--bg3)">'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+      +'<span style="font-size:22px">⚙</span>'
+      +'<div><div style="font-size:16px;font-weight:800">'+esc((selEqObj&&selEqObj.name)||CAL_EQ)+'</div>'
+      +(selEqObj?'<div style="font-size:11px;color:var(--mt)">'+esc(selEqObj.area)+(selEqObj.cat?' · '+esc(selEqObj.cat):'')+'</div>':'')
+      +'</div></div>'
+      +(can('w')?'<button class="btn bpri bxs" onclick="openEqDet(\''+CAL_EQ+'\');TAB.eq=\'subcomp\';renderModals()">✏ Kalibrasyon Düzenle</button>':'')
+      +'</div>'
+      +'<div style="padding:14px">'+calCards+'</div>'
+      +'</div>';
+  }
+
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'
+    +'<div style="font-size:20px;font-weight:800;letter-spacing:-.3px">📐 Kalibrasyon Takibi</div>'
+    +'<div style="font-size:12px;color:var(--mt)">Ekipman detayından "Alt Komponentler" sekmesi ile eklenir</div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">'
+    +'<div class="card"><div class="cardt">Yaklaşan Kalibrasyonlar (90 Gün)</div>'
+    +'<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">'
+    +[['Gecikmiş','var(--rdl)'],['0-14 gün','var(--orl)'],['15-90 gün','var(--gnl)']].map(function(x){return'<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mt)"><div style="width:9px;height:9px;border-radius:2px;background:'+x[1]+'"></div>'+x[0]+'</div>';}).join('')
+    +'</div>'+(upH||'<div style="font-size:12px;color:var(--mt)">Yaklaşan kalibrasyon yok</div>')+'</div>'
+    +'<div class="card" style="padding:0;overflow:hidden">'
+    +'<div style="padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">'
+    +'<div class="cardt" style="margin:0">Ekipman Listesi <span style="color:var(--mt)">('+eqIds.length+')</span></div>'
+    +'</div>'
+    +'<div style="padding:10px;max-height:320px;overflow-y:auto">'+eqListH+'</div>'
+    +'</div></div>'
+    +'<div>'+detailH+'</div>';
+}
+
+
+
 function toggleTasks(id){
   var el=document.getElementById(id);
   if(!el)return;
@@ -1740,14 +1870,14 @@ function tplEqDet(){
   var sc=(DB.eqSubComponents&&DB.eqSubComponents[eq.id])||{calibrations:[],others:[]};
   var scCount=(sc.calibrations||[]).length+(sc.others||[]).length;
   var tabH=[['tl','📋 İş Emri Geçmişi'],['info','⚙ Teknik Bilgiler'],['docs','📎 Dokümanlar ('+docs.length+')'],['parts','🔩 Parça Geçmişi ('+partHist.length+')'],['subcomp','🧩 Alt Komponentler ('+scCount+')']].map(function(tb){return'<button class="tabb'+(t===tb[0]?' on':'')+'" onclick="TAB.eq=\''+tb[0]+'\';renderModals()">'+tb[1]+'</button>';}).join('');
-  var hdr='<div style="background:var(--bg3);border-radius:10px;padding:14px 18px;margin-bottom:18px;border:1px solid var(--bd)"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px"><div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">'+eqLed(eq.status)+' '+critBadge(eq.crit)+(eq.val?'<span class="badge bxsm" style="color:var(--gnl);border-color:var(--gnl);background:rgba(16,185,129,.1)">✓ Val. '+esc(eq.valDoc||'')+'</span>':'')+'</div><div style="font-size:12px;color:var(--mt)">📍 '+esc(eq.area)+' · '+esc(eq.mfr||'—')+(eq.model?' · '+esc(eq.model):'')+'</div><div style="font-size:11px;color:var(--mt);margin-top:3px">S/N: '+esc(eq.sn||'—')+' · Kurulum: '+esc(eq.instDate||'—')+'</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:10px;color:var(--mt);margin-bottom:3px">SONRAKİ BAKIM</div><div style="font-size:22px;font-weight:900;color:'+dc+'">'+(d===null?'—':d<0?Math.abs(d)+' gün GEÇ':d===0?'BUGÜN':d+' gün')+(maintD.next?'<div style="font-size:11px;color:var(--mt);font-weight:400">'+esc(maintD.next)+'</div>':'')+'</div></div></div>'+(eq.notes?'<div style="margin-top:10px;font-size:12px;color:var(--sub);padding-top:10px;border-top:1px solid var(--bd)">📝 '+esc(eq.notes)+'</div>':'')+'</div>';
+  var hdr='<div style="background:var(--bg3);border-radius:10px;padding:14px 18px;margin-bottom:18px;border:1px solid var(--bd)"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px"><div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">'+eqLed(eq.status)+' '+critBadge(eq.crit)+(eq.val?'<span class="badge bxsm" style="color:var(--gnl);border-color:var(--gnl);background:rgba(16,185,129,.1)">✓ Val. '+esc(eq.valDoc||'')+'</span>':'')+'</div><div style="font-size:12px;color:var(--mt)">📍 '+esc(eq.area)+' · '+esc(eq.mfr||'—')+(eq.model?' · '+esc(eq.model):'')+'</div><div style="font-size:11px;color:var(--mt);margin-top:3px">S/N: '+esc(eq.sn||'—')+' · Kurulum: '+esc(eq.instDate||'—')+'</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:10px;color:var(--mt);margin-bottom:3px">SONRAKİ BAKIM</div><div style="font-size:22px;font-weight:900;color:'+dc+'">'+(d===null?'—':d<0?Math.abs(d)+' gün GEÇ':d===0?'BUGÜN':d+' gün')+(maintD.next?'<div style="font-size:11px;color:var(--mt);font-weight:400">'+esc(maintD.next)+'</div>':'')+'</div></div></div>'+(can('ap')&&eq.notes?'<div style="margin-top:10px;font-size:12px;color:var(--sub);padding-top:10px;border-top:1px solid var(--bd)">📝 '+esc(eq.notes)+'</div>':'')+'</div>';
   var content='';
   if(t==='tl'){
     if(!wos.length){content=emptyHTML('Henüz iş emri yok');}
     else{content='<div class="tlw">'+wos.map(function(w){var dot=w.type==='ariza'?'var(--rdl)':'var(--bll)';var wt=WTYPES[w.type]||{ico:'?'};var tc=DB.technicians.find(function(x){return x.id===w.techId;});return'<div class="tli"><div class="tld" style="background:'+dot+';box-shadow:0 0 6px '+dot+'40"></div><div class="tlb" style="cursor:pointer" onclick="closeM(\'eqDet\');openWODet(\''+w.id+'\')"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;gap:8px"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-size:16px">'+wt.ico+'</span><span style="font-size:13px;font-weight:700">'+esc(w.title)+'</span>'+(w.gmp?'<span class="badge bxsm" style="color:var(--cyl);border-color:var(--cyl)">GMP</span>':'')+'</div><div style="display:flex;gap:5px;flex-shrink:0">'+sevBadge(w.sev,true)+' '+staBadge(w.status,true)+'</div></div><div style="font-size:12px;color:var(--sub);margin-bottom:6px;line-height:1.4">'+esc(w.desc||'')+'</div><div style="display:flex;gap:12px;font-size:11px;color:var(--mt);flex-wrap:wrap"><span>📅 '+esc(w.date)+'</span>'+(tc?'<span>👷 '+esc(tc.name)+'</span>':'')+(w.root?'<span>🔍 '+esc(w.root)+'</span>':'')+(w.lh>0?'<span>⏱ '+w.lh+'s</span>':'')+(w.docs&&w.docs.length?'<span>📎 '+w.docs.length+' dosya</span>':'')+'</div></div></div>';}).join('')+'</div>';}
   }else if(t==='info'){
     var flds=[['Üretici',eq.mfr],['Model',eq.model],['Seri No',eq.sn],['Kategori',eq.cat],['Oda Numarası',eq.area],['Ekipman No',eq.instDate],['Son Bakım',maintD.last],['Sonraki Bakım',maintD.next]];
-    content='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+flds.map(function(f){return'<div style="background:var(--bg3);border-radius:8px;padding:10px 14px;border:1px solid var(--bd)"><div style="font-size:10px;color:var(--mt);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">'+f[0]+'</div><div style="font-size:13px;font-weight:600">'+esc(f[1]||'—')+'</div></div>';}).join('')+(eq.notes?'<div style="grid-column:1/-1;background:var(--bg3);border-radius:8px;padding:10px 14px;border:1px solid var(--bd)"><div style="font-size:10px;color:var(--mt);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">Notlar</div><div style="font-size:13px;color:var(--sub);line-height:1.5">'+esc(eq.notes)+'</div></div>':'')+'</div>';
+    content='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+flds.map(function(f){return'<div style="background:var(--bg3);border-radius:8px;padding:10px 14px;border:1px solid var(--bd)"><div style="font-size:10px;color:var(--mt);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">'+f[0]+'</div><div style="font-size:13px;font-weight:600">'+esc(f[1]||'—')+'</div></div>';}).join('')+(can('ap')&&eq.notes?'<div style="grid-column:1/-1;background:var(--bg3);border-radius:8px;padding:10px 14px;border:1px solid var(--bd)"><div style="font-size:10px;color:var(--mt);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">Notlar</div><div style="font-size:13px;color:var(--sub);line-height:1.5">'+esc(eq.notes)+'</div></div>':'')+'</div>';
   }else if(t==='docs'){
     content=(can('w')?'<div style="display:flex;gap:8px;margin-bottom:16px;align-items:flex-end"><div style="flex:2"><label class="lbl">Doküman Adı</label><input class="inp isml" id="eqd-name" placeholder="örn: SOP-001-v2.pdf"/></div><div style="flex:3"><label class="lbl">Not / Açıklama</label><input class="inp isml" id="eqd-note" placeholder="İsteğe bağlı..."/></div><button class="btn bpri bsm" onclick="addEqDoc(\''+eq.id+'\')">+ Ekle</button></div>':'')+
     (docs.length===0?emptyHTML('Doküman eklenmemiş — SOP, validasyon raporu, kalibrasyon sertifikası ekleyebilirsiniz.'):docs.map(function(d,i){return'<div class="irow" style="margin-bottom:9px;border:1px solid var(--bd)"><span style="font-size:22px">📄</span><div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--bll)">'+esc(d.name)+'</div>'+(d.note?'<div style="font-size:11px;color:var(--sub);margin-top:2px">'+esc(d.note)+'</div>':'')+'<div style="font-size:10px;color:var(--mt);margin-top:3px">📅 '+esc(d.date)+' · 👤 '+esc(d.by||'—')+'</div></div>'+(can('w')?'<button onclick="removeEqDoc(\''+eq.id+'\','+i+')" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:18px;padding:4px">🗑</button>':'')+'</div>';}).join(''));
@@ -3850,7 +3980,8 @@ var KVAL_TESTS = {
 };
 
 var KVAL_ACTIVE = 'partikul';
-var SCHED_EQ = null; // planlama sayfasında seçili ekipman // aktif test
+var SCHED_EQ = null; // planlama sayfasında seçili ekipman
+var CAL_EQ = null; // kalibrasyon sayfasında seçili ekipman // aktif test
 var KVAL_YEAR_FILTER = null;
 
 function pgKval(){
