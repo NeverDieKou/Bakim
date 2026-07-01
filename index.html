@@ -522,6 +522,7 @@ if(!DB.setTargets)DB.setTargets={};
 if(!DB.setProduction)DB.setProduction=[];
 var U=null,PAGE='dashboard',TAB={eq:'tl',wo:'info'},MODAL={},ET={},FLT={type:'all',sev:'all',status:'all',q:''},DID=null,QEID=null,WDOCS=[],CHARTS={};
 var QR_ACTIVE=false,QR_EQ_ID=null,QR_TAB=null,QR_PENDING_TAB='workorders',QR_WO_EDIT=null,SC_EQ_ID=null;
+var THRESHOLD_TYPES={gt:{lbl:'Büyüktür',sym:'>'},lt:{lbl:'Küçüktür',sym:'<'},gte:{lbl:'Büyük Eşit',sym:'≥'},lte:{lbl:'Küçük Eşit',sym:'≤'}};
 
 function hasPendingQR(){
   return !!(window._pendingQR || sessionStorage.getItem('pendingQR'));
@@ -576,38 +577,58 @@ function renderPage(){
   }
   if(U&&PAGE)addLog('Sayfa: '+PAGE,'','','');
   var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,calibration:pgCalibration,kvalifikasyon:pgKval,watersystem:pgWaterSystem,scoreboard:pgScoreboard,capa:pgCAPA,predictive:pgPredictive,energy:pgEnergy,set:pgSET,spareparts:pgSpareParts,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings,logs:pgLogs};
-  el.innerHTML=(map[PAGE]||pgDash)();bindPage();
+  try{
+    el.innerHTML=(map[PAGE]||pgDash)();
+    bindPage();
+  }catch(renderErr){
+    console.error('Sayfa render hatası ('+PAGE+'):', renderErr);
+    el.innerHTML='<div class="card" style="text-align:center;padding:40px;max-width:520px;margin:40px auto">'
+      +'<div style="font-size:40px;margin-bottom:12px">⚠️</div>'
+      +'<div style="font-size:15px;font-weight:700;margin-bottom:8px">Bu sayfa yüklenirken beklenmeyen bir hata oluştu</div>'
+      +'<div style="font-size:11px;color:var(--mt);margin-bottom:16px;font-family:monospace;background:var(--bg3);padding:8px;border-radius:6px;text-align:left;overflow-x:auto">'+esc(String((renderErr&&renderErr.message)||renderErr))+'</div>'
+      +'<button class="btn bpri bsm" onclick="PAGE=\'dashboard\';renderPage()">Gösterge Paneline Dön</button>'
+    +'</div>';
+  }
+}
+function safeTpl(fn,label){
+  try{ return fn(); }
+  catch(e){
+    console.error('Modal render hatası ('+label+'):', e);
+    return '<div class="ov"><div class="md" style="max-width:460px"><div class="mdh"><div class="mdt">⚠️ Bir hata oluştu</div>'
+      +'<button class="mdc" onclick="this.closest(\'.ov\').remove()">✕</button></div>'
+      +'<div style="font-size:12px;color:var(--mt);font-family:monospace;background:var(--bg3);padding:10px;border-radius:6px">'+esc(String((e&&e.message)||e))+'</div></div></div>';
+  }
 }
 function renderModals(){
   var r=document.getElementById('modals-root');if(!r)return;
   r.innerHTML='';
-  if(MODAL.wo){r.innerHTML+=tplWOModal();setTimeout(disableKapaliOption,0);}
-  if(MODAL.woDet)r.innerHTML+=tplWODet();
-  if(MODAL.eqDet)r.innerHTML+=tplEqDet();
-  if(MODAL.eqForm)r.innerHTML+=tplEqForm();
-  if(MODAL.tech)r.innerHTML+=tplTechForm();
-  if(MODAL.user)r.innerHTML+=tplUserForm();
-  if(MODAL.qr)r.innerHTML+=tplQRModal();
-  if(MODAL.schedule)r.innerHTML+=tplScheduleForm();
-  if(MODAL_SP)r.innerHTML+=tplSpareForm();
-  if(MODAL_SP_MOV)r.innerHTML+=tplSpareMovForm();
-  if(MODAL_SP_CAT)r.innerHTML+=tplSpareCatMgr();
-  if(WS_MODAL)r.innerHTML+=tplWaterModal();
-  if(WS_CLOSE_MODAL)r.innerHTML+=tplWsCloseModal();
-  if(MODAL_PENDING)r.innerHTML+=tplPendingModal();
-  if(MODAL_SCORE)r.innerHTML+=tplScoreModal();
-  if(MODAL_CAPA)r.innerHTML+=tplCAPAModal();
-  if(MODAL_ENERGY){r.innerHTML+=tplEnergyModal();
+  if(MODAL.wo){r.innerHTML+=safeTpl(tplWOModal,'wo');setTimeout(disableKapaliOption,0);}
+  if(MODAL.woDet)r.innerHTML+=safeTpl(tplWODet,'woDet');
+  if(MODAL.eqDet)r.innerHTML+=safeTpl(tplEqDet,'eqDet');
+  if(MODAL.eqForm)r.innerHTML+=safeTpl(tplEqForm,'eqForm');
+  if(MODAL.tech)r.innerHTML+=safeTpl(tplTechForm,'tech');
+  if(MODAL.user)r.innerHTML+=safeTpl(tplUserForm,'user');
+  if(MODAL.qr)r.innerHTML+=safeTpl(tplQRModal,'qr');
+  if(MODAL.schedule)r.innerHTML+=safeTpl(tplScheduleForm,'schedule');
+  if(MODAL_SP)r.innerHTML+=safeTpl(tplSpareForm,'spareForm');
+  if(MODAL_SP_MOV)r.innerHTML+=safeTpl(tplSpareMovForm,'spareMov');
+  if(MODAL_SP_CAT)r.innerHTML+=safeTpl(tplSpareCatMgr,'spareCat');
+  if(WS_MODAL)r.innerHTML+=safeTpl(tplWaterModal,'water');
+  if(WS_CLOSE_MODAL)r.innerHTML+=safeTpl(tplWsCloseModal,'waterClose');
+  if(MODAL_PENDING)r.innerHTML+=safeTpl(tplPendingModal,'pending');
+  if(MODAL_SCORE)r.innerHTML+=safeTpl(tplScoreModal,'score');
+  if(MODAL_CAPA)r.innerHTML+=safeTpl(tplCAPAModal,'capa');
+  if(MODAL_ENERGY){r.innerHTML+=safeTpl(tplEnergyModal,'energy');
     // Modal açılınca seçili türün unit'ini göster ve maliyeti hesapla
     setTimeout(function(){
       var sel=document.getElementById('en-type');
       if(sel){energyTypeChange(sel.value);}
     },0);
   }
-  if(MODAL_PPT)r.innerHTML+=tplPPTModal();
-  if(MODAL_SET_TARGETS)r.innerHTML+=tplSETTargets();
-  if(MODAL_SET_PROD)r.innerHTML+=tplSETProdModal();
-  if(MODAL.subComp)r.innerHTML+=tplSubCompModal();
+  if(MODAL_PPT)r.innerHTML+=safeTpl(tplPPTModal,'ppt');
+  if(MODAL_SET_TARGETS)r.innerHTML+=safeTpl(tplSETTargets,'setTargets');
+  if(MODAL_SET_PROD)r.innerHTML+=safeTpl(tplSETProdModal,'setProd');
+  if(MODAL.subComp)r.innerHTML+=safeTpl(tplSubCompModal,'subComp');
   bindModals();
   disableKapaliOption();
   if(MODAL.qr&&QEID)setTimeout(function(){drawQR(QEID);},80);
