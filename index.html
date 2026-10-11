@@ -212,6 +212,8 @@ var FB_DB  = null;
 var FB_REF = null;
 var FB_CONNECTED = false;
 var FB_SAVE_TIMER = null;
+var FB_SAVE_PENDING = false;
+var FB_SAVE_SAFETY_TIMER = null;
 
 function fbInit() {
   try {
@@ -227,6 +229,9 @@ function fbInit() {
 
     // Realtime listener — başka cihazdan değişiklik gelince güncelle
     FB_REF.on('value', function(snap) {
+      // Henüz Firebase'e gönderilmemiş yerel değişiklik varsa, gelen (eski) veriyi
+      // uygulayıp yeni eklenen/değiştirilen kayıtları SİLMEYELİM.
+      if(FB_SAVE_PENDING) return;
       var data = snap.val();
       if(!data) {
         // Firebase boş — yerel veriyi yükle ve kaydet
@@ -237,8 +242,16 @@ function fbInit() {
       }
       // Gelen veriyi uygula
       var needRender = false;
-      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats','waterPlans','waterStatuses','scores','scoreFormula','capas','sensorData','sensorAlerts','energyLogs','setTargets','setProduction','eqSubComponents'];
+      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats','waterPlans','waterStatuses','scores','scoreFormula','capas','sensorData','sensorAlerts','energyLogs','setTargets','setProduction','eqSubComponents','alarmNotify'];
+      // Firebase boş listeleri/objeleri hiç saklamaz; alan yoksa o liste boşaltılmış demektir.
+      var EMPTY_ARR=['workOrders','equipment','technicians','schedule','logs','spareParts','spareMovements','waterPlans','capas','sensorAlerts','energyLogs','setProduction'];
+      var EMPTY_OBJ=['eqDocs','kvalData','kvalSteps','eqPartHistory','scores','sensorData','setTargets','eqSubComponents'];
       keys.forEach(function(k) {
+        if(data[k] === undefined && (EMPTY_ARR.indexOf(k)>=0||EMPTY_OBJ.indexOf(k)>=0) && DB[k] && (Array.isArray(DB[k])?DB[k].length:Object.keys(DB[k]).length)) {
+          DB[k] = EMPTY_ARR.indexOf(k)>=0 ? [] : {};
+          needRender = true;
+          return;
+        }
         if(data[k] !== undefined) {
           // Array olarak gelenleri düzelt
           if(k === 'workOrders' || k === 'equipment' || k === 'technicians' || k === 'users' || k === 'schedule') {
@@ -282,6 +295,7 @@ function fbInit() {
       try { localStorage.setItem(SK, JSON.stringify(DB)); } catch(e) {}
       // Giriş ekranı henüz render edilmemişse R() ile başlat
       if(!U && !document.getElementById('lgw')) R();
+      if(!FB_LOADED){FB_LOADED=true;if(U)scheduleAutomation();}
     }, function(err) {
       console.warn('Firebase okuma hatası:', err.message);
       showSyncStatus('error');
@@ -295,6 +309,11 @@ function fbInit() {
 
 function fbSave() {
   // Debounce — 800ms bekle, çok sık kaydetme
+  FB_SAVE_PENDING = true;
+  // Güvenlik: set() hiç yanıt vermezse 15sn sonra bayrağı zorla temizle
+  // (aksi halde gelen Firebase güncellemeleri kalıcı olarak yok sayılır)
+  clearTimeout(FB_SAVE_SAFETY_TIMER);
+  FB_SAVE_SAFETY_TIMER = setTimeout(function(){FB_SAVE_PENDING=false;}, 15000);
   clearTimeout(FB_SAVE_TIMER);
   FB_SAVE_TIMER = setTimeout(fbSaveNow, 800);
 }
@@ -344,15 +363,19 @@ function fbSaveNow() {
     updatedBy:    U ? U.name : 'system'
   };
   FB_REF.set(payload).then(function() {
+    FB_SAVE_PENDING = false;
+    clearTimeout(FB_SAVE_SAFETY_TIMER);
     showSyncStatus('saved');
   }).catch(function(err) {
+    FB_SAVE_PENDING = false;
+    clearTimeout(FB_SAVE_SAFETY_TIMER);
     console.warn('Firebase kayıt hatası:', err.message);
     showSyncStatus('error');
   });
 }
 
 function showSyncStatus(status) {
-  var el = document.getElementById('sync-indicator');
+  var el = document.getElementById('sync-indicator')||document.getElementById('sync-ind');
   if(!el) return;
   var icons = {
     connected: {ico:'☁', col:'var(--gnl)', txt:'Senkronize'},
@@ -361,6 +384,7 @@ function showSyncStatus(status) {
     saving:    {ico:'↑', col:'var(--bll)', txt:'Kaydediyor...'},
     error:     {ico:'⚠', col:'var(--rdl)', txt:'Hata'},
   };
+  showSyncStatus._last=status;
   var s = icons[status] || icons.offline;
   el.style.color = s.col;
   el.innerHTML = '<span>'+s.ico+'</span><span style="font-size:10px">'+s.txt+'</span>';
@@ -397,6 +421,19 @@ function daysLeft(s){if(!s)return null;return Math.ceil((new Date(s)-new Date())
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function can(p){return !!(U&&ROLES[U.role]&&ROLES[U.role].p[p]);}
+// Giriş yapan kullanıcının bağlı olduğu personel (teknisyen) kaydı.
+// Öncelik: kullanıcıda seçili techId, sonra aynı e-posta, sonra aynı ad soyad.
+function userTechId(u){
+  u=u||U;if(!u)return '';
+  if(u.techId)return u.techId;
+  var techs=(typeof DB!=='undefined'&&DB.technicians)||[];
+  var em=String(u.email||'').trim().toLowerCase();
+  var t=em?techs.find(function(x){return String(x.email||'').trim().toLowerCase()===em;}):null;
+  if(!t){var nm=String(u.name||'').trim().toLowerCase();t=techs.find(function(x){return String(x.name||'').trim().toLowerCase()===nm;});}
+  return t?t.id:'';
+}
+// İş emri giriş yapan kullanıcıya mı atanmış?
+function isMyWO(w){if(!U||!w||!w.techId)return false;return w.techId===U.id||w.techId===userTechId(U);}
 function v(id){var e=document.getElementById(id);return e?e.value:'';}
 function vb(id){var e=document.getElementById(id);return e?e.checked:false;}
 function toast(msg,type){
@@ -420,7 +457,7 @@ var SEED={
   users:[
     {id:'U01',name:'Hüseyin Yönetici',un:'admin',pw:'admin123',role:'admin',dept:'Bakım Yönetimi',email:'admin@firma.com',active:true},
     {id:'U02',name:'Mehmet Mühendis',un:'muhendis',pw:'1234',role:'muhendis',dept:'Bakım Mühendisliği',email:'mehmet@firma.com',active:true},
-    {id:'U03',name:'Ali Teknisyen',un:'ali',pw:'1234',role:'teknisyen',dept:'Üretim Bakım',email:'ali@firma.com',active:true},
+    {id:'U03',name:'Ali Teknisyen',un:'ali',pw:'1234',role:'teknisyen',dept:'Üretim Bakım',email:'ali@firma.com',active:true,techId:'T01'},
     {id:'U04',name:'Ayşe Üretimci',un:'uretim',pw:'1234',role:'uretimci',dept:'Üretim',email:'ayse@firma.com',active:true},
     {id:'U05',name:'Veli Misafir',un:'misafir',pw:'1234',role:'misafir',dept:'Ziyaretçi',email:'veli@firma.com',active:true},
   ],
@@ -507,6 +544,7 @@ function dbLoad(){
   }catch(e){return null;}
 }
 function dbSave(){
+  try{ if(typeof autoReconcileClosed==='function') autoReconcileClosed(); }catch(e){ console.warn('Otomasyon:',e); }
   // Yerel kayıt
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   // Firebase kayıt
@@ -520,6 +558,7 @@ if(!DB.sensorAlerts)DB.sensorAlerts=[];
 if(!DB.energyLogs)DB.energyLogs=[];
 if(!DB.setTargets)DB.setTargets={};
 if(!DB.setProduction)DB.setProduction=[];
+if(!DB.waterStatuses)DB.waterStatuses=[{id:'planli',lbl:'Planlandı',col:'#4f8ef7'},{id:'tamamlandi',lbl:'Tamamlandı',col:'#10b981'},{id:'gecikti',lbl:'Gecikti',col:'#ef4444'},{id:'iptal',lbl:'İptal',col:'#94a3b8'}];
 var U=null,PAGE='dashboard',TAB={eq:'tl',wo:'info'},MODAL={},ET={},FLT={type:'all',sev:'all',status:'all',q:''},DID=null,QEID=null,WDOCS=[],CHARTS={};
 var QR_ACTIVE=false,QR_EQ_ID=null,QR_TAB=null,QR_PENDING_TAB='workorders',QR_WO_EDIT=null,SC_EQ_ID=null;
 var THRESHOLD_TYPES={gt:{lbl:'Büyüktür',sym:'>'},lt:{lbl:'Küçüktür',sym:'<'},gte:{lbl:'Büyük Eşit',sym:'≥'},lte:{lbl:'Küçük Eşit',sym:'≤'}};
@@ -565,8 +604,20 @@ function R(){
 
   QR_ACTIVE=false;
   app.innerHTML=tplShell();bindNav();renderPage();renderModals();
+  showSyncStatus(showSyncStatus._last||(FB_CONNECTED?'connected':'offline'));
 }
 function renderPage(){
+  // Arama kutusunda yazarken sayfa yeniden çizilince odak/imleç kaybolmasın
+  var _ae=document.activeElement,_fid=null,_s0=null,_s1=null;
+  if(_ae&&_ae.id&&(_ae.tagName==='INPUT'||_ae.tagName==='TEXTAREA')&&_ae.closest&&_ae.closest('#main')){
+    _fid=_ae.id;try{_s0=_ae.selectionStart;_s1=_ae.selectionEnd;}catch(e){}
+  }
+  try{ return _renderPageInner(); }
+  finally{
+    if(_fid){var _ne=document.getElementById(_fid);if(_ne&&_ne!==document.activeElement){_ne.focus();try{if(_s0!==null)_ne.setSelectionRange(_s0,_s1);}catch(e){}}}
+  }
+}
+function _renderPageInner(){
   var el=document.getElementById('main')||document.getElementById('main-content');
   if(!el){
     // Son çare: app div'e direkt yaz
@@ -575,7 +626,6 @@ function renderPage(){
     var tmp=app2.querySelector('main,[id="main"],[id="main-content"]');
     el=tmp||app2;
   }
-  if(U&&PAGE)addLog('Sayfa: '+PAGE,'','','');
   var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,calibration:pgCalibration,kvalifikasyon:pgKval,watersystem:pgWaterSystem,scoreboard:pgScoreboard,capa:pgCAPA,predictive:pgPredictive,energy:pgEnergy,set:pgSET,spareparts:pgSpareParts,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings,logs:pgLogs};
   try{
     el.innerHTML=(map[PAGE]||pgDash)();
@@ -629,6 +679,7 @@ function renderModals(){
   if(MODAL_SET_TARGETS)r.innerHTML+=safeTpl(tplSETTargets,'setTargets');
   if(MODAL_SET_PROD)r.innerHTML+=safeTpl(tplSETProdModal,'setProd');
   if(MODAL.subComp)r.innerHTML+=safeTpl(tplSubCompModal,'subComp');
+  if(MODAL_SP_DIAG)r.innerHTML+=safeTpl(tplSpareUploadDiag,'spareDiag');
   bindModals();
   disableKapaliOption();
   if(MODAL.qr&&QEID)setTimeout(function(){drawQR(QEID);},80);
@@ -665,6 +716,7 @@ function bindLogin(){
       }catch(e){}
       U = f;
       addLog('Giriş','Kullanıcı girişi: '+f.name,'','');
+      if(FB_LOADED||!FB_REF)scheduleAutomation();
       PAGE = 'dashboard';
       // QR/SP hedefi varsa R() bunu otomatik yakalayıp ilgili ekranı açacak
       R();
@@ -729,9 +781,9 @@ function tplShell(){
             +'</div>'
           +'</div>'
           +(function(){
-            var myOpen=DB.workOrders.filter(function(w){return w.techId===U.id&&w.status==='acik';}).length;
-            var myDevam=DB.workOrders.filter(function(w){return w.techId===U.id&&w.status==='devam';}).length;
-            var myKapali=DB.workOrders.filter(function(w){return w.techId===U.id&&w.status==='kapali';}).length;
+            var myOpen=DB.workOrders.filter(function(w){return isMyWO(w)&&w.status==='acik';}).length;
+            var myDevam=DB.workOrders.filter(function(w){return isMyWO(w)&&w.status==='devam';}).length;
+            var myKapali=DB.workOrders.filter(function(w){return isMyWO(w)&&w.status==='kapali';}).length;
             var myPend=can('ap')?(DB.workOrders.filter(function(w){return w.status==='bekliyor';}).length+(DB.waterPlans||[]).filter(function(p){return p.status==='bekliyor_onay';}).length):0;
             var rows=[];
             if(myOpen>0) rows.push('<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--bd)"><span style="color:var(--mt)">📋 Açık İş</span><span style="background:var(--rdl);color:#fff;border-radius:8px;padding:0 6px;font-weight:700">'+myOpen+'</span></div>');
@@ -764,7 +816,7 @@ function tplShell(){
           +(urgent.length?'<button class="btn bdng bsm" data-p="schedule">⚠ '+urgent.length+' Kritik Bakım</button>':'')
           +(can('w')?'<button class="btn bpri bsm" onclick="openWOModal(null,null)">+ İş Emri</button>':'')
           +'<div style="width:1px;height:24px;background:var(--bd);margin:0 4px"></div>'
-          +'<div id="sync-ind" style="font-size:11px;color:var(--mt)">☁</div>'
+          +'<div id="sync-ind" style="font-size:11px;color:var(--mt);display:flex;gap:4px;align-items:center">☁</div>'
         +'</div>'
       +'</div>'
       +'<main id="main"></main>'
@@ -1115,11 +1167,11 @@ function pgWO(){
   var rows=fl.length===0?'<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--mt)">İş emri bulunamadı</td></tr>':fl.map(function(w){
     var eq=DB.equipment.find(function(e){return e.id===w.eqId;});var tc=DB.technicians.find(function(t){return t.id===w.techId;});var wt=WTYPES[w.type]||{ico:'?'};
     var dl=w.due?daysLeft(w.due):null;var ov=dl!==null&&dl<0&&w.status!=='kapali';
-    var canSendApproval=(!can('cl'))&&w.techId===U.id&&(w.status==='acik'||w.status==='devam');
+    var canSendApproval=(!can('cl'))&&isMyWO(w)&&(w.status==='acik'||w.status==='devam');
     return '<tr onclick="openWODet(\''+w.id+'\')" style="cursor:pointer"><td style="font-family:monospace;font-size:10px;color:var(--mt)">'+esc(w.id)+'</td>'
       +'<td><span title="'+esc(wt.lbl)+'" style="font-size:15px">'+wt.ico+'</span></td>'
       +'<td style="font-weight:600;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc((eq&&eq.name)||'—')+'</td>'
-      +'<td style="max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(w.title)+'</td>'
+      +'<td style="max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(w.autoKey?'<span title="Otomatik açıldı">🤖 </span>':'')+esc(w.title)+'</td>'
       +'<td>'+sevBadge(w.sev,true)+'</td>'
       +'<td>'+staBadge(w.status,true)+'</td>'
       +'<td style="color:var(--mt);font-size:11px;white-space:nowrap">'+esc(w.date)+'</td>'
@@ -1237,7 +1289,8 @@ function pgSched(){
         +(can('d')?'<button class="btn bdng bxs" onclick="deleteSchedule(\''+ms.id+'\')">🗑</button>':'')
         +'</div></div>'
         +(ms.notes?'<div style="font-size:11px;color:var(--sub);margin-bottom:6px">📝 '+esc(ms.notes)+'</div>':'')
-        +(ms.next?'<div style="font-size:11px;color:var(--mt)">📅 Sonraki: <strong style="color:var(--tx)">'+esc(ms.next)+'</strong></div>':'')
+        +(ms.next?'<div style="font-size:11px;color:var(--mt)">📅 Sonraki: <strong style="color:var(--tx)">'+esc(ms.next)+'</strong>'+(ms.lastDone?' · Son yapılan: '+esc(ms.lastDone):'')+'</div>':'')
+        +(function(){var ow=DB.workOrders.find(function(w){return w.schedId===ms.id&&w.status!=='kapali';});return ow?'<div style="font-size:11px;margin-top:4px"><span onclick="openWODet(\''+ow.id+'\')" style="cursor:pointer;color:var(--bll);font-weight:700">🤖 '+esc(ow.id)+'</span> <span style="color:var(--mt)">otomatik iş emri açık ('+esc((STATS[ow.status]||{}).lbl||ow.status)+')</span></div>':'';})()
         +(tasks.length>0
           ?'<div id="'+tasksId+'" style="display:none;margin-top:10px;padding:10px;background:var(--bg2);border-radius:7px;border:1px solid var(--bd)">'
             +'<div style="font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Yapılacak İşler</div>'
@@ -1689,7 +1742,7 @@ function pgTech(){
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Teknisyenler</div>'+(can('s')?'<button class="btn bpri bsm" onclick="openTechForm(null)">+ Personel Ekle</button>':'')+'</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">'+h+'</div>';
 }
 
-function getUserIsOzeti(uid){var uw=(DB.workOrders||[]).filter(function(w){return w.techId===uid;});var op=uw.filter(function(w){return w.status==='acik';}).length;var dv=uw.filter(function(w){return w.status==='devam';}).length;var bk=uw.filter(function(w){return w.status==='bekliyor';}).length;var cl=uw.filter(function(w){return w.status==='kapali';}).length;var sc=0;if(DB.scores)Object.values(DB.scores).forEach(function(s){if(s.techId===uid)sc+=s.point;});var b=[];if(op)b.push('<span style="color:var(--rdl);font-size:10px;font-weight:700">Acik:'+op+'</span>');if(dv)b.push('<span style="color:var(--orl);font-size:10px;font-weight:700">Devam:'+dv+'</span>');if(bk)b.push('<span style="color:#a78bfa;font-size:10px;font-weight:700">Onay:'+bk+'</span>');if(cl)b.push('<span style="color:var(--gnl);font-size:10px;font-weight:700">Kapali:'+cl+'</span>');if(sc&&can('sc'))b.push('<span style="color:var(--bll);font-size:10px;font-weight:700">Puan:'+sc+'</span>');return b.length?'<td><div style="display:flex;flex-wrap:wrap;gap:3px">'+b.join('')+'</div></td>':'<td>—</td>';}
+function getUserIsOzeti(uid){var _u=(DB.users||[]).find(function(x){return x.id===uid;});var _tid=_u?userTechId(_u):'';var uw=(DB.workOrders||[]).filter(function(w){return w.techId&&(w.techId===uid||w.techId===_tid);});var op=uw.filter(function(w){return w.status==='acik';}).length;var dv=uw.filter(function(w){return w.status==='devam';}).length;var bk=uw.filter(function(w){return w.status==='bekliyor';}).length;var cl=uw.filter(function(w){return w.status==='kapali';}).length;var sc=0;if(DB.scores)Object.values(DB.scores).forEach(function(s){if(s.techId===uid||(_tid&&s.techId===_tid))sc+=s.point;});var b=[];if(op)b.push('<span style="color:var(--rdl);font-size:10px;font-weight:700">Acik:'+op+'</span>');if(dv)b.push('<span style="color:var(--orl);font-size:10px;font-weight:700">Devam:'+dv+'</span>');if(bk)b.push('<span style="color:#a78bfa;font-size:10px;font-weight:700">Onay:'+bk+'</span>');if(cl)b.push('<span style="color:var(--gnl);font-size:10px;font-weight:700">Kapali:'+cl+'</span>');if(sc&&can('sc'))b.push('<span style="color:var(--bll);font-size:10px;font-weight:700">Puan:'+sc+'</span>');return b.length?'<td><div style="display:flex;flex-wrap:wrap;gap:3px">'+b.join('')+'</div></td>':'<td>—</td>';}
 function pgUsers(){
   if(!can('u')){return '<div style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">🔒</div><div style="font-size:18px;font-weight:700;color:var(--rdl)">Erişim Reddedildi</div><div style="font-size:13px;color:var(--mt);margin-top:8px">Kullanıcı yönetimi sadece Yönetici yetkisine sahip kişiler tarafından görülebilir.</div></div>';}
   var permLabels={r:'Görüntüleme',w:'İş Emri Oluşturma',cl:'İş Emri Kapatma',ap:'Onaylama',d:'Silme',u:'Kullanıcı Yönetimi',s:'Sistem Ayarları'};
@@ -1711,7 +1764,7 @@ function pgUsers(){
     return '<tr>'
       +'<td style="font-weight:600">'+esc(u.name)+'</td>'
       +'<td style="font-family:monospace;color:var(--bll)">'+esc(u.un)+'</td>'
-      +'<td><span style="font-family:monospace;font-size:12px;background:var(--bg3);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);color:var(--orl)">'+(u.pw||u.password||'—')+'</span></td>'
+      +'<td style="font-size:11px;color:var(--sub)">'+(function(){var t=(DB.technicians||[]).find(function(x){return x.id===userTechId(u);});return t?'👷 '+esc(t.name):'<span style="color:var(--mt)">—</span>';})()+'</td>'
       +'<td><span class="badge bxsm" style="color:'+(rl&&rl.col||'#888')+';border-color:'+(rl&&rl.col||'#888')+';background:'+(rl&&rl.col||'#888')+'18">'+(rl&&rl.lbl||u.role)+'</span></td>'
       +'<td style="color:var(--mt);font-size:11px">'+esc(u.dept||'—')+'</td>'
       +'<td><span style="font-size:11px;font-weight:700;color:'+(u.active?'var(--gnl)':'var(--mt)')+'">'+(u.active?'● Aktif':'○ Pasif')+'</span></td>'
@@ -1731,7 +1784,7 @@ function pgUsers(){
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:22px">'+roleCards+'</div>'
     +'<div class="card" style="padding:0;overflow:hidden">'
     +'<table class="tbl"><thead><tr>'
-    +'<th>Ad Soyad</th><th>Kullanıcı Adı</th><th>Şifre</th><th>Rol</th><th>Departman</th><th>Durum</th><th></th>'
+    +'<th>Ad Soyad</th><th>Kullanıcı Adı</th><th>Bağlı Personel</th><th>Rol</th><th>Departman</th><th>Durum</th><th></th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table>'
     +'</div>';
 }
@@ -1755,14 +1808,14 @@ function pgSettings(){
   }).join('')||'<span style="font-size:12px;color:var(--mt)">Henüz durum eklenmedi</span>';
   var aH=s.areas.map(function(a){return'<div style="display:flex;align-items:center;gap:5px;padding:5px 11px;background:var(--bg3);border-radius:7px;border:1px solid var(--bd);font-size:13px">'+esc(a)+'<button onclick="rmListItem(\'area\',\''+esc(a)+'\')" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:14px;line-height:1;margin-left:2px">×</button></div>';}).join('');
   var rH=s.techRoles.map(function(r){return'<div style="display:flex;align-items:center;gap:5px;padding:5px 11px;background:var(--bg3);border-radius:7px;border:1px solid var(--bd);font-size:13px">'+esc(r)+'<button onclick="rmListItem(\'techRole\',\''+esc(r)+'\')" style="background:none;border:none;color:var(--rdl);cursor:pointer;font-size:14px;line-height:1;margin-left:2px">×</button></div>';}).join('');
-  return '<div style="font-size:20px;font-weight:800;margin-bottom:20px;letter-spacing:-.3px">Sistem Ayarları</div><div class="card"><div class="cardt">🏢 Firma Bilgileri</div><div class="g2"><div class="fr"><label class="lbl">Uygulama Başlığı</label><input class="inp" id="s-co" value="'+esc(s.company)+'"/></div><div class="fr"><label class="lbl">Tesis Adı</label><input class="inp" id="s-fa" value="'+esc(s.facility)+'"/></div><div class="fr"><label class="lbl">Adres</label><input class="inp" id="s-ad" value="'+esc(s.address||'')+'"/></div><div class="fr"><label class="lbl">Telefon</label><input class="inp" id="s-ph" value="'+esc(s.phone||'')+'"/></div></div></div><div class="card"><div class="cardt">⚙ Operasyonel Ayarlar</div><div class="g3"><div class="fr"><label class="lbl">Bakım Uyarı Eşiği (gün)</label><input class="inp" id="s-wd" type="number" min="1" value="'+s.warnDays+'"/></div><div class="fr"><label class="lbl">Kritik Uyarı Eşiği (gün)</label><input class="inp" id="s-cd" type="number" min="1" value="'+s.critDays+'"/></div></div><div class="chkr fr"><input type="checkbox" id="s-gd" '+(s.gmpDef?'checked':'')+"><label for='s-gd'>Yeni iş emirlerinde GMP varsayılan açık</label></div><div class='chkr fr'><input type='checkbox' id='s-ap' "+(s.reqApproval?'checked':'')+"><label for='s-ap'>Tamamlanan iş emirleri için onay mekanizması</label></div></div><div class='card'><div class='cardt'>💧 Su Sistemi Durumları <button class='btn bout bxs' onclick=\"addListItem('area')\">+ Ekle</button></div><div style='display:flex;gap:6px;flex-wrap:wrap'>"+aH+"</div></div><div class='card'><div class='cardt'>📍 Bölgeler <button class='btn bout bxs' onclick=\"addListItem('area')\">+ Ekle</button></div><div style='display:flex;gap:6px;flex-wrap:wrap'>"+aH+"</div></div><div class='card'><div class='cardt'>👷 Teknisyen Rolleri <button class='btn bout bxs' onclick=\"addListItem('techRole')\">+ Ekle</button></div><div style='display:flex;gap:6px;flex-wrap:wrap'>"+rH+"</div></div><div class='card'><div class='cardt'>💾 Veri Yönetimi</div><div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px'><div style='background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:16px'><div style='font-weight:700;margin-bottom:5px'>📊 Dışa Aktar</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px;line-height:1.4'>Tüm verileri Excel veya JSON olarak indir.</div><div style='display:flex;flex-direction:column;gap:7px'><button class='btn bsuc bsm' style='justify-content:center' onclick='exportExcel()'>📊 Excel (.xlsx)</button><button class='btn bout bsm' style='justify-content:center' onclick='exportJSON()'>📋 JSON Yedek</button></div></div><div style='background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:16px'><div style='font-weight:700;margin-bottom:5px'>📥 Yeni Bilgisayara Taşı</div><div style='font-size:11px;color:var(--mt);margin-bottom:4px'><strong style='color:var(--sub)'>1.</strong> JSON Yedek al</div><div style='font-size:11px;color:var(--mt);margin-bottom:4px'><strong style='color:var(--sub)'>2.</strong> Yeni bilgisayarda html aç</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px'><strong style='color:var(--sub)'>3.</strong> JSON Yükle → veriler gelir</div><label><button class='btn bout bsm' style='width:100%;justify-content:center' onclick='this.nextElementSibling.click()'>📂 JSON Yükle</button><input type='file' accept='.json' style='display:none' onchange='importJSON(this)'/></label></div><div style='background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.2);border-radius:9px;padding:16px'><div style='font-weight:700;color:var(--rdl);margin-bottom:5px'>⚠ Fabrika Sıfırlama</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px;line-height:1.4'>Tüm veriler silinir, örnek veri yüklenir. Geri alınamaz!</div><button class='btn bdng bsm' style='width:100%;justify-content:center' onclick='resetAll()'>Sıfırla</button></div></div></div><div style='display:flex;justify-content:flex-end;gap:10px;margin-top:4px'><button class='btn bghs' onclick='renderPage()'>İptal</button><button class='btn bsuc' onclick='saveSettings()'>Ayarları Kaydet</button></div>";
+  return '<div style="font-size:20px;font-weight:800;margin-bottom:20px;letter-spacing:-.3px">Sistem Ayarları</div><div class="card"><div class="cardt">🏢 Firma Bilgileri</div><div class="g2"><div class="fr"><label class="lbl">Uygulama Başlığı</label><input class="inp" id="s-co" value="'+esc(s.company)+'"/></div><div class="fr"><label class="lbl">Tesis Adı</label><input class="inp" id="s-fa" value="'+esc(s.facility)+'"/></div><div class="fr"><label class="lbl">Adres</label><input class="inp" id="s-ad" value="'+esc(s.address||'')+'"/></div><div class="fr"><label class="lbl">Telefon</label><input class="inp" id="s-ph" value="'+esc(s.phone||'')+'"/></div></div></div><div class="card"><div class="cardt">⚙ Operasyonel Ayarlar</div><div class="g3"><div class="fr"><label class="lbl">Bakım Uyarı Eşiği (gün)</label><input class="inp" id="s-wd" type="number" min="1" value="'+s.warnDays+'"/></div><div class="fr"><label class="lbl">Kritik Uyarı Eşiği (gün)</label><input class="inp" id="s-cd" type="number" min="1" value="'+s.critDays+'"/></div><div class="fr"><label class="lbl">Otomatik İE kaç gün önce açılsın</label><input class="inp" id="s-al" type="number" min="0" value="'+autoLeadDays()+'"/></div></div><div class="chkr fr"><input type="checkbox" id="s-auto" '+(autoEnabled()?'checked':'')+'><label for="s-auto">🤖 Planlı bakım ve kalibrasyondan otomatik iş emri aç</label></div><div style="display:flex;align-items:center;gap:10px;margin:-4px 0 12px;font-size:11px;color:var(--mt)"><span>Son çalışma: '+esc(s.autoLastRun||'—')+'</span><button class="btn bout bxs" onclick="runAutomation(true)">▶ Şimdi çalıştır</button></div><div class="chkr fr"><input type="checkbox" id="s-gd" '+(s.gmpDef?'checked':'')+"><label for='s-gd'>Yeni iş emirlerinde GMP varsayılan açık</label></div><div class='chkr fr'><input type='checkbox' id='s-ap' "+(s.reqApproval?'checked':'')+"><label for='s-ap'>Tamamlanan iş emirleri için onay mekanizması (kapalıysa teknisyen işi doğrudan kapatır)</label></div></div><div class='card'><div class='cardt'>💧 Su Sistemi Durumları <button class='btn bout bxs' onclick=\"addListItem('waterStatus')\">+ Ekle</button></div><div style='display:flex;gap:6px;flex-wrap:wrap'>"+wsStatusH+"</div></div><div class='card'><div class='cardt'>📍 Bölgeler <button class='btn bout bxs' onclick=\"addListItem('area')\">+ Ekle</button></div><div style='display:flex;gap:6px;flex-wrap:wrap'>"+aH+"</div></div><div class='card'><div class='cardt'>👷 Teknisyen Rolleri <button class='btn bout bxs' onclick=\"addListItem('techRole')\">+ Ekle</button></div><div style='display:flex;gap:6px;flex-wrap:wrap'>"+rH+"</div></div><div class='card'><div class='cardt'>💾 Veri Yönetimi</div><div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px'><div style='background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:16px'><div style='font-weight:700;margin-bottom:5px'>📊 Dışa Aktar</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px;line-height:1.4'>Tüm verileri Excel veya JSON olarak indir.</div><div style='display:flex;flex-direction:column;gap:7px'><button class='btn bsuc bsm' style='justify-content:center' onclick='exportExcel()'>📊 Excel (.xlsx)</button><button class='btn bout bsm' style='justify-content:center' onclick='exportJSON()'>📋 JSON Yedek</button></div></div><div style='background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:16px'><div style='font-weight:700;margin-bottom:5px'>📥 Yeni Bilgisayara Taşı</div><div style='font-size:11px;color:var(--mt);margin-bottom:4px'><strong style='color:var(--sub)'>1.</strong> JSON Yedek al</div><div style='font-size:11px;color:var(--mt);margin-bottom:4px'><strong style='color:var(--sub)'>2.</strong> Yeni bilgisayarda html aç</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px'><strong style='color:var(--sub)'>3.</strong> JSON Yükle → veriler gelir</div><label><button class='btn bout bsm' style='width:100%;justify-content:center' onclick='this.nextElementSibling.click()'>📂 JSON Yükle</button><input type='file' accept='.json' style='display:none' onchange='importJSON(this)'/></label></div><div style='background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.2);border-radius:9px;padding:16px'><div style='font-weight:700;color:var(--rdl);margin-bottom:5px'>⚠ Fabrika Sıfırlama</div><div style='font-size:11px;color:var(--mt);margin-bottom:12px;line-height:1.4'>Tüm veriler silinir, örnek veri yüklenir. Geri alınamaz!</div><button class='btn bdng bsm' style='width:100%;justify-content:center' onclick='resetAll()'>Sıfırla</button></div></div></div><div style='display:flex;justify-content:flex-end;gap:10px;margin-top:4px'><button class='btn bghs' onclick='renderPage()'>İptal</button><button class='btn bsuc' onclick='saveSettings()'>Ayarları Kaydet</button></div>";
 }
 
 // MODALS
 function openWOModal(id,eqId){ET.wo=id?DB.workOrders.find(function(w){return w.id===id;}):(eqId?{eqId:eqId,type:'ariza'}:null);WDOCS=ET.wo?[].concat(ET.wo.docs||[]):[];MODAL.wo=true;renderModals();if(eqId)setTimeout(function(){var el=document.getElementById('f-eqid');if(el)el.value=eqId;},60);}
 function tplWOModal(){
   var w=ET.wo,s=DB.settings,isNew=!w||!w.id;
-  var f={eqId:'',type:'ariza',title:'',desc:'',sev:'orta',status:'acik',date:today(),due:'',techId:'',gmp:s.gmpDef||false,root:'',lh:0,pc:0};
+  var f={eqId:'',type:'ariza',title:'',desc:'',sev:'orta',status:'acik',date:today(),due:'',techId:'',gmp:s.gmpDef||false,root:'',lh:0,pc:0,helperIds:[]};
   if(w)Object.keys(f).forEach(function(k){if(w[k]!==undefined)f[k]=w[k];});
   var ro=!can('w'),dis=ro?' disabled':'';
   var eqO=DB.equipment.map(function(e){return'<option value="'+e.id+'"'+(f.eqId===e.id?' selected':'')+'>'+esc(e.id)+' – '+esc(e.name)+'</option>';}).join('');
@@ -1770,7 +1823,7 @@ function tplWOModal(){
   var svO=Object.entries(SEVS).map(function(e){return'<option value="'+e[0]+'"'+(f.sev===e[0]?' selected':'')+'>'+e[1].lbl+'</option>';}).join('');
   var stO=Object.entries(STATS).filter(function(e){var _c=can('cl');return _c||(e[0]==='acik'||e[0]==='devam');}).map(function(e){return'<option value="'+e[0]+'"'+(f.status===e[0]?' selected':'')+'>'+e[1].lbl+'</option>';}).join('');
   var tcO=DB.technicians.filter(function(t){return t.active;}).map(function(t){return'<option value="'+t.id+'"'+(f.techId===t.id?' selected':'')+'>'+esc(t.name)+'</option>';}).join('');
-  return '<div class="ov" id="ov-wo"><div class="md"><div class="mdh"><div class="mdt">'+(isNew?'Yeni İş Emri':'İş Emrini Düzenle')+'</div><button class="mdc" onclick="closeM(\'wo\')">✕</button></div><div class="g2"><div class="fr"><label class="lbl">İş Tipi</label><select class="inp" id="f-type"'+dis+'><option value="">Seçiniz...</option>'+tO+'</select></div><div class="fr"><label class="lbl">Ekipman</label><select class="inp" id="f-eqid"'+dis+'><option value="">Seçiniz...</option>'+eqO+'</select></div></div><div class="fr"><label class="lbl">Başlık</label><input class="inp" id="f-title" value="'+esc(f.title)+'" placeholder="Açıklayıcı başlık..."'+dis+'/></div><div class="fr"><label class="lbl">Açıklama</label><textarea class="inp" id="f-desc" placeholder="Detaylı açıklama..."'+dis+'>'+esc(f.desc||'')+'</textarea></div><div class="g3"><div class="fr"><label class="lbl">Önem</label><select class="inp" id="f-sev"'+dis+'>'+svO+'</select></div><div class="fr"><label class="lbl">Durum</label><select class="inp" id="f-status"'+dis+'>'+stO+'</select></div><div class="fr"><label class="lbl">Tarih</label><input class="inp" type="date" id="f-date" value="'+f.date+'"'+dis+'/></div></div><div class="g3"><div class="fr"><label class="lbl">Son Tarih</label><input class="inp" type="date" id="f-due" value="'+esc(f.due||'')+'"'+dis+'/></div><div class="fr"><label class="lbl">Teknisyen</label><select class="inp" id="f-tech"'+dis+'><option value="">Seçiniz...</option>'+tcO+'</select></div><div class="fr"><label class="lbl">Kök Neden</label><input class="inp" id="f-root" value="'+esc(f.root||'')+'" placeholder="Arıza kök nedeni..."'+dis+'/></div></div><div class="g2"><div class="fr"><label class="lbl">İşçilik Saati</label><input class="inp" type="number" min="0" step="0.5" id="f-lh" value="'+String(f.lh||0)+'"'+dis+'/></div><div class="fr"><label class="lbl">Parça/Malzeme (₺)</label><input class="inp" type="number" min="0" id="f-pc" value="'+String(f.pc||0)+'"'+dis+'/></div></div><div class="chkr fr"><input type="checkbox" id="f-gmp"'+(f.gmp?' checked':'')+dis+'><label for="f-gmp">GMP / Validasyon etkisi var — deviation kaydı açılmalı</label></div><div class="fr"><label class="lbl">İlgili Dokümanlar</label>'+(ro?'':'<div style="display:flex;gap:8px;margin-bottom:8px"><input class="inp isml" id="f-di" placeholder="Dosya adı (örn: Protokol_v1.pdf)"/><button class="btn bout bxs" id="b-adddoc">+ Ekle</button></div>')+'<div id="f-docs">'+renderDocList(WDOCS,!ro)+'</div></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;padding-top:16px;border-top:1px solid var(--bd)"><button class="btn bghs" onclick="closeM(\'wo\')">İptal</button>'+(ro?'':'<button class="btn bsuc" onclick="saveWO()">İş Emrini Kaydet</button>')+'</div></div></div>';
+  return '<div class="ov" id="ov-wo"><div class="md"><div class="mdh"><div class="mdt">'+(isNew?'Yeni İş Emri':'İş Emrini Düzenle')+'</div><button class="mdc" onclick="closeM(\'wo\')">✕</button></div><div class="g2"><div class="fr"><label class="lbl">İş Tipi</label><select class="inp" id="f-type"'+dis+'><option value="">Seçiniz...</option>'+tO+'</select></div><div class="fr"><label class="lbl">Ekipman</label><select class="inp" id="f-eqid"'+dis+'><option value="">Seçiniz...</option>'+eqO+'</select></div></div><div class="fr"><label class="lbl">Başlık</label><input class="inp" id="f-title" value="'+esc(f.title)+'" placeholder="Açıklayıcı başlık..."'+dis+'/></div><div class="fr"><label class="lbl">Açıklama</label><textarea class="inp" id="f-desc" placeholder="Detaylı açıklama..."'+dis+'>'+esc(f.desc||'')+'</textarea></div><div class="g3"><div class="fr"><label class="lbl">Önem</label><select class="inp" id="f-sev"'+dis+'>'+svO+'</select></div><div class="fr"><label class="lbl">Durum</label><select class="inp" id="f-status"'+dis+'>'+stO+'</select></div><div class="fr"><label class="lbl">Tarih</label><input class="inp" type="date" id="f-date" value="'+f.date+'"'+dis+'/></div></div><div class="g3"><div class="fr"><label class="lbl">Son Tarih</label><input class="inp" type="date" id="f-due" value="'+esc(f.due||'')+'"'+dis+'/></div><div class="fr"><label class="lbl">Teknisyen</label><select class="inp" id="f-tech"'+dis+'><option value="">Seçiniz...</option>'+tcO+'</select></div><div class="fr"><label class="lbl">Kök Neden</label><input class="inp" id="f-root" value="'+esc(f.root||'')+'" placeholder="Arıza kök nedeni..."'+dis+'/></div></div><div class="fr"><label class="lbl">Yardımcı Teknisyenler <span style="font-weight:400;color:var(--mt);text-transform:none">(Ctrl/Cmd ile çoklu seçim)</span></label><select class="inp" id="f-helpers" multiple size="3"'+dis+'>'+DB.technicians.filter(function(t){return t.active;}).map(function(t){return'<option value="'+t.id+'"'+((f.helperIds||[]).indexOf(t.id)>=0?' selected':'')+'>'+esc(t.name)+'</option>';}).join('')+'</select></div><div class="g2"><div class="fr"><label class="lbl">İşçilik Saati</label><input class="inp" type="number" min="0" step="0.5" id="f-lh" value="'+String(f.lh||0)+'"'+dis+'/></div><div class="fr"><label class="lbl">Parça/Malzeme (₺)</label><input class="inp" type="number" min="0" id="f-pc" value="'+String(f.pc||0)+'"'+dis+'/></div></div><div class="chkr fr"><input type="checkbox" id="f-gmp"'+(f.gmp?' checked':'')+dis+'><label for="f-gmp">GMP / Validasyon etkisi var — deviation kaydı açılmalı</label></div><div class="fr"><label class="lbl">İlgili Dokümanlar</label>'+(ro?'':'<div style="display:flex;gap:8px;margin-bottom:8px"><input class="inp isml" id="f-di" placeholder="Dosya adı (örn: Protokol_v1.pdf)"/><button class="btn bout bxs" id="b-adddoc">+ Ekle</button></div>')+'<div id="f-docs">'+renderDocList(WDOCS,!ro)+'</div></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;padding-top:16px;border-top:1px solid var(--bd)"><button class="btn bghs" onclick="closeM(\'wo\')">İptal</button>'+(ro?'':'<button class="btn bsuc" onclick="saveWO()">İş Emrini Kaydet</button>')+'</div></div></div>';
 }
 
 function openWODet(id){ET.woDet=DB.workOrders.find(function(w){return w.id===id;});MODAL.woDet=true;TAB.wo='info';renderModals();}
@@ -1815,7 +1868,7 @@ function tplWODet(){
   }
   var actBtns=''
     +(can('w')?'<button class="btn bout bxs" style="margin-right:6px" onclick="closeM(\'woDet\');openWOModal(\''+w.id+'\',null)">Düzenle</button>':'')
-    +((!can('cl'))&&w.techId===U.id&&(w.status==='acik'||w.status==='devam')?'<button class="btn bpri bxs" style="margin-right:6px" onclick="closeM(\'woDet\');sendToApproval(\''+w.id+'\')">✔ Onaya Gönder</button>':'')
+    +((!can('cl'))&&isMyWO(w)&&(w.status==='acik'||w.status==='devam')?'<button class="btn bpri bxs" style="margin-right:6px" onclick="closeM(\'woDet\');sendToApproval(\''+w.id+'\')">✔ Onaya Gönder</button>':'')
     +(can('cl')&&(w.status==='acik'||w.status==='devam')?'<button class="btn bsuc bxs" style="margin-right:6px" onclick="closeWODirect(\''+w.id+'\')">✓ Kapat</button>':'')
     +(can('ap')&&w.status==='bekliyor'?'<button class="btn bdng bxs" style="margin-right:6px" onclick="closeM(\'woDet\');rejectWO(\''+w.id+'\')">❌ Reddet</button>':'')
     +(can('ap')&&w.status==='bekliyor'?'<button class="btn bsuc bxs" onclick="approveWO(\''+w.id+'\')">✓ Onayla</button>':'');
@@ -1853,11 +1906,13 @@ function getEqMaintDates(eq){
 function getEqPartHistory(eqId){
   var rows=[];
   var seen={};
+  // Aynı çıkış hem eqPartHistory'de hem spareMovements'ta durur; ikisini tek satır say.
   function add(row, key){
     if(!row)return;
-    var k=key||row.id||((row.partId||'')+'|'+(row.ts||'')+'|'+(row.qty||''));
-    if(seen[k])return;
-    seen[k]=true;
+    var comp=(row.partId||'')+'|'+(row.ts||'')+'|'+(row.qty||'');
+    if((key&&seen[key])||seen[comp])return;
+    if(key)seen[key]=true;
+    seen[comp]=true;
     rows.push(row);
   }
   var direct=(DB.eqPartHistory&&DB.eqPartHistory[eqId])||[];
@@ -1866,7 +1921,7 @@ function getEqPartHistory(eqId){
       id:ph.id, partId:ph.partId||'', partName:ph.partName||'', partCode:ph.partCode||'',
       qty:ph.qty||0, unit:ph.unit||'Adet', reason:ph.reason||'', woId:ph.woId||'',
       user:ph.user||'—', ts:ph.ts||''
-    }, ph.id);
+    }, ph.refMovId?('MOV-'+ph.refMovId):ph.id);
   });
   (DB.spareMovements||[]).filter(function(m){return m.eqId===eqId&&m.type==='cikis';}).forEach(function(m){
     var p=(DB.spareParts||[]).find(function(x){return x.id===m.partId;})||{};
@@ -1897,7 +1952,7 @@ function tplEqDet(){
     if(!wos.length){content=emptyHTML('Henüz iş emri yok');}
     else{content='<div class="tlw">'+wos.map(function(w){var dot=w.type==='ariza'?'var(--rdl)':'var(--bll)';var wt=WTYPES[w.type]||{ico:'?'};var tc=DB.technicians.find(function(x){return x.id===w.techId;});return'<div class="tli"><div class="tld" style="background:'+dot+';box-shadow:0 0 6px '+dot+'40"></div><div class="tlb" style="cursor:pointer" onclick="closeM(\'eqDet\');openWODet(\''+w.id+'\')"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;gap:8px"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-size:16px">'+wt.ico+'</span><span style="font-size:13px;font-weight:700">'+esc(w.title)+'</span>'+(w.gmp?'<span class="badge bxsm" style="color:var(--cyl);border-color:var(--cyl)">GMP</span>':'')+'</div><div style="display:flex;gap:5px;flex-shrink:0">'+sevBadge(w.sev,true)+' '+staBadge(w.status,true)+'</div></div><div style="font-size:12px;color:var(--sub);margin-bottom:6px;line-height:1.4">'+esc(w.desc||'')+'</div><div style="display:flex;gap:12px;font-size:11px;color:var(--mt);flex-wrap:wrap"><span>📅 '+esc(w.date)+'</span>'+(tc?'<span>👷 '+esc(tc.name)+'</span>':'')+(w.root?'<span>🔍 '+esc(w.root)+'</span>':'')+(w.lh>0?'<span>⏱ '+w.lh+'s</span>':'')+(w.docs&&w.docs.length?'<span>📎 '+w.docs.length+' dosya</span>':'')+'</div></div></div>';}).join('')+'</div>';}
   }else if(t==='info'){
-    var flds=[['Üretici',eq.mfr],['Model',eq.model],['Seri No',eq.sn],['Kategori',eq.cat],['Oda Numarası',eq.area],['Ekipman No',eq.instDate],['Son Bakım',maintD.last],['Sonraki Bakım',maintD.next]];
+    var flds=[['Üretici',eq.mfr],['Model',eq.model],['Seri No',eq.sn],['Kategori',eq.cat],['Oda Numarası',eq.area],['Kurulum Tarihi',eq.instDate],['Son Bakım',maintD.last],['Sonraki Bakım',maintD.next]];
     content='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+flds.map(function(f){return'<div style="background:var(--bg3);border-radius:8px;padding:10px 14px;border:1px solid var(--bd)"><div style="font-size:10px;color:var(--mt);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">'+f[0]+'</div><div style="font-size:13px;font-weight:600">'+esc(f[1]||'—')+'</div></div>';}).join('')+(can('ap')&&eq.notes?'<div style="grid-column:1/-1;background:var(--bg3);border-radius:8px;padding:10px 14px;border:1px solid var(--bd)"><div style="font-size:10px;color:var(--mt);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">Notlar</div><div style="font-size:13px;color:var(--sub);line-height:1.5">'+esc(eq.notes)+'</div></div>':'')+'</div>';
   }else if(t==='docs'){
     content=(can('w')?'<div style="display:flex;gap:8px;margin-bottom:16px;align-items:flex-end"><div style="flex:2"><label class="lbl">Doküman Adı</label><input class="inp isml" id="eqd-name" placeholder="örn: SOP-001-v2.pdf"/></div><div style="flex:3"><label class="lbl">Not / Açıklama</label><input class="inp isml" id="eqd-note" placeholder="İsteğe bağlı..."/></div><button class="btn bpri bsm" onclick="addEqDoc(\''+eq.id+'\')">+ Ekle</button></div>':'')+
@@ -2075,10 +2130,10 @@ function tplTechForm(){
 function openUserForm(id){if(!can('s')){toast('Kullanıcı yönetimi için Yönetici yetkisi gerekli.','err');return;}ET.user=id?DB.users.find(function(u){return u.id===id;}):null;MODAL.user=true;renderModals();}
 function tplUserForm(){
   var u=ET.user;
-  var f={name:'',un:'',pw:'',role:'readonly',dept:'',email:'',active:true};
+  var f={name:'',un:'',pw:'',role:'teknisyen',dept:'',email:'',active:true,techId:''};
   if(u){Object.keys(f).forEach(function(k){if(u[k]!==undefined)f[k]=u[k];});if(!f.pw&&u.password)f.pw=u.password;}
   var rO=Object.entries(ROLES).map(function(e){return'<option value="'+e[0]+'"'+(f.role===e[0]?' selected':'')+'>'+e[1].lbl+'</option>';}).join('');
-  return '<div class="ov" id="ov-user"><div class="md"><div class="mdh"><div class="mdt">'+(u?'Kullanıcı Düzenle':'Yeni Kullanıcı')+'</div><button class="mdc" onclick="closeM(\'user\')">✕</button></div><div class="fr"><label class="lbl">Ad Soyad</label><input class="inp" id="u-n" value="'+esc(f.name)+'"/></div><div class="g2"><div class="fr"><label class="lbl">Kullanıcı Adı</label><input class="inp" id="u-u" value="'+esc(f.un)+'" autocomplete="off"/></div><div class="fr"><label class="lbl">Şifre'+(u?' (değiştirmek için girin)':'')+'</label><input class="inp" type="password" id="u-p" placeholder="'+(u?'••••••••':'')+'"/></div><div class="fr"><label class="lbl">Departman</label><input class="inp" id="u-d" value="'+esc(f.dept||'')+'"/></div><div class="fr"><label class="lbl">E-posta</label><input class="inp" type="email" id="u-e" value="'+esc(f.email||'')+'"/></div></div><div class="fr"><label class="lbl">Rol</label><select class="inp" id="u-r">'+rO+'</select></div><div class="chkr fr"><input type="checkbox" id="u-ac"'+(f.active?' checked':'')+'><label for="u-ac">Aktif</label></div><div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)"><button class="btn bghs" onclick="closeM(\'user\')">İptal</button><button class="btn bsuc" onclick="saveUser()">Kaydet</button></div></div></div>';
+  return '<div class="ov" id="ov-user"><div class="md"><div class="mdh"><div class="mdt">'+(u?'Kullanıcı Düzenle':'Yeni Kullanıcı')+'</div><button class="mdc" onclick="closeM(\'user\')">✕</button></div><div class="fr"><label class="lbl">Ad Soyad</label><input class="inp" id="u-n" value="'+esc(f.name)+'"/></div><div class="g2"><div class="fr"><label class="lbl">Kullanıcı Adı</label><input class="inp" id="u-u" value="'+esc(f.un)+'" autocomplete="off"/></div><div class="fr"><label class="lbl">Şifre'+(u?' (değiştirmek için girin)':'')+'</label><input class="inp" type="password" id="u-p" placeholder="'+(u?'••••••••':'')+'"/></div><div class="fr"><label class="lbl">Departman</label><input class="inp" id="u-d" value="'+esc(f.dept||'')+'"/></div><div class="fr"><label class="lbl">E-posta</label><input class="inp" type="email" id="u-e" value="'+esc(f.email||'')+'"/></div></div><div class="g2"><div class="fr"><label class="lbl">Rol</label><select class="inp" id="u-r">'+rO+'</select></div><div class="fr"><label class="lbl">Bağlı Personel</label><select class="inp" id="u-t"><option value="">— Otomatik (ad / e-posta) —</option>'+(DB.technicians||[]).map(function(t){return'<option value="'+t.id+'"'+(f.techId===t.id?' selected':'')+'>'+esc(t.name)+'</option>';}).join('')+'</select></div></div><div style="font-size:11px;color:var(--mt);margin:-6px 0 12px">İş emirleri personel listesinden atanır. Teknisyenin kendi işlerini görmesi ve onaya gönderebilmesi için hesabını personel kaydına bağlayın.</div><div class="chkr fr"><input type="checkbox" id="u-ac"'+(f.active?' checked':'')+'><label for="u-ac">Aktif</label></div><div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd)"><button class="btn bghs" onclick="closeM(\'user\')">İptal</button><button class="btn bsuc" onclick="saveUser()">Kaydet</button></div></div></div>';
 }
 
 function openQRModal(){QEID=DB.equipment[0]&&DB.equipment[0].id||null;MODAL.qr=true;renderModals();}
@@ -2091,6 +2146,29 @@ function tplQRModal(){
 }
 
 // QR ENGINE
+function makeQRDataURL(text, size){
+  // Elle yazılmış makeQR() hatalı QR üretiyordu (jsQR ile doğrulandı, decode edilemiyor).
+  // Bunun yerine uygulamanın zaten güvenilir şekilde kullandığı QRCode.js kütüphanesini kullan.
+  if(typeof QRCode==='undefined') return null;
+  var tempDiv=document.createElement('div');
+  tempDiv.style.cssText='position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;';
+  document.body.appendChild(tempDiv);
+  var dataUrl=null;
+  try{
+    new QRCode(tempDiv,{
+      text:text,
+      width:size||200,
+      height:size||200,
+      colorDark:'#000000',
+      colorLight:'#ffffff',
+      correctLevel:QRCode.CorrectLevel.M
+    });
+    var canvas=tempDiv.querySelector('canvas');
+    if(canvas) dataUrl=canvas.toDataURL('image/png');
+  }catch(e){ console.warn('QR üretim hatası:', e); }
+  document.body.removeChild(tempDiv);
+  return dataUrl;
+}
 function makeQR(text,cell){
   cell=cell||8;
   var bytes=[];for(var i=0;i<text.length;i++){var c=text.charCodeAt(i);bytes.push(c<128?c:63);}
@@ -2232,6 +2310,12 @@ function printAllQR(){
 }
 
 // SAVE FUNCTIONS
+function nextWOId(){
+  var mx=0;
+  (DB.workOrders||[]).forEach(function(w){var m=/^WO-(\d+)$/.exec(w.id||'');if(m){var n=parseInt(m[1],10);if(n>mx)mx=n;}});
+  mx++;
+  return 'WO-'+(mx<10?'000'+mx:mx<100?'00'+mx:mx<1000?'0'+mx:mx);
+}
 function saveWO(){
   var eqId=v('f-eqid'),title=v('f-title').trim();
   if(!eqId){toast('Ekipman seçiniz','err');return;}
@@ -2241,12 +2325,22 @@ function saveWO(){
   if(statusVal==='bekliyor'&&!can('cl')){toast('Onay Bekliyor icin listeden Onaya Gonder butonunu kullanin.','warn');return;}
   var ex=ET.wo&&ET.wo.id?DB.workOrders.find(function(w){return w.id===ET.wo.id;}):null;
   var status=v('f-status');
-  var wo={id:ex?ex.id:(function(){var mx=0;(DB.workOrders||[]).forEach(function(w){var n=parseInt((w.id||'').replace(/[^0-9]/g,''));if(n>mx)mx=n;});mx++;return 'WO-'+(mx<10?'000'+(mx):mx<100?'00'+mx:mx<1000?'0'+mx:mx);})(),eqId:eqId,type:v('f-type'),title:title,desc:v('f-desc'),sev:v('f-sev'),status:status,date:v('f-date')||today(),due:v('f-due'),techId:v('f-tech'),gmp:vb('f-gmp'),root:v('f-root'),lh:parseFloat(v('f-lh'))||0,pc:parseFloat(v('f-pc'))||0,
+  var wo={id:ex?ex.id:nextWOId(),eqId:eqId,type:v('f-type'),title:title,desc:v('f-desc'),sev:v('f-sev'),status:status,date:v('f-date')||today(),due:v('f-due'),techId:v('f-tech'),gmp:vb('f-gmp'),root:v('f-root'),lh:parseFloat(v('f-lh'))||0,pc:parseFloat(v('f-pc'))||0,
     helperIds:(function(){var s=document.getElementById('f-helpers');if(!s)return[];return Array.from(s.selectedOptions||[]).map(function(o){return o.value;}).filter(Boolean);})(),
     steps:ex?ex.steps:[],docs:[].concat(WDOCS),comments:ex?ex.comments:[],by:ex?ex.by:U.id,approvedBy:ex?ex.approvedBy:'',closedAt:(status==='kapali'&&!(ex&&ex.closedAt))?nowStr():(ex?ex.closedAt||'':'')};
   if(wo.type==='ariza'&&wo.sev==='kritik'&&wo.status==='acik'){DB.equipment=DB.equipment.map(function(e){return e.id===eqId?Object.assign({},e,{status:'arizali'}):e;});}
   if(ex){DB.workOrders=DB.workOrders.map(function(w){return w.id===wo.id?wo:w;});addLog('İş Emri Düzenlendi',wo.title+' ['+wo.id+']','Durum:'+ex.status,'Durum:'+wo.status);}else{DB.workOrders=[wo].concat(DB.workOrders);addLog('İş Emri Oluşturuldu',wo.title+' ['+wo.id+']','',wo.status+'/'+wo.sev);}
   dbSave();WDOCS=[];closeM('wo');toast(ex?'İş emri güncellendi':'İş emri oluşturuldu');R();
+}
+// İş emri kapandıktan sonra: ekipmanın başka açık işi yoksa Arızalı -> Aktif ve son bakım tarihi
+function eqAfterWOClose(eqId){
+  if(!eqId)return;
+  var stillOpen=DB.workOrders.filter(function(w){return w.eqId===eqId&&w.status!=='kapali';}).length;
+  if(stillOpen===0){
+    DB.equipment=DB.equipment.map(function(e){
+      return e.id===eqId&&e.status==='arizali'?Object.assign({},e,{status:'aktif',lastMaint:today()}):e;
+    });
+  }
 }
 function closeWODirect(id){
   if(!can('cl')){toast('Kapatma yetkiniz yok.','err');return;}
@@ -2350,8 +2444,17 @@ function tplPendingModal(){
 function sendToApproval(id){
   var wo=DB.workOrders.find(function(w){return w.id===id;});
   if(!wo){toast('İş emri bulunamadı','err');return;}
-  if(wo.techId!==U.id){toast('Bu iş size atanmamış','err');return;}
-  if(!confirm('"'+wo.title+'" iş emrini tamamladınız mı? Onaya gönderilecek.'))return;
+  if(!isMyWO(wo)){toast('Bu iş size atanmamış','err');return;}
+  var needApproval=DB.settings.reqApproval!==false;
+  if(!confirm('"'+wo.title+'" iş emrini tamamladınız mı? '+(needApproval?'Onaya gönderilecek.':'İş emri kapatılacak.')))return;
+  if(!needApproval){
+    DB.workOrders=DB.workOrders.map(function(w){
+      return w.id!==id?w:Object.assign({},w,{status:'kapali',closedAt:nowStr(),closedBy:U.name});
+    });
+    eqAfterWOClose(wo.eqId);
+    addLog('İş Emri Kapatıldı',wo.title+' ['+id+']',wo.status,'kapali');
+    dbSave();toast('"'+wo.title+'" kapatıldı ✓');R();return;
+  }
   DB.workOrders=DB.workOrders.map(function(w){
     return w.id!==id?w:Object.assign({},w,{status:'bekliyor',sentToApprovalAt:nowStr(),sentToApprovalBy:U.name});
   });
@@ -2366,6 +2469,7 @@ function approveWO(id){
   var wo=DB.workOrders.find(function(w){return w.id===id;});
   if(wo)addLog('İş Emri Onaylandı',wo.title+' ['+id+']','bekliyor','kapali');
   DB.workOrders=DB.workOrders.map(function(w){return w.id===id?Object.assign({},w,{status:'kapali',approvedBy:U.id,closedAt:nowStr()}):w;});
+  if(wo)eqAfterWOClose(wo.eqId);
   dbSave();MODAL_PENDING=false;toast('İş emri onaylandı ve kapatıldı ✓');renderModals();R();
 }
 function deleteEq(id){
@@ -2376,11 +2480,10 @@ function deleteEq(id){
   if(openWOs.length>0){
     toast(eq.name+' için '+openWOs.length+' açık iş emri var. Önce kapatınız.','err');return;
   }
-  if(!confirm(eq.name+' ekipmanını silmek istiyor musunuz?\n\nBu işlem geri alınamaz!')) return;
+  if(!confirm(eq.name+' ekipmanını silmek istiyor musunuz?\n\nGeçmiş iş emirleri kayıt olarak saklanır. Kullanımdan kalkan ekipman için "Devre Dışı" durumunu tercih edebilirsiniz.\n\nBu işlem geri alınamaz!')) return;
   addLog('Ekipman Silindi',eq.name+' ['+id+']','Stok:'+eq.status,'');
   DB.equipment=DB.equipment.filter(function(e){return e.id!==id;});
-  // İlgili iş emirlerini de sil
-  DB.workOrders=DB.workOrders.filter(function(w){return w.eqId!==id;});
+  // Kapalı iş emirleri GMP geçmişi olarak saklanır (silinmez)
   // İlgili dokümanları sil
   if(DB.eqDocs&&DB.eqDocs[id])delete DB.eqDocs[id];
   // İlgili bakım planlarını sil
@@ -2455,12 +2558,12 @@ function saveUser(){
   if(!name||!un){toast('Ad ve kullanıcı adı zorunludur','err');return;}
   var ex=ET.user;var rawPw=v('u-p');
   if(DB.users.some(function(x){return x.un===un&&x.id!==(ex&&ex.id);})){toast('Bu kullanıcı adı kullanılıyor','err');return;}
-  var u={id:ex?ex.id:'U-'+uid(),name:name,un:un,pw:rawPw||(ex&&ex.pw)||'',role:v('u-r'),dept:v('u-d'),email:v('u-e'),active:vb('u-ac')};
+  var u={id:ex?ex.id:'U-'+uid(),name:name,un:un,pw:rawPw||(ex&&ex.pw)||'',role:v('u-r'),dept:v('u-d'),email:v('u-e'),active:vb('u-ac'),techId:v('u-t')||''};
   if(ex){DB.users=DB.users.map(function(x){return x.id===u.id?u:x;});if(U.id===u.id)U=u;addLog('Kullanıcı Düzenlendi',u.name+' ['+u.un+']','','');}else{DB.users=DB.users.concat([u]);addLog('Kullanıcı Eklendi',u.name+' ['+u.un+']','',u.role);}
   dbSave();closeM('user');toast(ex?'Kullanıcı güncellendi':'Kullanıcı eklendi');R();
 }
 function saveSettings(){
-  var s=DB.settings;var newUrl=v('s-url');if(newUrl&&newUrl.trim())BASE_URL=newUrl.trim().endsWith('/')?newUrl.trim():newUrl.trim()+'/';s.company=v('s-co')||s.company;s.facility=v('s-fa')||s.facility;s.address=v('s-ad');s.phone=v('s-ph');s.warnDays=parseInt(v('s-wd'))||7;s.critDays=parseInt(v('s-cd'))||3;s.gmpDef=vb('s-gd');s.reqApproval=vb('s-ap');
+  var s=DB.settings;var newUrl=v('s-url');if(newUrl&&newUrl.trim())BASE_URL=newUrl.trim().endsWith('/')?newUrl.trim():newUrl.trim()+'/';s.company=v('s-co')||s.company;s.facility=v('s-fa')||s.facility;s.address=v('s-ad');s.phone=v('s-ph');s.warnDays=parseInt(v('s-wd'))||7;s.critDays=parseInt(v('s-cd'))||3;s.gmpDef=vb('s-gd');s.reqApproval=vb('s-ap');s.autoWO=vb('s-auto');var _al=parseInt(v('s-al'));s.autoLeadDays=isNaN(_al)?7:Math.max(0,_al);
   dbSave();toast('Ayarlar kaydedildi');R();
 }
 function addEqDoc(eqId){var name=(document.getElementById('eqd-name')||{value:''}).value.trim();if(!name){toast('Doküman adı zorunludur','err');return;}var note=(document.getElementById('eqd-note')||{value:''}).value.trim();if(!DB.eqDocs)DB.eqDocs={};if(!DB.eqDocs[eqId])DB.eqDocs[eqId]=[];DB.eqDocs[eqId].push({name:name,note:note,date:today(),by:U.name});dbSave();toast('Doküman eklendi');TAB.eq='docs';renderModals();}
@@ -2560,7 +2663,6 @@ function bindPage(){
   var ft=document.getElementById('ft');if(ft)ft.onchange=function(){FLT.type=ft.value;renderPage();};
   var fs=document.getElementById('fs');if(fs)fs.onchange=function(){FLT.sev=fs.value;renderPage();};
   var fst=document.getElementById('fst');if(fst)fst.onchange=function(){FLT.status=fst.value;renderPage();};
-  setTimeout(function(){drawChart('ch-trend');drawChart('ch-eq');drawChart('ch-type');},80);
 }
 
 // CHARTS
@@ -3256,7 +3358,7 @@ function _buildPPTX(selYear, selMonth){
     s14.addShape(pres.ShapeType.roundRect,{x:0.8,y:y14,w:12,h:0.72,fill:{color:'162c54'},line:{color:a.col,pt:1.5},rectRadius:0.08});
     s14.addText(a.ico,{x:0.95,y:y14+0.12,w:0.6,h:0.48,fontSize:18,fontFace:'Calibri'});
     s14.addText(a.text,{x:1.65,y:y14+0.18,w:8.5,h:0.38,fontSize:12,color:C.white,fontFace:'Calibri'});
-    s14.addShape(pres.ShapeType.roundRect,{x:10.3,y:y14+0.16,w:2.3,h:0.4,fill:{color:a.col+'30'},line:{color:a.col,pt:1},rectRadius:0.06});
+    s14.addShape(pres.ShapeType.roundRect,{x:10.3,y:y14+0.16,w:2.3,h:0.4,fill:{color:a.col,transparency:80},line:{color:a.col,pt:1},rectRadius:0.06});
     s14.addText(a.pri,{x:10.3,y:y14+0.18,w:2.3,h:0.36,fontSize:10,bold:true,align:'center',color:a.col,fontFace:'Calibri'});
   });
   s14.addText(s.facility+' | '+todayStr+' | PharmaMS Bakım Yönetim Sistemi',
@@ -3410,7 +3512,7 @@ function renderQRLanding() {
   var tabContent = '';
   if(QR_TAB === 'info') {
     var _qrMaintD = (typeof getEqMaintDates==='function') ? getEqMaintDates(eq) : {last:eq.lastMaint,next:eq.nextMaint};
-    var fields = [['Üretici',eq.mfr],['Model',eq.model],['Seri No',eq.sn],['Kategori',eq.cat],['Oda Numarası',eq.area],['Ekipman No',eq.instDate],['Son Bakım',_qrMaintD.last],['Sonraki Bakım',_qrMaintD.next]];
+    var fields = [['Üretici',eq.mfr],['Model',eq.model],['Seri No',eq.sn],['Kategori',eq.cat],['Oda Numarası',eq.area],['Kurulum Tarihi',eq.instDate],['Son Bakım',_qrMaintD.last],['Sonraki Bakım',_qrMaintD.next]];
     tabContent = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
       + fields.map(function(f){
           return '<div style="background:var(--bg3);border-radius:8px;padding:10px 12px;border:1px solid var(--bd)">'
@@ -3448,7 +3550,11 @@ function renderQRLanding() {
                 + '<button class="btn bout bxs" onclick="QR_WO_EDIT=\''+w.id+'\';QR_TAB=\'edit_wo\';refreshQRTab()">✏ Düzenle</button>'
                 + (can('ap')
                   ? '<button class="btn bsuc bxs" onclick="approveWOQR(\''+w.id+'\')">✓ Onayla & Kapat</button>'
-                  : '<button class="btn bsuc bxs" onclick="closeWOQR(\''+w.id+'\')">✓ Kapat</button>')
+                  : can('cl')
+                    ? '<button class="btn bsuc bxs" onclick="closeWOQR(\''+w.id+'\')">✓ Kapat</button>'
+                    : (isMyWO(w) && w.status!=='bekliyor')
+                      ? '<button class="btn bpri bxs" onclick="sendToApprovalQR(\''+w.id+'\')">✔ Onaya Gönder</button>'
+                      : '')
                 + (w.gmp?'<span class="badge bxsm" style="color:var(--cyl);border-color:var(--cyl)">GMP</span>':'')
                 + '</div>'
               : '<div style="display:flex;gap:5px;align-items:center">'
@@ -3552,9 +3658,10 @@ function saveQRWO(editId) {
   var title = (document.getElementById('qf-title')||{value:''}).value.trim();
   if(!title){toast('Başlık zorunludur','err');return;}
   var status = (document.getElementById('qf-status')||{value:'acik'}).value;
+  if((status==='kapali'||status==='bekliyor')&&!can('cl')){toast('Bu durum için yetkiniz yok. İşi listeden onaya gönderin.','err');return;}
   var ex = editId ? DB.workOrders.find(function(w){return w.id===editId;}) : null;
   var wo = {
-    id: ex ? ex.id : 'WO-'+uid(),
+    id: ex ? ex.id : nextWOId(),
     eqId: QR_EQ_ID,
     type: (document.getElementById('qf-type')||{value:'ariza'}).value || 'ariza',
     title: title,
@@ -3568,6 +3675,7 @@ function saveQRWO(editId) {
     root: (document.getElementById('qf-root')||{value:''}).value || '',
     lh: parseFloat((document.getElementById('qf-lh')||{value:0}).value)||0,
     pc: parseFloat((document.getElementById('qf-pc')||{value:0}).value)||0,
+    helperIds: ex ? (ex.helperIds||[]) : [],
     steps: ex ? ex.steps : [],
     docs: ex ? ex.docs : [],
     comments: ex ? ex.comments : [],
@@ -3587,6 +3695,8 @@ function saveQRWO(editId) {
   }
   if(ex) DB.workOrders = DB.workOrders.map(function(w){return w.id===wo.id?wo:w;});
   else DB.workOrders = [wo].concat(DB.workOrders);
+  if(ex) addLog('İş Emri Düzenlendi',wo.title+' ['+wo.id+'] (QR)','Durum:'+ex.status,'Durum:'+wo.status);
+  else addLog('İş Emri Oluşturuldu',wo.title+' ['+wo.id+'] (QR)','',wo.status+'/'+wo.sev);
   dbSave();
   QR_WO_EDIT = null;
   QR_TAB = 'workorders';
@@ -3594,6 +3704,10 @@ function saveQRWO(editId) {
   showQRLanding(QR_EQ_ID);
 }
 
+function sendToApprovalQR(woId){
+  sendToApproval(woId);
+  if(U)showQRLanding(QR_EQ_ID,'workorders');
+}
 function closeWOQR(woId) {
   if(!can('cl')){toast('İş emri kapatma yetkiniz yok. Mühendis veya Yönetici gerekli.','err');return;}
   if(!confirm('Bu iş emrini kapatmak istiyor musunuz?')) return;
@@ -3606,6 +3720,8 @@ function closeWOQR(woId) {
   if(eq && eq.status==='arizali' && stillOpen===0){
     DB.equipment = DB.equipment.map(function(e){return e.id===QR_EQ_ID?Object.assign({},e,{status:'aktif',lastMaint:today()}):e;});
   }
+  var _cwo=DB.workOrders.find(function(w){return w.id===woId;});
+  addLog('İş Emri Kapatıldı',((_cwo&&_cwo.title)||woId)+' ['+woId+'] (QR)','Açık','Kapalı');
   dbSave();
   toast('İş emri kapatıldı');
   showQRLanding(QR_EQ_ID);
@@ -3617,10 +3733,9 @@ function approveWOQR(woId) {
   DB.workOrders = DB.workOrders.map(function(w){
     return w.id===woId ? Object.assign({},w,{status:'kapali',approvedBy:U.id,closedAt:nowStr()}) : w;
   });
-  var stillOpen = DB.workOrders.filter(function(w){return w.eqId===QR_EQ_ID&&w.status!=='kapali';}).length;
-  if(stillOpen===0){
-    DB.equipment = DB.equipment.map(function(e){return e.id===QR_EQ_ID?Object.assign({},e,{status:'aktif',lastMaint:today()}):e;});
-  }
+  eqAfterWOClose(QR_EQ_ID);
+  var _awo=DB.workOrders.find(function(w){return w.id===woId;});
+  addLog('İş Emri Onaylandı',((_awo&&_awo.title)||woId)+' ['+woId+'] (QR)','bekliyor','kapali');
   dbSave();
   toast('İş emri onaylandı ve kapatıldı');
   showQRLanding(QR_EQ_ID);
@@ -3920,7 +4035,7 @@ var KVAL_TESTS = {
       'Sızdıran filtreler için iş emri açın ve etikete not düşün',
     ],
     cols: ['Oda / Alan', 'Oda Adı', 'Filtre No', 'Filtre Tipi', 'Upstream (µg/L)', 'Downstream (µg/L)', 'Sızıntı %', 'Limit', 'Sonuç', 'Notlar'],
-    exampleData: [['Steril Dolum-1','F-001','HEPA H14','80','0.003','0.00375','≤0.005','UYGUN',''],['Steril Dolum-1','F-002','HEPA H14','80','0.002','0.0025','≤0.005','UYGUN','']],
+    exampleData: [['Steril Dolum-1','Dolum Odası','F-001','HEPA H14','80','0.003','0.00375','≤0.005','UYGUN',''],['Steril Dolum-1','Dolum Odası','F-002','HEPA H14','80','0.002','0.0025','≤0.005','UYGUN','']],
   },
   havadegisim: {
     ico: '💨',
@@ -3939,7 +4054,7 @@ var KVAL_TESTS = {
       'ACH = Toplam Hava Akışı (m³/h) ÷ Oda Hacmi (m³) formülünü kullanın',
     ],
     cols: ['Oda / Alan', 'Oda Adı', 'Oda Hacmi (m³)', 'Difüzör Sayısı', 'Toplam Akış (m³/h)', 'ACH (h⁻¹)', 'Limit', 'Sonuç', 'Notlar'],
-    exampleData: [['Steril Dolum-1','42','6','12600','300','≥240','UYGUN',''],['Hazırlık Odası','85','8','6120','72','≥60','UYGUN','']],
+    exampleData: [['Steril Dolum-1','Dolum Odası','42','6','12600','300','≥240','UYGUN',''],['Hazırlık Odası','Hazırlık','85','8','6120','72','≥60','UYGUN','']],
   },
   duman: {
     ico: '🌫️',
@@ -3958,7 +4073,7 @@ var KVAL_TESTS = {
       'Her geçiş noktasını (kapı, pass-through) ayrı ayrı test edin',
     ],
     cols: ['Geçiş Noktası', 'Oda Adı', 'Yüksek Basınç Odası', 'Düşük Basınç Odası', 'Basınç Farkı (Pa)', 'Limit (Pa)', 'Duman Akışı', 'Sonuç', 'Notlar'],
-    exampleData: [['Kap-001','Steril Dolum-1','Hazırlık','18','≥15','Doğru Yön','UYGUN',''],['Kap-002','Hazırlık','Giriş Koridoru','12','≥10','Doğru Yön','UYGUN','']],
+    exampleData: [['Kap-001','Dolum Girişi','Steril Dolum-1','Hazırlık','18','≥15','Doğru Yön','UYGUN',''],['Kap-002','Hazırlık Girişi','Hazırlık','Giriş Koridoru','12','≥10','Doğru Yön','UYGUN','']],
   },
   dekont: {
     ico: '🧪',
@@ -3977,7 +4092,7 @@ var KVAL_TESTS = {
       'İnkübasyon sonuçlarını ve renk değişimini kaydedin',
     ],
     cols: ['Oda / Alan', 'Oda Adı', 'BI Noktası', 'BI Türü', 'Başlangıç Konsantrasyon', 'Döngü Süresi (dk)', 'İnkübasyon Sonucu', 'Log Azalma', 'Sonuç', 'Notlar'],
-    exampleData: [['Steril Dolum-1','BI-1','G. stearothermophilus','10⁶','45','Negatif','≥6','UYGUN',''],['Steril Dolum-1','BI-2','G. stearothermophilus','10⁶','45','Negatif','≥6','UYGUN','']],
+    exampleData: [['Steril Dolum-1','Dolum Odası','BI-1','G. stearothermophilus','10⁶','45','Negatif','≥6','UYGUN',''],['Steril Dolum-1','Dolum Odası','BI-2','G. stearothermophilus','10⁶','45','Negatif','≥6','UYGUN','']],
   },
   sicakliknem: {
     ico: '🌡️',
@@ -4176,27 +4291,30 @@ function getKvalValueCols(testId){
       {label:'ISO Sınıfı',        rawIdx:4},
     ],
     filtre: [
-      {label:'Filtre Tipi',      rawIdx:2},
-      {label:'Upstream (µg/L)',  rawIdx:3},
-      {label:'Downstream (µg/L)',rawIdx:4},
-      {label:'Sızıntı %',        rawIdx:5},
+      {label:'Filtre No',        rawIdx:2},
+      {label:'Filtre Tipi',      rawIdx:3},
+      {label:'Upstream (µg/L)',  rawIdx:4},
+      {label:'Downstream (µg/L)',rawIdx:5},
+      {label:'Sızıntı %',        rawIdx:6},
     ],
     havadegisim: [
       {label:'Oda Hacmi (m³)',   rawIdx:2},
-      {label:'Toplam Akış (m³/h)',rawIdx:3},
-      {label:'ACH (h⁻¹)',        rawIdx:4},
+      {label:'Difüzör Sayısı',   rawIdx:3},
+      {label:'Toplam Akış (m³/h)',rawIdx:4},
+      {label:'ACH (h⁻¹)',        rawIdx:5},
     ],
     duman: [
-      {label:'Yüksek Bas. Odası',rawIdx:1},
-      {label:'Düşük Bas. Odası', rawIdx:2},
-      {label:'Basınç Farkı (Pa)',rawIdx:3},
-      {label:'Duman Akışı',      rawIdx:5},
+      {label:'Yüksek Bas. Odası',rawIdx:2},
+      {label:'Düşük Bas. Odası', rawIdx:3},
+      {label:'Basınç Farkı (Pa)',rawIdx:4},
+      {label:'Duman Akışı',      rawIdx:6},
     ],
     dekont: [
-      {label:'BI Türü',          rawIdx:2},
-      {label:'Döngü Süresi (dk)',rawIdx:4},
-      {label:'İnkübasyon Sonucu',rawIdx:5},
-      {label:'Log Azalma',       rawIdx:6},
+      {label:'BI Noktası',       rawIdx:2},
+      {label:'BI Türü',          rawIdx:3},
+      {label:'Döngü Süresi (dk)',rawIdx:5},
+      {label:'İnkübasyon Sonucu',rawIdx:6},
+      {label:'Log Azalma',       rawIdx:7},
     ],
     sicakliknem: [
       {label:'Min Sıcaklık (°C)',rawIdx:2},
@@ -4382,8 +4500,11 @@ function addLog(action, detail, oldVal, newVal) {
 function pgLogs() {
   if(!can('s')) return '<div style="text-align:center;padding:60px"><div style="font-size:48px">🔒</div><div style="font-size:18px;font-weight:700;color:var(--rdl);margin-top:16px">Erişim Reddedildi</div></div>';
 
-  var logs = DB.logs || [];
-  var fq = document.getElementById ? (document.getElementById('log-q') ? document.getElementById('log-q').value : '') : '';
+  var allLogs = (DB.logs || []).filter(function(l){return String(l.action||'').indexOf('Sayfa:')!==0;});
+  var fq = (LOG_Q||'').toLowerCase();
+  var logs = !fq ? allLogs : allLogs.filter(function(l){
+    return [l.user,l.role,l.action,l.detail,l.oldVal,l.newVal,l.page,l.ts].join(' ').toLowerCase().indexOf(fq)>=0;
+  });
 
   // Filtre seçenekleri
   var actions = [...new Set(logs.map(function(l){return l.action;}))].sort();
@@ -4437,15 +4558,16 @@ function pgLogs() {
     +'</div></div>'
     +(statsH?'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px">'+statsH+'</div>':'')
     +'<div class="card" style="padding:12px;margin-bottom:14px">'
-    +'<input class="inp isml" id="log-q" placeholder="Kullanıcı, işlem veya detay ara..." style="width:100%" oninput="renderPage()"/>'
+    +'<input class="inp isml" id="log-q" placeholder="Kullanıcı, işlem veya detay ara..." style="width:100%" value="'+esc(LOG_Q)+'" oninput="LOG_Q=this.value;renderPage()"/>'
     +'</div>'
     +(logs.length===0
-      ? '<div class="empty"><div style="font-size:36px;margin-bottom:10px">📭</div><div style="font-size:14px;font-weight:600;color:var(--sub)">Henüz log kaydı yok</div></div>'
+      ? '<div class="empty"><div style="font-size:36px;margin-bottom:10px">📭</div><div style="font-size:14px;font-weight:600;color:var(--sub)">'+(fq?'Aramaya uyan kayıt yok':'Henüz log kaydı yok')+'</div></div>'
       : '<div class="card" style="padding:0;overflow:hidden"><div style="overflow-x:auto"><table class="tbl">'
         +'<thead><tr><th>Zaman</th><th>Kullanıcı</th><th>İşlem</th><th>Detay</th><th>Eski Değer</th><th>Yeni Değer</th><th>Sayfa</th></tr></thead>'
         +'<tbody>'+rows+'</tbody></table></div></div>');
 }
 
+var LOG_Q='';
 function clearLogs(){
   if(!can('s')){toast('Yetki yok','err');return;}
   if(!confirm('Tüm log kayıtları silinecek. Emin misiniz?'))return;
@@ -4561,6 +4683,7 @@ function pgSpareParts(){
   if(can('s')) html += '<button class="btn bghs bsm" onclick="openSpareCatMgr()">🏷 Kategoriler</button>';
   if(can('s')) html += '<button class="btn bout bsm" onclick="downloadSpareTemplate()">⬇ Excel Şablonu</button>';
   if(can('s')) html += '<label class="btn bsuc bsm" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">📤 Excel Yükle<input type="file" accept=".xlsx,.xls" style="display:none" onchange="uploadSpareExcel(this)"/></label>';
+  html += '<button class="btn bpri bsm" onclick="exportSpareExcelWithQR()">📥 Excel İndir (QR ile)</button>';
   if(can('s')) html += '<button class="btn bpri bsm" onclick="openSpareForm(null)">+ Parça Ekle</button>';
   html += '</div></div>';
 
@@ -4737,7 +4860,7 @@ function saveSpareMovement(){
   });
   // Hareket kaydı
   var mov={id:'MOV-'+uid(),partId:p.id,type:m.type,qty:qty,reason:reason,woId:woId,eqId:eqId,user:U?U.name:'—',ts:ts};
-  if(eqId&&!isGiris){if(!DB.eqPartHistory)DB.eqPartHistory={};if(!DB.eqPartHistory[eqId])DB.eqPartHistory[eqId]=[];DB.eqPartHistory[eqId].unshift({id:'EPH-'+uid(),partId:p.id,partName:p.name,partCode:p.code||'',qty:qty,unit:p.unit||'Adet',reason:reason,woId:woId,user:U?U.name:'—',ts:ts});}
+  if(eqId&&!isGiris){if(!DB.eqPartHistory)DB.eqPartHistory={};if(!DB.eqPartHistory[eqId])DB.eqPartHistory[eqId]=[];DB.eqPartHistory[eqId].unshift({id:'EPH-'+uid(),refMovId:mov.id,partId:p.id,partName:p.name,partCode:p.code||'',qty:qty,unit:p.unit||'Adet',reason:reason,woId:woId,user:U?U.name:'—',ts:ts});}
   if(!DB.spareMovements)DB.spareMovements=[];
   DB.spareMovements.unshift(mov);
   // İş emrine yorum olarak ekle (woId seçilmişse)
@@ -5018,6 +5141,298 @@ function submitSpareMovQR(spId, type){
 
 
 // ── Yedek Parça Excel Şablonu İndir ──────────────────────────
+
+// ══ YEDEK PARÇA — QR'LI EXCEL İNDİRME ═══════════════════════════
+function exportSpareExcelWithQR(){
+  var parts = DB.spareParts||[];
+  if(!parts.length){toast('Dışa aktarılacak parça yok','warn');return;}
+  toast('Excel hazırlanıyor, QR kodları oluşturuluyor...','warn');
+  setTimeout(function(){
+    try{
+      var headers = ['Parça Adı','Stok Kodu','Kategori','Birim','Mevcut Stok','Min. Stok','Durum','Konum','Bağlı Ekipman','QR Kod','Parça ID'];
+      var qrColIndex = headers.indexOf('QR Kod');
+      var rows = [];
+      var qrImages = [];
+
+      parts.forEach(function(p, i){
+        var eq = (DB.equipment||[]).find(function(e){return e.id===p.eqId;});
+        var stock = parseFloat(p.stock)||0;
+        var minStock = parseFloat(p.minStock)||0;
+        var stockStatus = stock<=0?'Sıfır Stok':stock<=minStock?'Kritik Stok':'Normal';
+
+        var row = new Array(headers.length).fill('');
+        row[0]=p.name||''; row[1]=p.code||''; row[2]=p.cat||''; row[3]=p.unit||'Adet';
+        row[4]=stock; row[5]=minStock; row[6]=stockStatus; row[7]=p.location||'';
+        row[8]=(eq&&eq.name)||''; row[qrColIndex]=''; row[10]=p.id;
+        rows.push(row);
+
+        try{
+          var qrUrl = BASE_URL+'?sp='+encodeURIComponent(p.id);
+          var dataUrl = makeQRDataURL(qrUrl, 180);
+          if(dataUrl){
+            var base64 = dataUrl.split(',')[1];
+            var pngBytes = xlsxBase64ToBytes(base64);
+            qrImages.push({rowIndex:i, pngBytes:pngBytes});
+          }
+        }catch(qrErr){ console.warn('QR oluşturulamadı:', p.id, qrErr); }
+      });
+
+      var xlsxBytes = buildXlsxWithCellImages(headers, rows, qrImages, 'QR Kod', 'Yedek Parçalar');
+      var blob = new Blob([xlsxBytes], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'YedekParcalar_QR_'+today()+'.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){URL.revokeObjectURL(url);}, 1000);
+      toast('Excel indirildi: '+parts.length+' parça, QR kodları hücrelere gömüldü ✓');
+      addLog('Yedek Parça Excel Indirildi (QR hücreye gömülü)', parts.length+' parça','','');
+    }catch(e){
+      console.error('Excel export hatası:', e);
+      toast('Excel oluşturulurken hata: '+(e.message||e),'err');
+    }
+  }, 50);
+}
+
+
+// ══ NATIVE .XLSX ÜRETİCİ — hücreye bağlı (cell-anchored) gerçek görsel gömme ═══
+// SheetJS ücretsiz sürümü görsel gömmeyi desteklemediği için, minimal bir ZIP
+// yazıcı + OOXML paketleyici ile gerçek .xlsx dosyası elle inşa edilir.
+// Görseller Excel'in kendi "twoCellAnchor" mekanizmasıyla hücreye bağlanır —
+// satır/sütun yeniden boyutlandığında görsel de birlikte hareket eder, kaymaz.
+
+function xlsxCrc32(buf){
+  var table = xlsxCrc32._t || (xlsxCrc32._t = (function(){
+    var t=[];
+    for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}
+    return t;
+  })());
+  var crc=0xFFFFFFFF;
+  for(var i=0;i<buf.length;i++) crc=table[(crc^buf[i])&0xFF]^(crc>>>8);
+  return (crc^0xFFFFFFFF)>>>0;
+}
+function xlsxDosTime(d){
+  d=d||new Date();
+  var time=((d.getHours()&0x1F)<<11)|((d.getMinutes()&0x3F)<<5)|((d.getSeconds()>>1)&0x1F);
+  var date=(((d.getFullYear()-1980)&0x7F)<<9)|(((d.getMonth()+1)&0xF)<<5)|(d.getDate()&0x1F);
+  return {time:time,date:date};
+}
+function xlsxStrToBytes(str){
+  if(typeof TextEncoder!=='undefined') return new TextEncoder().encode(str);
+  var utf8=unescape(encodeURIComponent(str));
+  var bytes=new Uint8Array(utf8.length);
+  for(var i=0;i<utf8.length;i++) bytes[i]=utf8.charCodeAt(i);
+  return bytes;
+}
+function xlsxU16(v){return [v&0xFF,(v>>8)&0xFF];}
+function xlsxU32(v){return [v&0xFF,(v>>8)&0xFF,(v>>16)&0xFF,(v>>>24)&0xFF];}
+function xlsxBase64ToBytes(b64){
+  var bin=atob(b64);
+  var bytes=new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return bytes;
+}
+function xlsxBuildZip(files){
+  var localParts=[],centralParts=[],offset=0,dt=xlsxDosTime();
+  files.forEach(function(f){
+    var nameBytes=xlsxStrToBytes(f.name), data=f.data;
+    var crc=xlsxCrc32(data), size=data.length;
+    var lh=[].concat([0x50,0x4b,0x03,0x04],xlsxU16(20),xlsxU16(0),xlsxU16(0),
+      xlsxU16(dt.time),xlsxU16(dt.date),xlsxU32(crc),xlsxU32(size),xlsxU32(size),
+      xlsxU16(nameBytes.length),xlsxU16(0));
+    var lhBytes=new Uint8Array(lh);
+    var entry=new Uint8Array(lhBytes.length+nameBytes.length+data.length);
+    entry.set(lhBytes,0); entry.set(nameBytes,lhBytes.length); entry.set(data,lhBytes.length+nameBytes.length);
+    localParts.push(entry);
+
+    var ch=[].concat([0x50,0x4b,0x01,0x02],xlsxU16(20),xlsxU16(20),xlsxU16(0),xlsxU16(0),
+      xlsxU16(dt.time),xlsxU16(dt.date),xlsxU32(crc),xlsxU32(size),xlsxU32(size),
+      xlsxU16(nameBytes.length),xlsxU16(0),xlsxU16(0),xlsxU16(0),xlsxU16(0),xlsxU32(0),xlsxU32(offset));
+    var chBytes=new Uint8Array(ch);
+    var centralEntry=new Uint8Array(chBytes.length+nameBytes.length);
+    centralEntry.set(chBytes,0); centralEntry.set(nameBytes,chBytes.length);
+    centralParts.push(centralEntry);
+    offset+=entry.length;
+  });
+  var centralSize=centralParts.reduce(function(a,p){return a+p.length;},0);
+  var centralOffset=offset;
+  var eocd=[].concat([0x50,0x4b,0x05,0x06],xlsxU16(0),xlsxU16(0),xlsxU16(files.length),xlsxU16(files.length),
+    xlsxU32(centralSize),xlsxU32(centralOffset),xlsxU16(0));
+  var total=offset+centralSize+eocd.length;
+  var result=new Uint8Array(total), pos=0;
+  localParts.forEach(function(p){result.set(p,pos);pos+=p.length;});
+  centralParts.forEach(function(p){result.set(p,pos);pos+=p.length;});
+  result.set(new Uint8Array(eocd),pos);
+  return result;
+}
+function xlsxColLetter(idx){
+  var s=''; idx++;
+  while(idx>0){var rem=(idx-1)%26; s=String.fromCharCode(65+rem)+s; idx=Math.floor((idx-1)/26);}
+  return s;
+}
+function xlsxEsc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+
+// rows: [[val,val,...]], qrImages: [{rowIndex(0-based), pngBytes(Uint8Array)}], headers: [str,...]
+function buildXlsxWithCellImages(headers, rows, qrImages, qrColName, sheetName){
+  var qrColIndex = headers.indexOf(qrColName);
+  var rowsXml='';
+  rowsXml += '<row r="1" ht="20" customHeight="1">';
+  headers.forEach(function(h,ci){
+    rowsXml += '<c r="'+xlsxColLetter(ci)+'1" t="inlineStr" s="1"><is><t xml:space="preserve">'+xlsxEsc(h)+'</t></is></c>';
+  });
+  rowsXml += '</row>';
+
+  rows.forEach(function(row,ri){
+    var r = ri+2;
+    rowsXml += '<row r="'+r+'" ht="72" customHeight="1">';
+    row.forEach(function(val,ci){
+      var ref = xlsxColLetter(ci)+r;
+      if(ci===qrColIndex){
+        rowsXml += '<c r="'+ref+'"/>';
+      } else if(typeof val==='number'){
+        rowsXml += '<c r="'+ref+'"><v>'+val+'</v></c>';
+      } else {
+        rowsXml += '<c r="'+ref+'" t="inlineStr"><is><t xml:space="preserve">'+xlsxEsc(val)+'</t></is></c>';
+      }
+    });
+    rowsXml += '</row>';
+  });
+
+  var lastCol=xlsxColLetter(headers.length-1), lastRow=rows.length+1;
+  var colsXml='<cols>';
+  headers.forEach(function(h,ci){
+    var w=(ci===qrColIndex)?16:(ci===0?30:14);
+    colsXml += '<col min="'+(ci+1)+'" max="'+(ci+1)+'" width="'+w+'" customWidth="1"/>';
+  });
+  colsXml += '</cols>';
+
+  var sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+    +'<dimension ref="A1:'+lastCol+lastRow+'"/>'
+    +'<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+    +'<sheetFormatPr defaultRowHeight="15"/>'
+    +colsXml+'<sheetData>'+rowsXml+'</sheetData>'
+    +'<drawing r:id="rIdDrawing1"/>'
+    +'</worksheet>';
+
+  var drawingShapes='';
+  qrImages.forEach(function(img,i){
+    var fromRow = img.rowIndex+1, toRow = fromRow+1;
+    drawingShapes += '<xdr:twoCellAnchor editAs="twoCell">'
+      +'<xdr:from><xdr:col>'+qrColIndex+'</xdr:col><xdr:colOff>19050</xdr:colOff><xdr:row>'+fromRow+'</xdr:row><xdr:rowOff>19050</xdr:rowOff></xdr:from>'
+      +'<xdr:to><xdr:col>'+(qrColIndex+1)+'</xdr:col><xdr:colOff>-19050</xdr:colOff><xdr:row>'+toRow+'</xdr:row><xdr:rowOff>-19050</xdr:rowOff></xdr:to>'
+      +'<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="'+(i+2)+'" name="QR'+i+'"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr>'
+      +'<xdr:blipFill><a:blip r:embed="rIdImg'+i+'"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>'
+      +'<xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic>'
+      +'<xdr:clientData/></xdr:twoCellAnchor>';
+  });
+  var drawingXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+    +drawingShapes+'</xdr:wsDr>';
+
+  var drawingRelsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +qrImages.map(function(img,i){return '<Relationship Id="rIdImg'+i+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image'+i+'.png"/>';}).join('')
+    +'</Relationships>';
+
+  var sheetRelsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rIdDrawing1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>'
+    +'</Relationships>';
+
+  var workbookXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+    +'<sheets><sheet name="'+xlsxEsc(sheetName||'Sayfa1')+'" sheetId="1" r:id="rIdSheet1"/></sheets></workbook>';
+
+  var workbookRelsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rIdSheet1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+    +'<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+    +'</Relationships>';
+
+  var rootRelsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rIdWb" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+    +'<Relationship Id="rIdCore" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+    +'<Relationship Id="rIdApp" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>'
+    +'</Relationships>';
+
+  var nowIso = new Date().toISOString().replace(/\.\d+Z$/,'Z');
+  var coreXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+    +'<dc:title>Yedek Parçalar</dc:title>'
+    +'<dc:creator>PharmaMS</dc:creator>'
+    +'<cp:lastModifiedBy>PharmaMS</cp:lastModifiedBy>'
+    +'<dcterms:created xsi:type="dcterms:W3CDTF">'+nowIso+'</dcterms:created>'
+    +'<dcterms:modified xsi:type="dcterms:W3CDTF">'+nowIso+'</dcterms:modified>'
+    +'</cp:coreProperties>';
+
+  var appXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">'
+    +'<Application>PharmaMS</Application>'
+    +'<DocSecurity>0</DocSecurity>'
+    +'<ScaleCrop>false</ScaleCrop>'
+    +'<HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant></vt:vector></HeadingPairs>'
+    +'<TitlesOfParts><vt:vector size="1" baseType="lpstr"><vt:lpstr>Yedek Parçalar</vt:lpstr></vt:vector></TitlesOfParts>'
+    +'<LinksUpToDate>false</LinksUpToDate>'
+    +'<SharedDoc>false</SharedDoc>'
+    +'<HyperlinksChanged>false</HyperlinksChanged>'
+    +'<AppVersion>16.0300</AppVersion>'
+    +'</Properties>';
+
+  var contentTypesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    +'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+    +'<Default Extension="xml" ContentType="application/xml"/>'
+    +'<Default Extension="png" ContentType="image/png"/>'
+    +'<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+    +'<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+    +'<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>'
+    +'<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+    +'<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
+    +'<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>'
+    +'</Types>';
+
+  var stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+    +'<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font>'
+    +'<font><sz val="11"/><name val="Calibri"/><b/><color rgb="FFFFFFFF"/></font></fonts>'
+    +'<fills count="2"><fill><patternFill patternType="none"/></fill>'
+    +'<fill><patternFill patternType="solid"><fgColor rgb="FF1E2761"/><bgColor indexed="64"/></patternFill></fill></fills>'
+    +'<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+    +'<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+    +'<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+    +'<xf numFmtId="0" fontId="1" fillId="1" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs>'
+    +'<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+    +'<dxfs count="0"/>'
+    +'<tableStyles count="0" defaultTableStyle="TableStyleMedium2" defaultPivotStyle="PivotStyleLight16"/>'
+    +'</styleSheet>';
+
+  var files=[
+    {name:'[Content_Types].xml', data:xlsxStrToBytes(contentTypesXml)},
+    {name:'_rels/.rels', data:xlsxStrToBytes(rootRelsXml)},
+    {name:'docProps/core.xml', data:xlsxStrToBytes(coreXml)},
+    {name:'docProps/app.xml', data:xlsxStrToBytes(appXml)},
+    {name:'xl/workbook.xml', data:xlsxStrToBytes(workbookXml)},
+    {name:'xl/_rels/workbook.xml.rels', data:xlsxStrToBytes(workbookRelsXml)},
+    {name:'xl/styles.xml', data:xlsxStrToBytes(stylesXml)},
+    {name:'xl/worksheets/sheet1.xml', data:xlsxStrToBytes(sheetXml)},
+    {name:'xl/worksheets/_rels/sheet1.xml.rels', data:xlsxStrToBytes(sheetRelsXml)},
+    {name:'xl/drawings/drawing1.xml', data:xlsxStrToBytes(drawingXml)},
+    {name:'xl/drawings/_rels/drawing1.xml.rels', data:xlsxStrToBytes(drawingRelsXml)},
+  ];
+  qrImages.forEach(function(img,i){ files.push({name:'xl/media/image'+i+'.png', data:img.pngBytes}); });
+
+  return xlsxBuildZip(files);
+}
+
+
+
 function downloadSpareTemplate(){
   if(typeof XLSX==='undefined'){toast('XLSX kütüphanesi yüklenemedi','err');return;}
   var wb = XLSX.utils.book_new();
@@ -5028,7 +5443,7 @@ function downloadSpareTemplate(){
     [''],
     ['DOLDURMA TALİMATLARI:'],
     ['1. "Parçalar" sekmesini doldurun'],
-    ['2. Tüm zorunlu (*) alanları doldurun'],
+    ['2. Tüm zorunlu (*) alanları doldurun. Stok Kodu isteğe bağlıdır, boş bırakılabilir.'],
     ['3. Stok Kodu benzersiz olmalıdır'],
     ['4. Kategori sütununa: '+(DB.spareCats||[]).join(', ')],
     ['5. Birim sütununa: Adet, Kutu, Paket, Metre, Litre, Kg, Gram, Rulo, Çift, Set'],
@@ -5040,7 +5455,7 @@ function downloadSpareTemplate(){
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instrData), 'Talimatlar');
 
   // Parçalar sayfası
-  var headers = ['Parça Adı *','Stok Kodu *','Kategori','Birim','Mevcut Stok Adedi *','Minimum Stok Adedi','Raf / Konum','Bağlı Ekipman ID'];
+  var headers = ['Parça Adı *','Stok Kodu','Kategori','Birim','Mevcut Stok Adedi *','Minimum Stok Adedi','Raf / Konum','Bağlı Ekipman ID'];
   var exampleRows = [
     ['HEPA Filtre H14 592x592x75','FLT-001','HVAC Filtresi','Adet','4','2','Depo A-Raf1','EQ-001'],
     ['Rulman 6205-2RS','MKN-001','Mekanik','Adet','10','3','Depo B-Raf2','EQ-002'],
@@ -5071,49 +5486,111 @@ function uploadSpareExcel(inp){
   reader.onload = function(e){
     try{
       var wb = XLSX.read(e.target.result, {type:'array'});
+      var allSheetNames = wb.SheetNames.slice();
+
       // "Parçalar" sayfasını bul
       var wsName = wb.SheetNames.find(function(n){
         return n==='Parçalar'||n==='Parcalar'||n==='Sheet1'||n==='Sayfa1';
       }) || wb.SheetNames[0];
       var ws = wb.Sheets[wsName];
-      var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-      if(rows.length < 2){toast('Dosyada veri bulunamadı','err');return;}
+      var allRows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
 
-      var headers = rows[0].map(function(h){return String(h).trim().toLowerCase();});
-      // Kolon indexleri bul
-      function findCol(keywords){
-        // Tam eşleşmeyi önce dene
-        var exact = headers.findIndex(function(h){
-          return keywords.some(function(k){return h===k;});
-        });
-        if(exact>=0) return exact;
-        // Sonra kısmi eşleşme
-        return headers.findIndex(function(h){
-          return keywords.some(function(k){return h.indexOf(k)>=0;});
-        });
+      if(allRows.length < 1){
+        showSpareUploadDiag({fileName:file.name, allSheets:allSheetNames, usedSheet:wsName,
+          fatalError:'Seçilen sayfada hiç satır bulunamadı.'});
+        return;
       }
-      var idxName  = findCol(['parça adı','parca adi','ad','name']);
-      var idxCode  = findCol(['stok kodu','parca kodu','part code','code','kod']);
-      var idxCat   = findCol(['kategori','category','cat']);
-      var idxUnit  = findCol(['birim','unit']);
-      var idxStock = findCol(['mevcut stok','stok miktarı','stok adedi','stock qty','miktar','quantity']);
-      var idxMin   = findCol(['minimum','min stok','min']);
-      var idxLoc   = findCol(['raf','konum','location','loc']);
-      var idxEq    = findCol(['bağlı ekipman','bagli ekipman','ekipman id','equipment id','eqid','eq id']);
 
-      if(idxName<0||idxCode<0){
-        toast('Parça Adı ve Stok Kodu sütunları zorunludur. Şablonu kullanın.','err');
+      // ── Akıllı başlık satırı tespiti ──
+      // "Parça Adı" (veya benzeri) içeren satırı, ilk 6 satır arasından ara.
+      // Böylece üstte bir başlık/title satırı bırakılsa bile şablon çalışır.
+      function findCol(hdrs, keywords){
+        var exact = hdrs.findIndex(function(h){return keywords.some(function(k){return h===k;});});
+        if(exact>=0) return exact;
+        return hdrs.findIndex(function(h){return keywords.some(function(k){return h.indexOf(k)>=0;});});
+      }
+      var NAME_KW=['parça adı','parca adi','ad','name'];
+      var headerRowIdx = -1, headers = [];
+      for(var hr=0; hr<Math.min(6, allRows.length); hr++){
+        var candidateHeaders = allRows[hr].map(function(h){return String(h).trim().toLowerCase();});
+        if(findCol(candidateHeaders, NAME_KW) >= 0){
+          headerRowIdx = hr; headers = candidateHeaders; break;
+        }
+      }
+      if(headerRowIdx < 0){
+        // Bulunamadıysa eski davranış: ilk satırı başlık say (tanı raporu doğru hatayı gösterecek)
+        headerRowIdx = 0; headers = allRows[0].map(function(h){return String(h).trim().toLowerCase();});
+      }
+      var rows = allRows.slice(headerRowIdx); // artık rows[0] = gerçek başlık satırı
+
+      var diag = {
+        fileName: file.name,
+        allSheets: allSheetNames,
+        usedSheet: wsName,
+        totalRowsInSheet: rows.length,
+        headerRowNumber: headerRowIdx+1,
+        skippedLeadingRows: headerRowIdx,
+        rawHeaderRow: rows.length ? rows[0] : [],
+        colMap: {},
+        rowDetails: [],
+      };
+
+      if(rows.length < 2){
+        diag.fatalError = 'Başlık satırı bulundu ama altında hiç veri satırı yok.';
+        showSpareUploadDiag(diag);
+        return;
+      }
+
+      var idxName  = findCol(headers, NAME_KW);
+      var idxCode  = findCol(headers, ['stok kodu','parca kodu','part code','code','kod']);
+      var idxCat   = findCol(headers, ['kategori','category','cat']);
+      var idxUnit  = findCol(headers, ['birim','unit']);
+      var idxStock = findCol(headers, ['mevcut stok','stok miktarı','stok adedi','stock qty','miktar','quantity']);
+      var idxMin   = findCol(headers, ['minimum','min stok','min']);
+      var idxLoc   = findCol(headers, ['raf','konum','location','loc']);
+      var idxEq    = findCol(headers, ['bağlı ekipman','bagli ekipman','ekipman id','equipment id','eqid','eq id']);
+
+      function colInfo(idx){return idx>=0 ? {idx:idx, header:rows[0][idx]} : {idx:-1, header:null};}
+      diag.colMap = {
+        'Parça Adı':      colInfo(idxName),
+        'Stok Kodu':      colInfo(idxCode),
+        'Kategori':       colInfo(idxCat),
+        'Birim':          colInfo(idxUnit),
+        'Mevcut Stok':    colInfo(idxStock),
+        'Min. Stok':      colInfo(idxMin),
+        'Konum':          colInfo(idxLoc),
+        'Bağlı Ekipman':  colInfo(idxEq),
+      };
+
+      if(idxName<0){
+        diag.fatalError = '"Parça Adı" sütunu hiçbir başlıkla eşleşmedi. Aşağıdaki ham başlık satırını kontrol edin.';
+        showSpareUploadDiag(diag);
         return;
       }
 
       if(!DB.spareParts) DB.spareParts=[];
       var added=0, updated=0, skipped=0;
 
+      // ── ÖNEMLİ: Kopya kontrolü, yükleme SIRASINDA eklenen parçalarla değil,
+      // yükleme BAŞLAMADAN ÖNCE sistemde zaten var olan kodlarla yapılır.
+      // Aksi halde, dosya içinde aynı kod tekrar edilirse (örn. hepsi "1"),
+      // farklı parçalar birbirinin üzerine yazılıp TEK bir kayıtta erirdi.
+      var codesAtStart = {};
+      DB.spareParts.forEach(function(p){ if(p.code) codesAtStart[p.code] = p; });
+      var codesSeenInThisFile = {}; // dosya içi tekrar eden kodları tespit etmek için
+
       for(var i=1;i<rows.length;i++){
         var row = rows[i];
         var name = String(row[idxName]||'').trim();
-        var code = String(row[idxCode]||'').trim();
-        if(!name || !code) {skipped++;continue;}
+        var code = idxCode>=0 ? String(row[idxCode]||'').trim() : '';
+        var rowDetail = {rowNum:i+1+headerRowIdx, rawRow:row, name:name, code:code};
+
+        if(!name){
+          skipped++;
+          rowDetail.result='ATLANDI'; rowDetail.reason='Parça Adı boş';
+          diag.rowDetails.push(rowDetail);
+          continue;
+        }
 
         var stock   = parseInt(row[idxStock])||0;
         var minStock= parseInt(row[idxMin])||5;
@@ -5122,11 +5599,13 @@ function uploadSpareExcel(inp){
         var loc     = String(idxLoc>=0?row[idxLoc]||'':'').trim();
         var eqId    = String(idxEq>=0?row[idxEq]||'':'').trim();
 
-        // Aynı kod varsa güncelle
-        var existing = DB.spareParts.find(function(p){return p.code===code;});
+        var dupInFile = code && codesSeenInThisFile[code];
+        var existing = code ? codesAtStart[code] : null;
+
         if(existing){
           Object.assign(existing,{name:name,cat:cat,unit:unit,stock:stock,minStock:minStock,location:loc,eqId:eqId});
           updated++;
+          rowDetail.result='GÜNCELLENDİ'; rowDetail.reason='Bu kod yüklemeden önce sistemde zaten kayıtlıydı';
         } else {
           DB.spareParts.push({
             id:'SP-'+uid(),
@@ -5135,23 +5614,120 @@ function uploadSpareExcel(inp){
             location:loc, eqId:eqId, createdAt:today()
           });
           added++;
+          rowDetail.result='EKLENDİ';
+          rowDetail.reason = dupInFile ? '⚠ Bu kod dosyada birden fazla kez geçiyor — yine de ayrı parça olarak eklendi' : '';
         }
+        if(code) codesSeenInThisFile[code] = true;
+        diag.rowDetails.push(rowDetail);
       }
+
+      diag.added=added; diag.updated=updated; diag.skipped=skipped;
 
       addLog('Yedek Parça Excel Yüklendi',
         added+' eklendi, '+updated+' güncellendi',
         '',added+'+'+updated+' kayıt');
       dbSave();
       inp.value='';
-      toast('✓ '+added+' yeni parça eklendi, '+updated+' güncellendi'+(skipped?' ('+skipped+' satır atlandı)':''));
+      SP_CAT='all'; SP_Q='';
+      var spqEl=document.getElementById('sp-q'); if(spqEl) spqEl.value='';
       renderPage();
+      showSpareUploadDiag(diag);
     }catch(err){
       console.error(err);
       toast('Excel okuma hatası: '+err.message,'err');
+      showSpareUploadDiag({fatalError:'Beklenmeyen hata: '+(err.message||err), fileName:file.name});
     }
   };
   reader.readAsArrayBuffer(file);
 }
+
+var MODAL_SP_DIAG = false;
+var SP_DIAG_DATA = null;
+function showSpareUploadDiag(diag){
+  SP_DIAG_DATA = diag;
+  MODAL_SP_DIAG = true;
+  renderModals();
+}
+function closeSpareUploadDiag(){
+  MODAL_SP_DIAG = false;
+  SP_DIAG_DATA = null;
+  renderModals();
+}
+function tplSpareUploadDiag(){
+  if(!MODAL_SP_DIAG || !SP_DIAG_DATA) return '';
+  var d = SP_DIAG_DATA;
+
+  var summaryH = '';
+  if(d.fatalError){
+    summaryH = '<div style="background:rgba(239,68,68,.1);border:1px solid var(--rdl);border-radius:8px;padding:12px;margin-bottom:14px;color:var(--rdl);font-weight:700">⛔ '+esc(d.fatalError)+'</div>';
+  } else {
+    var okColor = (d.added>0) ? 'var(--gnl)' : 'var(--orl)';
+    summaryH = '<div style="background:var(--bg3);border-radius:8px;padding:12px;margin-bottom:14px;display:flex;gap:20px;flex-wrap:wrap">'
+      +'<div><div style="font-size:22px;font-weight:900;color:'+okColor+'">'+d.added+'</div><div style="font-size:11px;color:var(--mt)">Yeni Eklendi</div></div>'
+      +'<div><div style="font-size:22px;font-weight:900;color:var(--bll)">'+d.updated+'</div><div style="font-size:11px;color:var(--mt)">Güncellendi</div></div>'
+      +'<div><div style="font-size:22px;font-weight:900;color:var(--orl)">'+d.skipped+'</div><div style="font-size:11px;color:var(--mt)">Atlandı</div></div>'
+    +'</div>';
+  }
+
+  var sheetsH = '<div style="font-size:12px;margin-bottom:10px"><strong>Dosya:</strong> '+esc(d.fileName||'—')+'<br>'
+    +'<strong>Bulunan sayfalar:</strong> '+esc((d.allSheets||[]).join(', '))+'<br>'
+    +'<strong>Kullanılan sayfa:</strong> <span style="color:var(--bll);font-weight:700">'+esc(d.usedSheet||'—')+'</span></div>';
+
+  var headerRowH = '';
+  if(d.rawHeaderRow && d.rawHeaderRow.length){
+    headerRowH = '<div style="margin-bottom:14px">'
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:6px">📋 Excel\'de Bulunan Ham Başlık Satırı (1. satır)</div>'
+      +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'
+      +'<tr>'+d.rawHeaderRow.map(function(h,i){return '<th style="border:1px solid var(--bd);padding:5px 8px;background:var(--bg3);white-space:nowrap">'+String.fromCharCode(65+i)+'</th>';}).join('')+'</tr>'
+      +'<tr>'+d.rawHeaderRow.map(function(h){return '<td style="border:1px solid var(--bd);padding:5px 8px;font-family:monospace">'+esc(String(h||'(boş)'))+'</td>';}).join('')+'</tr>'
+      +'</table></div></div>';
+  }
+
+  var colMapH = '';
+  if(d.colMap){
+    colMapH = '<div style="margin-bottom:14px">'
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:6px">🔗 Sütun Eşleştirme Sonucu</div>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:11px">'
+      +'<tr><th style="border:1px solid var(--bd);padding:5px 8px;background:var(--bg3);text-align:left">Aranan Alan</th><th style="border:1px solid var(--bd);padding:5px 8px;background:var(--bg3);text-align:left">Eşleşen Excel Sütunu</th></tr>'
+      +Object.keys(d.colMap).map(function(k){
+        var info = d.colMap[k];
+        var val = info.idx>=0
+          ? '<span style="color:var(--gnl)">'+String.fromCharCode(65+info.idx)+' — "'+esc(String(info.header))+'"</span>'
+          : '<span style="color:var(--rdl)">BULUNAMADI</span>';
+        return '<tr><td style="border:1px solid var(--bd);padding:5px 8px">'+esc(k)+'</td><td style="border:1px solid var(--bd);padding:5px 8px">'+val+'</td></tr>';
+      }).join('')
+      +'</table></div>';
+  }
+
+  var rowsH = '';
+  if(d.rowDetails && d.rowDetails.length){
+    rowsH = '<div>'
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:6px">📄 Satır Satır Sonuç (Excel satır no. ile)</div>'
+      +'<div style="max-height:280px;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'
+      +'<tr><th style="border:1px solid var(--bd);padding:5px 8px;background:var(--bg3)">Satır</th><th style="border:1px solid var(--bd);padding:5px 8px;background:var(--bg3);text-align:left">Parça Adı</th><th style="border:1px solid var(--bd);padding:5px 8px;background:var(--bg3);text-align:left">Stok Kodu</th><th style="border:1px solid var(--bd);padding:5px 8px;background:var(--bg3)">Sonuç</th><th style="border:1px solid var(--bd);padding:5px 8px;background:var(--bg3);text-align:left">Neden</th></tr>'
+      +d.rowDetails.map(function(r){
+        var col = r.result==='EKLENDİ'?'var(--gnl)':r.result==='GÜNCELLENDİ'?'var(--bll)':'var(--orl)';
+        return '<tr>'
+          +'<td style="border:1px solid var(--bd);padding:5px 8px;text-align:center">'+r.rowNum+'</td>'
+          +'<td style="border:1px solid var(--bd);padding:5px 8px">'+esc(r.name||'(boş)')+'</td>'
+          +'<td style="border:1px solid var(--bd);padding:5px 8px;font-family:monospace">'+esc(r.code||'(boş)')+'</td>'
+          +'<td style="border:1px solid var(--bd);padding:5px 8px;text-align:center;color:'+col+';font-weight:700">'+r.result+'</td>'
+          +'<td style="border:1px solid var(--bd);padding:5px 8px;color:var(--mt)">'+esc(r.reason||'')+'</td>'
+        +'</tr>';
+      }).join('')
+      +'</table></div></div>';
+  }
+
+  return '<div class="ov" id="ov-sp-diag"><div class="md mdlg">'
+    +'<div class="mdh"><div class="mdt">🔍 Excel Yükleme Tanı Raporu</div>'
+    +'<button class="mdc" onclick="closeSpareUploadDiag()">✕</button></div>'
+    +summaryH+sheetsH+headerRowH+colMapH+rowsH
+    +'<div style="display:flex;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bd);margin-top:14px">'
+    +'<button class="btn bghs" onclick="closeSpareUploadDiag()">Kapat</button>'
+    +'</div></div></div>';
+}
+
+// ── Yedek Parça Kategori Yöneticisi ─────────────────────────
 
 
 // ── Yedek Parça Kategori Yöneticisi ─────────────────────────
@@ -5676,7 +6252,7 @@ function tplWaterModal(){
     +DB.technicians.filter(function(t){return t.active;}).map(function(t){
       return '<option value="'+t.id+'"'+(f.techId===t.id?' selected':'')+'>'+esc(t.name)+'</option>';
     }).join('');
-  var _wsAp=can('ap');statOpts=Object.entries(getWaterStatuses()).filter(function(e){return _wsAp||(e[0]==='planli'||e[0]==='bekliyor_onay');}).map(function(e){
+  var _wsAp=can('ap');var statOpts=Object.entries(getWaterStatuses()).filter(function(e){return _wsAp||(e[0]==='planli'||e[0]==='bekliyor_onay');}).map(function(e){
     return '<option value="'+e[0]+'"'+(f.status===e[0]?' selected':'')+'>'+e[1].lbl+'</option>';
   }).join('');
   return '<div class="ov" id="ov-water"><div class="md" style="max-width:480px">'
@@ -6218,7 +6794,7 @@ function pgScoreboard(){
           +'<div style="font-size:12px;font-weight:700;color:var(--bll)">'+esc(wo.id)+'</div>'
           +'<div style="font-size:12px;color:var(--tx);margin:3px 0">'+esc(wo.title.slice(0,35))+'</div>'
           +(tc?'<div style="font-size:11px;color:var(--mt)">👷 '+esc(tc.name)+'</div>':'')
-          +'<button class="btn bpri bxs" style="margin-top:8px;width:100%" onclick="openScoreModal(this.dataset.id)" data-id="'+wo.id+'">⭐ Puan Ver</button>';
+          +'<button class="btn bpri bxs" style="margin-top:8px;width:100%" onclick="openScoreModal(this.dataset.id)" data-id="'+wo.id+'">⭐ Puan Ver</button>'
           +'</div>';
       }).join('')+'</div></div>';
 
@@ -6463,9 +7039,10 @@ function saveCAPA(){
   if(!DB.capas)DB.capas=[];
   if(CAPA_EDIT)DB.capas=DB.capas.map(function(x){return x.id===ca.id?ca:x;});
   else DB.capas=[ca].concat(DB.capas);
-  addLog('CAPA '+(CAPA_EDIT?'Güncellendi':'Oluşturuldu'),ca.title,'',ca.type);
+  var _wasEdit=!!CAPA_EDIT;
+  addLog('CAPA '+(_wasEdit?'Güncellendi':'Oluşturuldu'),ca.title,'',ca.type);
   dbSave();MODAL_CAPA=false;CAPA_EDIT=null;
-  toast((CAPA_EDIT?'Güncellendi':'Oluşturuldu')+': '+ca.title+' ✓');
+  toast((_wasEdit?'Güncellendi':'Oluşturuldu')+': '+ca.title+' ✓');
   renderModals();renderPage();
 }
 
@@ -7642,6 +8219,150 @@ function saveSETProd(){
   toast('Üretim verisi kaydedildi ✓');renderModals();renderPage();
 }
 
+
+
+// ══════════════════════════════════════════════════════════════
+// BAKIM OTOMASYONU
+// 1) Planlı bakım tarihi yaklaşınca (Ayarlar > Otomasyon, varsayılan 7 gün) iş emri açar.
+// 2) Planlı bakım iş emri kapanınca planın sonraki tarihini periyoda göre (kapanış tarihinden) ilerletir.
+// 3) Alt komponent kalibrasyonları için aynısını yapar.
+// Sunucu olmadığı için, uygulamayı yazma yetkisi olan biri açtığında (ve açıkken saatte bir) çalışır.
+// ══════════════════════════════════════════════════════════════
+var FB_LOADED=false, AUTO_RUN_PENDING=false;
+function autoEnabled(){return !DB.settings||DB.settings.autoWO!==false;}
+function autoLeadDays(){var n=parseInt(DB.settings&&DB.settings.autoLeadDays);return isNaN(n)?7:Math.max(0,n);}
+function ymd(d){var p=function(n){return n<10?'0'+n:String(n);};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
+function parseYmd(s){var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||'');return m?new Date(+m[1],+m[2]-1,+m[3]):null;}
+function addDaysStr(s,n){var d=parseYmd(s);if(!d)return '';d.setDate(d.getDate()+n);return ymd(d);}
+// '1 hafta','2 hafta','1 ay','3 ay','6 ay','1 yıl','2 yıl' ...
+function addIntervalStr(s,interval){
+  var d=parseYmd(s);if(!d)return '';
+  var m=/(\d+)\s*(hafta|gün|gun|ay|yıl|yil)/i.exec(String(interval||''));
+  if(!m){d.setMonth(d.getMonth()+3);return ymd(d);}
+  var n=parseInt(m[1],10),u=m[2].toLowerCase();
+  if(u==='hafta')d.setDate(d.getDate()+7*n);
+  else if(u==='gün'||u==='gun')d.setDate(d.getDate()+n);
+  else if(u==='ay'){var day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+n);var last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();d.setDate(Math.min(day,last));}
+  else d.setFullYear(d.getFullYear()+n);
+  return ymd(d);
+}
+function daysBetween(a,b){var x=parseYmd(a),y=parseYmd(b);if(!x||!y)return null;return Math.round((y-x)/86400000);}
+function calIntervalDays(c){
+  if(c.intervalDays>0)return c.intervalDays;
+  var d=daysBetween(c.lastCal,c.nextCal);
+  return d&&d>0?d:365;
+}
+function syncEqNextMaint(eqId){
+  var nexts=(DB.schedule||[]).filter(function(x){return x.eqId===eqId&&x.next;}).map(function(x){return x.next;}).sort();
+  if(nexts.length)DB.equipment=DB.equipment.map(function(e){return e.id===eqId?Object.assign({},e,{nextMaint:nexts[0]}):e;});
+}
+
+// Kapanan otomatik iş emirlerinden plan/kalibrasyon tarihlerini ilerlet. Her dbSave öncesi çalışır.
+function autoReconcileClosed(){
+  var changed=false;
+  (DB.workOrders||[]).forEach(function(w,i){
+    if(w.status!=='kapali')return;
+    var doneDate=String(w.closedAt||today()).slice(0,10);
+    if(w.schedId&&!w.schedAdvanced){
+      var ms=(DB.schedule||[]).find(function(x){return x.id===w.schedId;});
+      if(ms){
+        var nn=addIntervalStr(doneDate,ms.interval);
+        // Plan bu iş açıldıktan sonra elle ileri alındıysa ona dokunma
+        if(!ms.next||ms.next<=(w.schedFor||ms.next)){
+          DB.schedule=DB.schedule.map(function(x){return x.id===ms.id?Object.assign({},x,{next:nn,lastDone:doneDate}):x;});
+        }
+        DB.equipment=DB.equipment.map(function(e){return e.id===ms.eqId?Object.assign({},e,{lastMaint:doneDate}):e;});
+        syncEqNextMaint(ms.eqId);
+        addLog('Plan İlerletildi',ms.title+' → '+nn+' ['+w.id+']',w.schedFor||'',nn);
+      }
+      DB.workOrders[i]=Object.assign({},w,{schedAdvanced:true});changed=true;
+    }
+    if(w.calRef&&!w.calAdvanced){
+      var sc=DB.eqSubComponents&&DB.eqSubComponents[w.calRef.eqId];
+      var list=(sc&&sc.calibrations)||[];
+      var ci=list.findIndex(function(c){return c.name===w.calRef.name;});
+      if(ci>=0){
+        var c=list[ci],iv=calIntervalDays(c),nc=addDaysStr(doneDate,iv);
+        if(!c.nextCal||c.nextCal<=(w.calRef.due||c.nextCal)){
+          list[ci]=Object.assign({},c,{lastCal:doneDate,nextCal:nc,intervalDays:iv});
+          addLog('Kalibrasyon İlerletildi',c.name+' → '+nc+' ['+w.id+']',c.nextCal||'',nc);
+        }
+      }
+      DB.workOrders[i]=Object.assign({},DB.workOrders[i],{calAdvanced:true});changed=true;
+    }
+  });
+  return changed;
+}
+
+function autoCreateWO(o){
+  var wo={id:nextWOId(),eqId:o.eqId,type:o.type,title:o.title,desc:o.desc||'',sev:o.due<today()?'yuksek':'orta',status:'acik',
+    date:today(),due:o.due,techId:o.techId||'',gmp:!!o.gmp,root:'',lh:0,pc:0,helperIds:[],
+    steps:(o.tasks||[]).map(function(t){return {t:t,d:false};}),docs:[],
+    comments:[{user:'Sistem',text:'🤖 '+o.note,date:nowStr()}],
+    by:'AUTO',approvedBy:'',closedAt:'',autoKey:o.key};
+  if(o.schedId){wo.schedId=o.schedId;wo.schedFor=o.due;}
+  if(o.calRef)wo.calRef=o.calRef;
+  DB.workOrders=[wo].concat(DB.workOrders);
+  addLog('Otomatik İş Emri',wo.title+' ['+wo.id+']','','Son tarih: '+wo.due);
+  return wo;
+}
+
+// Yaklaşan plan ve kalibrasyonlar için iş emri aç. Dönüş: açılan iş emirleri.
+function autoGenerate(){
+  if(!autoEnabled())return [];
+  var limit=addDaysStr(today(),autoLeadDays()),created=[];
+  var keys={};(DB.workOrders||[]).forEach(function(w){if(w.autoKey)keys[w.autoKey]=w;});
+  (DB.schedule||[]).forEach(function(ms){
+    if(!ms.next||ms.next>limit||!ms.eqId)return;
+    if(!(DB.equipment||[]).some(function(e){return e.id===ms.eqId&&e.status!=='devre_disi';}))return;
+    var key='PM|'+ms.id+'|'+ms.next;
+    if(keys[key]||ms.lastGenFor===ms.next)return;
+    // Aynı plan için hâlâ açık bir otomatik iş varsa yenisini açma
+    if((DB.workOrders||[]).some(function(w){return w.schedId===ms.id&&w.status!=='kapali';}))return;
+    var wo=autoCreateWO({key:key,eqId:ms.eqId,type:ms.type||'onleyici',title:ms.title,desc:ms.notes||'',due:ms.next,techId:ms.techId,
+      tasks:ms.tasks,schedId:ms.id,note:'Planlı bakımdan otomatik açıldı ('+ms.interval+' periyot, plan tarihi '+ms.next+').'});
+    DB.schedule=DB.schedule.map(function(x){return x.id===ms.id?Object.assign({},x,{lastGenFor:ms.next}):x;});
+    created.push(wo);
+  });
+  Object.keys(DB.eqSubComponents||{}).forEach(function(eqId){
+    var eq=(DB.equipment||[]).find(function(e){return e.id===eqId;});
+    if(!eq||eq.status==='devre_disi')return;
+    var list=(DB.eqSubComponents[eqId].calibrations)||[];
+    list.forEach(function(c,ci){
+      if(!c.nextCal||c.nextCal>limit||!c.name)return;
+      var key='CAL|'+eqId+'|'+c.name+'|'+c.nextCal;
+      if(keys[key]||c.lastGenFor===c.nextCal)return;
+      if((DB.workOrders||[]).some(function(w){return w.calRef&&w.calRef.eqId===eqId&&w.calRef.name===c.name&&w.status!=='kapali';}))return;
+      var wo=autoCreateWO({key:key,eqId:eqId,type:'kalibrasyon',title:'Kalibrasyon: '+c.name+' ('+eq.name+')',
+        desc:'Sertifika: '+(c.certNo||'—')+' · Son kalibrasyon: '+(c.lastCal||'—'),due:c.nextCal,techId:eq.techId||'',gmp:!!eq.val,
+        tasks:['Kalibrasyonu yap','Sonuçları kaydet','Yeni sertifika numarasını alt komponente gir'],
+        calRef:{eqId:eqId,name:c.name,due:c.nextCal},note:'Kalibrasyon takviminden otomatik açıldı (sonraki kalibrasyon '+c.nextCal+').'});
+      list[ci]=Object.assign({},c,{lastGenFor:c.nextCal});
+      created.push(wo);
+    });
+  });
+  return created;
+}
+
+function runAutomation(manual){
+  if(!U||!can('w')){if(manual)toast('Otomasyonu çalıştırma yetkiniz yok','err');return;}
+  if(!autoEnabled()){if(manual)toast('Otomatik iş emri Ayarlar\'dan kapalı','warn');return;}
+  var created=autoGenerate();
+  var reconciled=autoReconcileClosed();
+  DB.settings.autoLastRun=nowStr();
+  if(created.length||reconciled||manual){
+    dbSave();
+    if(created.length)toast('🤖 '+created.length+' otomatik iş emri açıldı: '+created.map(function(w){return w.id;}).join(', '),'info');
+    else if(manual)toast('Açılacak yeni iş emri yok ✓');
+    var hasModal=Object.values(MODAL).some(function(v){return v;});
+    if(document.getElementById('main')&&!hasModal&&!QR_ACTIVE)renderPage();
+  }
+}
+function scheduleAutomation(){
+  if(AUTO_RUN_PENDING)return;AUTO_RUN_PENDING=true;
+  setTimeout(function(){AUTO_RUN_PENDING=false;runAutomation(false);},1500);
+}
+setInterval(function(){if(U)runAutomation(false);},60*60*1000);
 
 // BOOT
 // Firebase başlat
