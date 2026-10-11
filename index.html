@@ -161,6 +161,71 @@ pre{white-space:pre-wrap;word-break:break-all;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
 
+/* AHU 3D GÖRÜNTÜLEYİCİ */
+.a3d-ov{position:fixed;inset:0;z-index:1000;background:#0b0f15;color:var(--tx);display:flex;flex-direction:column;overflow:auto}
+.a3d-load{margin:auto;color:var(--sub);font-size:14px;display:flex;gap:10px;align-items:center}
+.a3-top{display:flex;align-items:center;gap:16px;padding:14px 18px;border-bottom:1px solid #1f2937;flex-wrap:wrap}
+.a3-title{display:flex;align-items:center;gap:12px;margin-right:auto;min-width:0}
+.a3-h1{font-size:24px;font-weight:800;letter-spacing:-.4px}
+.a3-code{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--sub);border:1px solid #334155;border-radius:5px;padding:3px 8px}
+.a3-specs{display:flex;border:1px solid #273244;border-radius:8px;overflow:hidden;position:relative}
+.a3-specs>div{padding:6px 12px;border-right:1px solid #273244;min-width:84px}
+.a3-specs>div:last-of-type{border-right:none}
+.a3-specs span{display:block;font-size:9.5px;color:#7b8aa0;letter-spacing:1px;font-weight:700}
+.a3-specs b{font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:600;white-space:nowrap}
+.a3-specedit{background:none;border:none;border-left:1px solid #273244;color:var(--sub);padding:0 10px;cursor:pointer}
+.a3-close{background:#151b24;border:1px solid #273244;color:var(--tx);border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:15px}
+.a3-main{display:flex;gap:14px;padding:14px 18px;flex:1;min-height:0}
+.a3-left{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;background:#111720;border:1px solid #1f2937;border-radius:10px;padding:12px}
+.a3-right{width:400px;flex-shrink:0;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.a3-tbar,.a3-bbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.a3-seg{display:inline-flex;align-items:center;gap:2px;background:#151b24;border:1px solid #273244;border-radius:7px;padding:3px}
+.a3-seg-l{font-size:10px;color:#7b8aa0;letter-spacing:1px;font-weight:700;padding:0 8px}
+.a3-seg button,.a3-btn{background:none;border:none;color:#e2e8f0;font-size:12.5px;font-weight:700;padding:6px 11px;border-radius:5px;cursor:pointer;white-space:nowrap}
+.a3-seg button.on{background:#1e3a5f;color:#60a5fa}
+.a3-btn{padding:9px 14px}
+.a3-file{cursor:pointer;font-size:12.5px;font-weight:700;padding:9px 14px}.a3-file input{display:none}
+.a3-seg input[type=range]{width:140px;accent-color:#3b82f6;margin:0 8px}
+.a3-view{position:relative;flex:1;min-height:440px;border-radius:8px;overflow:hidden;background:radial-gradient(ellipse at 50% 40%,#232b36 0%,#141a22 60%,#0d1218 100%)}
+.a3-view canvas{display:block;width:100%!important;height:100%!important;position:absolute;inset:0}
+#a3-labels{position:absolute;inset:0;pointer-events:none}
+.a3-num{position:absolute;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;background:#111827;border:1.5px solid #e5e7eb;color:#fff;font-size:10.5px;font-weight:800;cursor:pointer;pointer-events:auto;box-shadow:0 2px 6px rgba(0,0,0,.5);padding:0}
+.a3-num.on,.a3-num:hover{background:#2563eb;border-color:#93c5fd}
+.a3-dim{position:absolute;transform:translate(-50%,-50%);font:600 11px ui-monospace,Menlo,monospace;color:#7dd3fc;background:rgba(13,18,24,.85);padding:1px 6px;border-radius:4px}
+.a3-hint{position:absolute;left:10px;bottom:8px;font-size:10.5px;color:#64748b;pointer-events:none}
+.a3-card{background:#111720;border:1px solid #1f2937;border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.6;color:#d6dde7}
+.a3-card p{margin:0 0 10px}.a3-card ul{margin:0 0 6px 18px}.a3-card li{margin-bottom:6px}.a3-card li::marker{color:#3b82f6}
+.a3-ch{font-size:11px;color:#7b8aa0;letter-spacing:1.2px;font-weight:700;margin:-2px 0 12px;padding-bottom:10px;border-bottom:1px solid #1f2937}
+.a3-ihead{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.a3-ic{width:34px;height:34px;border-radius:50%;background:#1b2330;border:1px solid #334155;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.a3-it{font-size:18px;font-weight:700;color:#fff}.a3-is{font-size:11.5px;color:#7b8aa0}
+.a3-sh{font-size:10.5px;color:#7b8aa0;letter-spacing:1px;font-weight:700;text-transform:uppercase;margin:14px 0 6px}
+.a3-tbl{width:100%;border-collapse:collapse;font-size:12px}.a3-tbl td{padding:5px 0;border-bottom:1px solid #1f2937}.a3-tbl td:first-child{color:#7b8aa0;width:42%}
+.a3-tbl td:last-child{font-family:ui-monospace,Menlo,monospace;font-size:11.5px}
+.a3-fault{background:#0d131b;border:1px solid #1f2937;border-radius:7px;padding:8px 10px;margin-bottom:6px;font-size:12px}
+.a3-fault div{color:#b8c2cf;margin-top:3px}.a3-fault span{display:block;font-size:9.5px;color:#7b8aa0;font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+.a3-kv{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:4px 0;border-bottom:1px solid #1a2230}.a3-kv span{color:#b8c2cf}
+.a3-sch{width:100%;height:auto;display:block;margin-bottom:8px}
+.a3-sch .t{fill:#94a3b8;font-size:9px;text-anchor:middle;font-family:ui-monospace,Menlo,monospace}
+.a3-sch .ts{fill:#cbd5e1;font-size:7.5px;text-anchor:middle;font-weight:700;font-family:ui-monospace,Menlo,monospace}
+.a3-sch .hl circle,.a3-sch .hl rect{stroke:#60a5fa}
+.a3-iolist{font-size:12px}
+.a3-io{display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:5px;cursor:pointer}.a3-io:hover,.a3-io.hl{background:#172131}
+.a3-dot{width:10px;height:10px;border-radius:50%;border:1.5px solid #64748b;flex-shrink:0}.a3-dot.on{background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 6px #f59e0b80}
+.a3-tag{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#93c5fd;width:46px;flex-shrink:0}
+.a3-iod{flex:1;min-width:0;color:#d6dde7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.a3-val{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#fff;min-width:70px;text-align:right}
+.a3-adr{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#64748b;width:42px;text-align:right}
+.a3-prog{height:4px;background:#1f2937;border-radius:2px;overflow:hidden;margin-bottom:8px}.a3-prog div{height:100%;background:#3b82f6;transition:width .3s}
+.a3-stepno{font-size:11px;color:#7b8aa0;font-weight:700;letter-spacing:.5px}
+.a3-stept{font-size:16px;font-weight:700;color:#fff;margin:6px 0}
+.a3-ol{margin:4px 0 0 18px;font-size:12.5px}
+.a3-all li{cursor:pointer;padding:3px 4px;border-radius:4px;color:#94a3b8}.a3-all li span{font-size:9.5px;font-weight:800;margin-right:4px}
+.a3-all li.on{background:#172131;color:#fff}.a3-all li.done{color:#64748b;text-decoration:line-through}
+@media(max-width:1000px){
+  .a3-main{flex-direction:column;padding:10px}.a3-right{width:100%}.a3-view{min-height:56vh}
+  .a3-specs{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}.a3-specs>div{flex-shrink:0}.a3-seg{max-width:100%;overflow-x:auto;flex-wrap:nowrap}.a3-seg button{padding:6px 9px}.a3-h1{font-size:19px}.a3-top{padding:10px}
+}
 
 /* TESİS HARİTASI */
 .map-tb{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -9129,7 +9194,8 @@ function mapPanelHTML(){
   if(MAP_TAB==='gorunum'){
     if(model==='ahu'){
       h+=mapViewToggles()
-        +'<div class="mp-view" onclick="MAP_FULL=true;renderPage()" title="Büyütmek için tıklayın">'+ahuSVG(e,MAP_VIEW,false)+'<span class="mp-zoomhint">⛶ Büyüt</span></div>'
+        +'<button class="btn bpri" style="width:100%;margin-bottom:8px;padding:10px" onclick="openAHU3D(\''+e.id+'\')">🧊 3D Görüntüleyiciyi Aç</button>'
+        +'<div class="mp-view" onclick="openAHU3D(\''+e.id+'\')" title="3D görüntüleyicide aç">'+ahuSVG(e,MAP_VIEW,false)+'<span class="mp-zoomhint">🧊 3D</span></div>'
         +mapCompList(e);
     } else {
       h+='<div class="mp-view">'+genericSVG(e)+'</div>'
@@ -9174,6 +9240,7 @@ function mapPanelHTML(){
     else{
       var si=Math.min(MAP_STEP_SEL||0,kb2.steps.length-1),S=kb2.steps[si];
       h+='<select class="inp isml" style="margin-bottom:10px" onchange="MAP_STEP_SEL=+this.value;renderPage()">'+kb2.steps.map(function(s,i){return '<option value="'+i+'"'+(i===si?' selected':'')+'>'+esc(s.title)+'</option>';}).join('')+'</select>'
+        +(model==='ahu'?'<button class="btn bpri bsm" style="width:100%;margin-bottom:10px" onclick="openAHU3D(\''+e.id+'\',{steps:'+si+'})">▶ 3D\'de adım adım göster</button>':'')
         +(model==='ahu'&&S.comp?'<div class="mp-view mp-view-sm">'+ahuSVG(e,'exploded',false,S.comp)+'</div>':'')
         +'<div class="mp-steps"><div class="mp-st-h" style="color:var(--orl)">⚠ Önce — Güvenlik (LOTO)</div><ol>'+LOTO_PRE.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>'
         +'<div class="mp-st-h" style="color:var(--rdl)">🔧 Sökme</div><ol>'+(S.sokme||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>'
@@ -9416,6 +9483,689 @@ function genericSVG(e){
     +'<circle cx="220" cy="96" r="9" fill="'+st.col+'"/><circle cx="250" cy="96" r="9" fill="#ef4444" stroke="#7f1d1d" stroke-width="3"/>'
     +'<rect x="88" y="152" width="184" height="34" rx="3" fill="none" stroke="#8796a8"/>'
     +'<text x="200" y="224" text-anchor="middle" fill="#94a3b8" font-size="11">'+esc(e.name)+'</text></svg>';
+}
+
+// ══════════════════════════════════════════════════════════════
+// AHU 3D GÖRÜNTÜLEYİCİ (Three.js r128, ilk açılışta yüklenir)
+// Prosedürel model: karışım damperi, G4, F7, ısıtıcı, soğutucu + damla tutucu,
+// buharlı nemlendirici, plug fan, susturucu, F9. Kesit, şeffaf, numaralar,
+// ölçüler, hava akışı, patlatma, adım adım sökme, BMS kontrol şeması.
+// ══════════════════════════════════════════════════════════════
+var A3=null;
+var THREE_URLS=['https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js','https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js'];
+var GLTF_URL='https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
+function a3LoadScripts(urls,cb,err){
+  var i=0;(function nx(){if(i>=urls.length)return cb();var s=document.createElement('script');s.src=urls[i++];s.onload=nx;s.onerror=function(){err&&err();};document.head.appendChild(s);})();
+}
+
+// ── Parça kataloğu (numara sırası = 3D'deki numaralar) ─────────
+var A3_PARTS=[
+ {id:'damper',comp:'damper',no:1,name:'Karışım Damperi',sub:'Taze hava / dönüş havası · Motorlu, karşı hareketli kanat',
+  desc:['Taze hava ve dönüş havası damperleri, BMS\'den gelen 0-10 V sinyali ile çalışan aktüatörler tarafından birbirinin tersi yönde konumlandırılır. Böylece minimum taze hava oranı korunurken enerji geri kazanımı sağlanır.',
+        'Kanatlar alüminyum profil, kenarları EPDM contalıdır; karşı hareketli (opposed blade) yapı debi kontrolünü doğrusallaştırır. Santral durduğunda yay geri dönüşlü aktüatör taze hava damperini kapatır (donma koruması).'],
+  bullets:['Aktüatör: 24 VAC, 0-10 V, yay geri dönüşlü, 10 Nm','Kaçak sınıfı: EN 1751 Sınıf 2','Minimum taze hava konumu BMS\'de sınırlandırılır'],
+  tech:[['Kanat','Alüminyum, karşı hareketli'],['Aktüatör','24 VAC · 0-10 V · 10 Nm'],['Kontrol','Y4 (AO)']]},
+ {id:'g4',comp:'g4',no:2,name:'G4 Panel Ön Filtre',sub:'ISO 16890 Coarse 60% · EN 779 G4',
+  desc:['Santrale giren havadaki kaba partikülleri (≥10 µm) tutarak F7 torba filtreyi ve batarya lamellerini korur. Sentetik pilili medyalı, galvaniz çerçeveli panel filtreler kızak sistemine yerleşir ve servis kapısından yana çekilerek değiştirilir.',
+        'Filtre kirlendikçe fark basıncı artar; PDT-01 transmitteri bu değeri BMS\'ye aktarır ve son basınca ulaşıldığında bakım alarmı üretir.'],
+  bullets:['Başlangıç ΔP ≈ 50 Pa · Son ΔP 150 Pa','Değişim: ΔP alarmı veya en geç 3 ay','GMP: Değişim tarihi filtre etiketine ve iş emrine yazılır'],
+  tech:[['Sınıf','ISO Coarse 60% (G4)'],['Ölçü','592 × 592 × 48 mm'],['ΔP başl./son','50 / 150 Pa'],['Ölçüm','PDT-01 (AI)']]},
+ {id:'f7',comp:'f7',no:3,name:'F7 Torba Filtre',sub:'ISO 16890 ePM1 60% · EN 779 F7',
+  desc:['Bataryalardan önce ince partikülleri tutan ana filtre kademesidir. Cepli (torba) yapısı geniş filtre alanı sağlayarak düşük basınç kaybıyla yüksek toz tutma kapasitesi verir.',
+        'Torbalar ön çerçeveye kaynaklı, cepler dikey yönde çalışacak şekilde kızağa takılır. Cep sayısı ve boyu, santral kesit hızına (≤ 2,5 m/s) göre seçilir.'],
+  bullets:['Başlangıç ΔP ≈ 90 Pa · Son ΔP 200 Pa','Cepler dikey olmalı; katlanmış cep debiyi düşürür','Değişimde çerçeve contası mutlaka kontrol edilir'],
+  tech:[['Sınıf','ISO ePM1 60% (F7)'],['Cep','6 cep · 600 mm'],['ΔP başl./son','90 / 200 Pa'],['Ölçüm','PDT-02 (AI)']]},
+ {id:'heat',comp:'heat',no:4,name:'Isıtıcı Batarya',sub:'Sıcak su · Bakır boru / alüminyum lamel',
+  desc:['Havayı sıcak su ile ısıtan lamelli eşanjördür. Bakır borular üzerine preslenmiş alüminyum lameller ısı transfer yüzeyini oluşturur; kolektörler ve hava tahliye/boşaltma pürjörleri servis tarafındadır.',
+        'Kapasite, üfleme sıcaklığı (TT-02) setpointine göre 3 yollu vana (Y1) ile oransal ayarlanır. Batarya çıkışındaki donma termostatı 5 °C altında santrali durdurur ve vanayı tam açar.'],
+  bullets:['Su rejimi: 80/60 °C','Donma koruması: TS-01 kapiler termostat (DI)','Bakım: Lamel temizliği, hava alma, sızdırmazlık kontrolü'],
+  tech:[['Akışkan','Sıcak su 80/60 °C'],['Sıra / Lamel','2 sıra · 2,1 mm'],['Vana','3 yollu · Y1 (AO)'],['Koruma','TS-01 donma termostatı']]},
+ {id:'hvalve',comp:'heat',no:5,name:'Isıtma Vanası Grubu',sub:'3 yollu karışım vanası + oransal aktüatör',
+  desc:['Batarya debisini oransal olarak ayarlayan 3 yollu vana ve 0-10 V aktüatörden oluşur. Vana grubunda küresel vanalar, pislik tutucu ve termometreler bulunur.',
+        'Aktüatör arızası veya sinyal kaybında üfleme sıcaklığı setpointten sapar; önce aktüatör beslemesi ve sinyali, ardından vana mili kontrol edilir.'],
+  bullets:['Aktüatör: 24 VAC, 0-10 V, manuel kumandalı','Pislik tutucu periyodik temizlenmelidir'],
+  tech:[['Tip','3 yollu, DN32, kvs 16'],['Sinyal','0-10 V · Y1 (AO)']]},
+ {id:'cool',comp:'cool',no:6,name:'Soğutucu Batarya',sub:'Soğuk su · Bakır boru / alüminyum lamel',
+  desc:['Havayı soğutan ve nemini alan lamelli eşanjördür. Yüzey sıcaklığı çiğ noktasının altında olduğundan lameller üzerinde yoğuşma oluşur; su paslanmaz drenaj tavasında toplanır.',
+        'Kapasite Y2 vanası ile ayarlanır. Nem alma kontrolünde soğutucu önce nemi düşürür, ardından ısıtıcı ile istenen üfleme sıcaklığına getirilir (reheat).'],
+  bullets:['Su rejimi: 7/12 °C','Lamel arası temizlik: düşük basınçlı su veya onaylı kimyasal','Hijyen: VDI 6022\'ye göre periyodik dezenfeksiyon'],
+  tech:[['Akışkan','Soğuk su 7/12 °C'],['Sıra / Lamel','6 sıra · 2,5 mm'],['Vana','2 yollu · Y2 (AO)']]},
+ {id:'drain',comp:'cool',no:7,name:'Damla Tutucu, Drenaj Tavası ve Sifon',sub:'Paslanmaz tava · PP profil damla tutucu',
+  desc:['Damla tutucu, batarya lamellerinden kopan su damlalarının hava ile taşınmasını engeller. Toplanan su eğimli paslanmaz tavadan sifon üzerinden atılır.',
+        'Sifon yüksekliği fan basıncına göre seçilir; yetersiz sifon havanın emilmesine ve tavada su birikmesine yol açar. Kuru sifon koku ve kontaminasyon kaynağıdır.'],
+  bullets:['Sifon yüksekliği ≥ fan negatif basıncı (mmSS) + 50 mm','Tava eğimi drenaj ağzına doğru olmalı','Aylık görsel kontrol, 6 aylık dezenfeksiyon'],
+  tech:[['Tava','AISI 304, çift eğimli'],['Sifon','Negatif basınç tipi'],['Damla tutucu','PP profil, sökülebilir kaset']]},
+ {id:'hum',comp:'hum',no:8,name:'Buharlı Nemlendirici',sub:'Buhar dağıtım lansları',
+  desc:['Buhar jeneratöründen gelen kuru buhar, kesit boyunca yerleştirilen lanslar ile havaya eşit dağıtılır. Absorpsiyon mesafesi boyunca buharın tamamen havaya karışması gerekir; aksi halde sonraki elemanlarda ıslanma oluşur.',
+        'Nem kontrolü üfleme nem sensörü (MT-01) ile oransal yapılır; kanal tipi maksimum nem limitleyici (%90) aşırı nemlendirmeyi önler.'],
+  bullets:['Kontrol: Y3 (AO) · Limitleyici MH-01 (DI)','Kondens hatları ve kapanları periyodik kontrol edilir','Silindir kireçlenmesi kapasiteyi düşürür'],
+  tech:[['Kapasite','45 kg/h'],['Lans','3 adet, paslanmaz'],['Kontrol','Y3 (AO)']]},
+ {id:'fan',comp:'fan',no:9,name:'Plug Fan Çarkı ve Emme Konisi',sub:'Geriye eğimli kanatlı, kayışsız (direkt akuple)',
+  desc:['Plug fan, salyangozu olmayan açık çarklı bir radyal fandır. Hava emme konisinden eksenel girer, çark tarafından radyal olarak fan hücresine basılır. Kayış ve kasnak olmadığından kayış tozu oluşmaz; GMP alanları için tercih edilir.',
+        'Verim ve gürültü için çark ile emme konisi arasındaki boşluk çevre boyunca eşit ve üretici değerinde olmalıdır. Konideki basınç ölçüm nipelleri ile debi (k-faktör yöntemi) sürekli izlenir.'],
+  bullets:['Debi ölçümü: Δp koni × k-faktör → FT-01','Balans kalitesi: ISO 21940 G2.5','Kontrol: titreşim, boşluk, kanatlarda kir birikimi'],
+  tech:[['Çark','Ø 630 mm · geriye eğimli'],['Debi ölçümü','k-faktör · FT-01 (AI)'],['Balans','G2.5']]},
+ {id:'motor',comp:'fan',no:10,name:'Fan Motoru ve Frekans İnvertörü',sub:'IE4 · 15 kW · VFD ile değişken devir',
+  desc:['Çark doğrudan motor miline taper-lock göbek ile bağlıdır. Motor devri frekans invertörü (VFD) ile kanal statik basıncı veya debi setpointine göre ayarlanır.',
+        'İnvertör çalışma (DI), arıza (DI) ve hız geri bildirimi (AI) sinyallerini BMS\'ye verir. Rulman sıcaklığı ve titreşim, kestirimci bakım için periyodik ölçülür.'],
+  bullets:['Start komutu: DO-01 · Hız: SC-01 (AO)','Rulman ömrü L10h ≥ 40.000 saat','Megger testi yılda bir'],
+  tech:[['Güç','15 kW · 400 V · IE4'],['Devir','1450 d/d (50 Hz)'],['Sürücü','VFD · SC-01 (AO)']]},
+ {id:'iso',comp:'fan',no:11,name:'Fan Kaidesi ve Yay Takozlar',sub:'Titreşim izolasyonu',
+  desc:['Fan-motor ünitesi ortak bir çelik kaide üzerine monte edilir ve yay takozlar ile santral gövdesinden izole edilir. Fan çıkışı ile panel arasında esnek bağlantı bulunur.',
+        'Yay çökmesi veya takoz hasarı titreşimin gövdeye ve kanala iletilmesine neden olur.'],
+  bullets:['Yay statik çökme: 25 mm','Nakliye kilitleri devreye almadan önce sökülmelidir'],
+  tech:[['İzolatör','Çelik yay, 25 mm çökme'],['Verim','> %95 izolasyon']]},
+ {id:'sil',comp:'sil',no:12,name:'Susturucu',sub:'Kulisli tip, mineral yün dolgu',
+  desc:['Fan gürültüsünü kanala geçmeden azaltan kulisli susturucudur. Kulis dolgusu mineral yündür ve hava ile temas eden yüzeyler, lif kopmasını önlemek için cam tülü ve delikli sac ile kaplanmıştır.',
+        'GMP alanlarında susturucu partikül kaynağı olmamalıdır; hasarlı kulis değiştirilmelidir.'],
+  bullets:['Kulis kalınlığı 200 mm, aralık 100 mm','Kontrol: kaplamada yırtık, dolguda dağılma'],
+  tech:[['Kulis','4 adet · 200 mm'],['Dolgu','Mineral yün, cam tülü kaplı']]},
+ {id:'f9',comp:'f9',no:13,name:'F9 Son Filtre',sub:'ISO 16890 ePM1 80% · EN 779 F9',
+  desc:['Fan sonrasında yer alan son filtre kademesidir; temiz alanlara giden havayı terminal HEPA filtrelerden önce süzer ve HEPA ömrünü uzatır. Fan sonrası (pozitif basınç) konumu, filtre sonrası sızıntı ile kirli hava emilmesini engeller.',
+        'Değişimden sonra beslenen alanlarda basınç kaskadı ve partikül sayımı kontrol edilir.'],
+  bullets:['Başlangıç ΔP ≈ 120 Pa · Son ΔP 250 Pa','Kontrol: PDT-03 (AI)','QA bilgilendirmesi ile değiştirilir'],
+  tech:[['Sınıf','ISO ePM1 80% (F9)'],['Cep','8 cep · 600 mm'],['ΔP başl./son','120 / 250 Pa'],['Ölçüm','PDT-03 (AI)']]},
+ {id:'pdt',comp:'g4',no:14,name:'Fark Basınç Transmitterleri',sub:'PDT-01/02/03 · filtre kirlilik izleme',
+  desc:['Her filtre kademesinin giriş ve çıkışı arasındaki fark basıncını ölçer ve 4-20 mA / 0-10 V olarak BMS\'ye aktarır. Panel üzerindeki ibreli manometreler yerel okuma sağlar.',
+        'Ölçüm hortumlarının kırılması veya ters bağlanması yanlış ΔP okumasına neden olur; kalibrasyon programına dahildir.'],
+  bullets:['Aralık 0-500 Pa','Kalibrasyon: yıllık'],
+  tech:[['Aralık','0-500 Pa'],['Çıkış','0-10 V'],['Kalibrasyon','12 ay']]},
+ {id:'body',comp:'body',no:15,name:'Gövde Panelleri ve Servis Kapıları',sub:'Çift cidarlı, 50 mm izolasyonlu panel',
+  desc:['Gövde, alüminyum profil iskelet ve 50 mm taş yünü dolgulu çift cidarlı panellerden oluşur. İç yüzeyler temizlenebilir, köşe ve vida başları dışarıdadır (hijyenik tasarım).',
+        'Servis kapıları basınca karşı açılmayacak şekilde yerleştirilir; kapı contalarının yıpranması hava kaçağına ve yoğuşmaya neden olur.'],
+  bullets:['Mekanik dayanım: EN 1886 D1(M)','Kaçak sınıfı: L1(M) · Isıl köprü: TB2','Kapı switch\'leri fanı emniyete alır'],
+  tech:[['Panel','50 mm taş yünü'],['Sınıflar','D1 · L1 · T2 · TB2'],['Profil','Alüminyum, hijyenik']]}
+];
+function a3Part(id){return A3_PARTS.filter(function(p){return p.id===id;})[0];}
+
+// ── Teknik veriler (ekipmana özel, düzenlenebilir) ──────────────
+function a3Specs(e){
+  var s=Object.assign({},((DB.eqKnowledge||{})[e.id]||{}).specs||{});
+  var m=/(\d[\d.,]*)\s*m³\/h/i.exec(e.notes||'');
+  var d={'Debi':m?m[1]+' m³/h':'18.000 m³/h','Fan':'15 kW · Plug','Filtre':'G4 · F7 · F9','Isıtma':'120 kW','Soğutma':'95 kW','ESP':'600 Pa','Ölçü (U×G×Y)':'5900 × 1400 × 1650 mm'};
+  Object.keys(d).forEach(function(k){if(!s[k])s[k]=d[k];});
+  return s;
+}
+
+// ── Aç / kapat ─────────────────────────────────────────────────
+function openAHU3D(eqId,opt){
+  var e=(DB.equipment||[]).find(function(x){return x.id===eqId;});if(!e)return;
+  opt=opt||{};
+  var ov=document.createElement('div');ov.id='a3d';ov.className='a3d-ov';
+  ov.innerHTML='<div class="a3d-load">3D model yükleniyor…</div>';
+  document.body.appendChild(ov);
+  var go=function(){a3Build(e,opt);};
+  if(window.THREE&&THREE.OrbitControls)go();
+  else a3LoadScripts(THREE_URLS,go,function(){ov.innerHTML='<div class="a3d-load">3D kütüphanesi yüklenemedi. İnternet bağlantısını kontrol edin. <button class="btn bghs bsm" onclick="closeAHU3D()">Kapat</button></div>';});
+}
+function closeAHU3D(){
+  if(A3){A3.dead=true;cancelAnimationFrame(A3.raf);try{A3.renderer.dispose();A3.renderer.forceContextLoss();}catch(e){}window.removeEventListener('resize',A3.onResize);}
+  A3=null;var o=document.getElementById('a3d');if(o)o.remove();
+}
+
+// ── Arayüz ─────────────────────────────────────────────────────
+function a3Shell(e){
+  var sp=a3Specs(e),keys=['Debi','Fan','Filtre','Isıtma','Soğutma','ESP'];
+  var seg=function(grp,items){return '<div class="a3-seg">'+(grp?'<span class="a3-seg-l">'+grp+'</span>':'')+items.map(function(i){return '<button data-a3="'+i[0]+'" class="'+(i[2]?'on':'')+'">'+i[1]+'</button>';}).join('')+'</div>';};
+  return '<div class="a3-top">'
+    +'<div class="a3-title"><div class="a3-h1">'+esc(e.name)+'</div><span class="a3-code">'+esc((e.model||'AHU')+' · '+e.id)+'</span></div>'
+    +'<div class="a3-specs">'+keys.map(function(k){return '<div><span>'+esc(k.toLocaleUpperCase('tr'))+'</span><b>'+esc(sp[k])+'</b></div>';}).join('')
+    +(can('s')?'<button class="a3-specedit" onclick="a3EditSpecs()" title="Teknik verileri düzenle">✎</button>':'')+'</div>'
+    +'<button class="a3-close" onclick="closeAHU3D()" title="Kapat">✕</button></div>'
+    +'<div class="a3-main"><div class="a3-left">'
+      +'<div class="a3-tbar">'+seg('GÖRÜNÜM',[['v:iso','İzometrik',1],['v:front','Ön'],['v:top','Üst'],['v:end','Uç']])
+        +seg('',[['t:cut','Kesit'],['t:xray','Şeffaf'],['t:nums','Numaralar',1],['t:dims','Ölçüler'],['t:flow','Hava akışı',1],['t:heat','Arıza ısısı']])+'</div>'
+      +'<div class="a3-tbar">'+seg('BMS',[['m:heat','Isıtma',1],['m:cool','Soğutma'],['m:stop','Durdur']])
+        +'<label class="a3-seg a3-file">CAD yükle (.glb)<input type="file" accept=".glb,.gltf" onchange="a3LoadGLB(this)"/></label>'
+        +'<button class="a3-seg a3-btn" onclick="a3Shot()">Görüntü al</button></div>'
+      +'<div class="a3-view" id="a3-view"><div id="a3-labels"></div><div class="a3-hint">Sürükle: döndür · Tekerlek: yakınlaştır · Sağ tık: kaydır · Parçaya tıkla: detay</div></div>'
+      +'<div class="a3-bbar"><div class="a3-seg"><span class="a3-seg-l">PATLATMA</span><input type="range" min="0" max="100" value="0" id="a3-exp"/></div>'
+        +'<button class="a3-seg a3-btn" onclick="a3StepsOpen()">Sökme adımları</button></div>'
+    +'</div><div class="a3-right"><div class="a3-card" id="a3-info"></div><div class="a3-card" id="a3-bms"></div></div></div>';
+}
+
+function a3Build(e,opt){
+  var ov=document.getElementById('a3d');if(!ov)return;
+  ov.innerHTML=a3Shell(e);
+  var view=document.getElementById('a3-view');
+  var W=view.clientWidth,H=view.clientHeight;
+  var renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:false});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setSize(W,H);
+  renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  view.insertBefore(renderer.domElement,view.firstChild);
+  var scene=new THREE.Scene();
+  var camera=new THREE.PerspectiveCamera(32,W/H,0.05,200);
+  var controls=new THREE.OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true;controls.dampingFactor=0.08;controls.maxPolarAngle=Math.PI*0.495;controls.minDistance=2;controls.maxDistance=30;
+  scene.add(new THREE.HemisphereLight(0xe4ecff,0x202a38,0.85));
+  var key=new THREE.DirectionalLight(0xffffff,1.25);key.position.set(5,9,7);key.castShadow=true;key.shadow.mapSize.set(1024,1024);
+  var sc=key.shadow.camera;sc.left=-6;sc.right=6;sc.top=5;sc.bottom=-5;sc.near=1;sc.far=30;key.shadow.bias=-0.0005;scene.add(key);
+  var fill=new THREE.DirectionalLight(0x9db8ff,0.45);fill.position.set(-7,4,-6);scene.add(fill);
+  var rim=new THREE.DirectionalLight(0xffffff,0.35);rim.position.set(-3,6,8);scene.add(rim);
+  var ground=new THREE.Mesh(new THREE.PlaneGeometry(40,40),new THREE.ShadowMaterial({opacity:0.32}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+  var grid=new THREE.GridHelper(24,48,0x2a3a52,0x1a2536);grid.position.y=0.001;grid.material.transparent=true;grid.material.opacity=0.55;scene.add(grid);
+
+  A3={eq:e,renderer:renderer,scene:scene,camera:camera,controls:controls,view:view,parts:{},sections:[],cutMeshes:[],casing:[],doors:{},removable:{},
+      opt:{cut:false,xray:false,nums:true,dims:false,flow:true,heat:false},mode:'heat',run:true,explode:0,sel:null,steps:null,stepIdx:0,stepR:0,stepT:0,
+      camAnim:null,clock:new THREE.Clock(),t:0,fanSpeed:0,damper:0,bms:{}};
+  a3Model(e);
+  a3Dims();
+  a3Flow();
+  a3SetView('iso',true);
+  // olaylar
+  ov.querySelectorAll('[data-a3]').forEach(function(b){b.onclick=function(){a3Cmd(b.getAttribute('data-a3'),b);};});
+  document.getElementById('a3-exp').oninput=function(){A3.explode=this.value/100;};
+  var down=null;
+  renderer.domElement.addEventListener('pointerdown',function(ev){down={x:ev.clientX,y:ev.clientY};});
+  renderer.domElement.addEventListener('pointerup',function(ev){if(down&&Math.abs(ev.clientX-down.x)+Math.abs(ev.clientY-down.y)<5)a3Pick(ev);down=null;});
+  A3.onResize=function(){if(!A3)return;var w=view.clientWidth,h=view.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();};
+  window.addEventListener('resize',A3.onResize);
+  a3Info(opt.part||null);a3BMS();
+  if(opt.steps!==undefined)a3StepsOpen(opt.steps);
+  a3Loop();
+}
+
+// ── Malzemeler ve yardımcılar ──────────────────────────────────
+function a3Tex(draw,w,h,rx,ry){var c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);var t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx||1,ry||1);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t;}
+function a3Mats(){
+  if(A3.M)return A3.M;
+  var std=function(c,m,r,o){return new THREE.MeshStandardMaterial(Object.assign({color:c,metalness:m,roughness:r},o||{}));};
+  var pleat=a3Tex(function(g,w,h){g.fillStyle='#ece8df';g.fillRect(0,0,w,h);for(var x=0;x<w;x+=8){var gr=g.createLinearGradient(x,0,x+8,0);gr.addColorStop(0,'#d6d0c3');gr.addColorStop(.5,'#fbf8f2');gr.addColorStop(1,'#c9c2b3');g.fillStyle=gr;g.fillRect(x,0,8,h);}},128,64,6,1);
+  var fins=function(base,line){return a3Tex(function(g,w,h){g.fillStyle=base;g.fillRect(0,0,w,h);g.strokeStyle=line;g.lineWidth=1;for(var x=0;x<w;x+=3){g.beginPath();g.moveTo(x+.5,0);g.lineTo(x+.5,h);g.stroke();}},96,96,8,6);};
+  var perf=a3Tex(function(g,w,h){g.fillStyle='#cfd5dc';g.fillRect(0,0,w,h);g.fillStyle='#8e98a4';for(var y=4;y<h;y+=8)for(var x=(y%16?4:8);x<w;x+=8){g.beginPath();g.arc(x,y,1.6,0,6.3);g.fill();}},64,64,3,6);
+  var motorFins=a3Tex(function(g,w,h){g.fillStyle='#2c4f86';g.fillRect(0,0,w,h);for(var y=0;y<h;y+=6){g.fillStyle='#1e3a68';g.fillRect(0,y,w,2);}},32,64,1,4);
+  A3.M={
+    panel:std(0xdde2e8,0.25,0.42),panelIn:std(0xb9c1ca,0.3,0.5),
+    profile:std(0xa9b3bf,0.75,0.32),base:std(0x6f7b89,0.6,0.45),dark:std(0x262e39,0.4,0.55),handle:std(0x1c2229,0.5,0.4),
+    galv:std(0xc3c9d0,0.7,0.35),copper:std(0xc27a43,0.85,0.3),steel:std(0xd5dbe2,0.9,0.22),
+    pleat:std(0xffffff,0,0.9,{map:pleat}),bag7:std(0xf1cf4d,0,0.85,{side:THREE.DoubleSide}),bag9:std(0xe6eefb,0,0.85,{side:THREE.DoubleSide}),
+    finHeat:std(0xffffff,0.55,0.4,{map:fins('#c9a07d','#8f6545')}),finCool:std(0xffffff,0.55,0.4,{map:fins('#aebfcf','#6f8396')}),
+    perf:std(0xffffff,0.4,0.6,{map:perf}),motor:std(0xffffff,0.35,0.5,{map:motorFins}),motorCap:std(0x2c4f86,0.35,0.45),
+    blade:std(0xb8c2cc,0.8,0.3,{side:THREE.DoubleSide}),act:std(0xf2a516,0.3,0.45),red:std(0xc0392b,0.4,0.45),blue:std(0x2f6fbf,0.4,0.45),
+    rubber:std(0x1a1d22,0.1,0.85),spring:std(0xe5a400,0.6,0.35),glass:std(0xdbe9ff,0.1,0.1,{transparent:true,opacity:0.35}),
+    gauge:std(0xf8fafc,0.1,0.4),steam:std(0xd7dee6,0.85,0.25)
+  };
+  return A3.M;
+}
+function a3Mesh(geo,mat,part,opt){
+  var m=new THREE.Mesh(geo,mat.clone());m.castShadow=true;m.receiveShadow=true;m.userData.part=part||null;
+  if(opt){if(opt.cut)A3.cutMeshes.push(m);if(opt.casing){A3.casing.push(m);m.userData.casing=true;}}
+  return m;
+}
+function a3Box(w,h,d,mat,part,opt){return a3Mesh(new THREE.BoxGeometry(w,h,d),mat,part,opt);}
+function a3Cyl(r1,r2,h,mat,part,seg){return a3Mesh(new THREE.CylinderGeometry(r1,r2,h,seg||24),mat,part);}
+function a3Taper(len,h0,t0,h1,t1){ // x yönünde daralan kutu (torba cebi)
+  var g=new THREE.BoxGeometry(len,h0,t0,1,1,1),p=g.attributes.position;
+  for(var i=0;i<p.count;i++){if(p.getX(i)>0){p.setY(i,p.getY(i)*h1/h0);p.setZ(i,p.getZ(i)*t1/t0);}}
+  g.computeVertexNormals();return g;
+}
+function a3Anchor(group,part,x,y,z){var o=new THREE.Object3D();o.position.set(x,y,z);group.add(o);A3.parts[part]=A3.parts[part]||{meshes:[],anchors:[]};A3.parts[part].anchors.push(o);return o;}
+function a3Reg(group){group.traverse(function(o){if(o.isMesh&&o.userData.part){var p=A3.parts[o.userData.part]=A3.parts[o.userData.part]||{meshes:[],anchors:[]};p.meshes.push(o);}});}
+
+// ── Model ──────────────────────────────────────────────────────
+var A3_SECS=[{id:'damper',L:0.6},{id:'g4',L:0.35},{id:'f7',L:0.75},{id:'heat',L:0.45},{id:'cool',L:0.65},{id:'hum',L:0.6},{id:'fan',L:1.15},{id:'sil',L:0.8},{id:'f9',L:0.85}];
+var A3_W=1.4,A3_H=1.5,A3_B=0.15; // derinlik, iç yükseklik, şase
+function a3Model(e){
+  var M=a3Mats(),root=new THREE.Group();A3.root=root;A3.scene.add(root);
+  var L=A3_SECS.reduce(function(a,s){return a+s.L;},0);A3.L=L;
+  var x=-L/2,W=A3_W,H=A3_H,y0=A3_B,T=0.05;
+  // şase
+  var base=new THREE.Group();
+  [-W/2+0.06,W/2-0.06].forEach(function(z){var b=a3Box(L+0.04,0.12,0.1,M.base,'body');b.position.set(0,0.07,z);base.add(b);});
+  for(var i=0;i<=6;i++){var cb=a3Box(0.08,0.1,W-0.1,M.base,'body');cb.position.set(-L/2+0.04+i*(L-0.08)/6,0.07,0);base.add(cb);}
+  root.add(base);a3Reg(base);
+  A3_SECS.forEach(function(s,i){
+    var g=new THREE.Group();g.userData.x0=x+s.L/2;g.position.x=g.userData.x0;root.add(g);
+    var sl=s.L,cy=y0+H/2;
+    // gövde panelleri
+    var back=a3Box(sl-0.02,H,T,M.panel,'body',{casing:1});back.position.set(0,cy,-W/2+T/2);g.add(back);
+    var top=a3Box(sl-0.02,T,W,M.panel,'body',{casing:1,cut:1});top.position.set(0,y0+H-T/2,0);top.userData.ex={y:0.5};g.add(top);
+    var floor=a3Box(sl-0.02,T,W,M.panelIn,'body');floor.position.set(0,y0+T/2,0);g.add(floor);
+    // ön panel: kapı veya düz panel
+    var door=new THREE.Group();door.position.set(-sl/2+0.01,cy,W/2-T/2);g.add(door);
+    var dp=a3Box(sl-0.02,H,T,M.panel,'body',{casing:1,cut:1});dp.position.set((sl-0.02)/2,0,0);door.add(dp);
+    if(sl>=0.45&&s.id!=='g4'){
+      var fr=a3Box(sl-0.14,H-0.16,0.012,M.panelIn,'body',{cut:1});fr.position.set((sl-0.02)/2,0,T/2+0.002);door.add(fr);
+      [-H/2+0.25,H/2-0.25].forEach(function(hy){var hg=a3Box(0.05,0.12,0.03,M.handle,'body',{cut:1});hg.position.set(0.05,hy,T/2+0.02);door.add(hg);});
+      var hd=a3Box(0.04,0.22,0.05,M.handle,'body',{cut:1});hd.position.set(sl-0.09,0,T/2+0.03);door.add(hd);
+      A3.doors[s.id]=door;
+    }
+    door.userData.ex={z:0.6};
+    // profil iskelet (köşeler)
+    [[-sl/2,-W/2],[sl/2,-W/2],[-sl/2,W/2],[sl/2,W/2]].forEach(function(c){var p=a3Box(0.035,H+0.02,0.035,M.profile,'body');p.position.set(c[0]+(c[0]<0?0.017:-0.017),cy,c[1]+(c[1]<0?0.017:-0.017));g.add(p);});
+    [[y0+0.017],[y0+H-0.017]].forEach(function(yy){[-W/2+0.017,W/2-0.017].forEach(function(z){var p=a3Box(sl,0.035,0.035,M.profile,'body',{cut:z>0&&yy[0]>1});p.position.set(0,yy[0],z);g.add(p);});
+      [-sl/2+0.017,sl/2-0.017].forEach(function(xx){var p=a3Box(0.035,0.035,W,M.profile,'body',{cut:yy[0]>1});p.position.set(xx,yy[0],0);g.add(p);});});
+    // iç elemanlar
+    var inner=new THREE.Group();inner.userData.ex={y:0};g.add(inner);
+    a3Inner(s.id,inner,sl,W,H,y0,M);
+    A3.sections.push({id:s.id,g:g,inner:inner,door:door,top:top});
+    a3Reg(g);
+    x+=s.L;
+  });
+  // uç duvarlar: giriş (damperli açıklık) ve çıkış (kanal bağlantısı)
+  var inG=A3.sections[0].g,outG=A3.sections[A3.sections.length-1].g,s0=A3_SECS[0].L,sN=A3_SECS[A3_SECS.length-1].L;
+  [[-W/2,-0.3],[0.3,W/2]].forEach(function(r){var p=a3Box(T,H,r[1]-r[0],M.panel,'body',{casing:1});p.position.set(-s0/2+T/2,y0+H/2,(r[0]+r[1])/2);inG.add(p);});
+  [[y0,y0+0.25],[y0+H-0.18,y0+H]].forEach(function(r){var p=a3Box(T,r[1]-r[0],0.6,M.panel,'body',{casing:1});p.position.set(-s0/2+T/2,(r[0]+r[1])/2,0);inG.add(p);});
+  var outEnd=new THREE.Group();outG.add(outEnd);
+  [[-W/2,-0.4],[0.4,W/2]].forEach(function(r){var p=a3Box(T,H,r[1]-r[0],M.panel,'body',{casing:1});p.position.set(sN/2-T/2,y0+H/2,(r[0]+r[1])/2);outEnd.add(p);});
+  [[y0,y0+0.35],[y0+H-0.25,y0+H]].forEach(function(r){var p=a3Box(T,r[1]-r[0],0.8,M.panel,'body',{casing:1});p.position.set(sN/2-T/2,(r[0]+r[1])/2,0);outEnd.add(p);});
+  // çıkış kanal bağlantısı (esnek bağlantı + flanş + kanal)
+  var flex=a3Box(0.18,0.95,0.85,M.dark,'body');flex.position.set(sN/2+0.09,y0+0.35+0.45,0);outG.add(flex);
+  var duct=a3Box(0.7,0.9,0.8,M.galv,'body');duct.position.set(sN/2+0.18+0.35,y0+0.35+0.45,0);outG.add(duct);
+  var dfl=a3Box(0.03,1.0,0.9,M.galv,'body');dfl.position.set(sN/2+0.19,y0+0.8,0);outG.add(dfl);
+  a3Reg(inG);a3Reg(outG);
+  // isim plakası
+  var plate=a3Box(0.34,0.14,0.006,M.gauge,'body',{cut:1});A3.sections[0].door.add(plate);plate.position.set(0.25,-H/2+0.25,0.03);
+  // gövde numarası için çapa
+  a3Anchor(A3.sections[5].door,'body',(A3_SECS[5].L)/2,H/2-0.2,0.06);
+  A3.root.position.y=0;
+}
+function a3Inner(id,g,sl,W,H,y0,M){
+  var cy=y0+H/2,k;
+  if(id==='damper'){
+    // giriş damperi (uç duvarda)
+    var dg=new THREE.Group();dg.position.set(-sl/2+0.03,cy-0.03,0);g.add(dg);A3.damperBlades=[];
+    var fr=a3Box(0.08,1.1,0.64,M.galv,'damper');dg.add(fr);var hole=a3Box(0.09,1.0,0.56,M.dark,'damper');dg.add(hole);
+    for(k=0;k<7;k++){var b=a3Box(0.02,0.14,0.54,M.blade,'damper');b.position.set(0,-0.45+k*0.15,0);b.rotation.z=0;dg.add(b);A3.damperBlades.push({m:b,dir:k%2?1:-1});}
+    var act=a3Box(0.12,0.16,0.1,M.act,'damper');act.position.set(-0.06,0.62,0.22);dg.add(act);
+    // dönüş havası damperi (üstte)
+    var rg=new THREE.Group();rg.position.set(0.05,y0+H+0.02,0);g.add(rg);
+    var rf=a3Box(0.42,0.06,0.9,M.galv,'damper',{cut:1});rg.add(rf);
+    for(k=0;k<3;k++){var rb=a3Box(0.12,0.015,0.84,M.blade,'damper',{cut:1});rb.position.set(-0.13+k*0.13,0.02,0);rb.rotation.z=0.5;rg.add(rb);A3.damperBlades.push({m:rb,dir:1,top:1});}
+    var rd=a3Box(0.44,0.3,0.92,M.galv,'damper',{cut:1});rd.position.set(0,0.18,0);rg.add(rd);
+    a3Anchor(dg,'damper',-0.06,0.62,0.3);
+    A3.removable.damper=act;
+  }
+  if(id==='g4'||id==='f7'||id==='f9'){
+    var rem=new THREE.Group();g.add(rem);rem.userData.ex={y:1.15};
+    var fx=-sl/2+0.08;
+    // kızak çerçevesi
+    var fr2=a3Box(0.06,H-0.06,W-0.06,M.galv,id);fr2.position.set(fx,cy,0);g.add(fr2);
+    var cols=id==='g4'?2:(id==='f7'?6:8),rows=id==='g4'?2:2;
+    if(id==='g4'){
+      for(var r=0;r<2;r++)for(var c=0;c<2;c++){var pg=new THREE.Group();pg.position.set(fx+0.04,y0+0.06+(H-0.12)/4*(1+2*r),-(W-0.12)/4*(1-2*c));rem.add(pg);
+        var f=a3Box(0.05,(H-0.12)/2-0.02,(W-0.12)/2-0.02,M.galv,'g4');pg.add(f);
+        var md=a3Box(0.052,(H-0.12)/2-0.07,(W-0.12)/2-0.07,M.pleat,'g4');md.material.map=M.pleat.map;pg.add(md);}
+      a3Anchor(rem,'g4',fx+0.05,y0+H-0.25,W/2-0.25);
+      a3Anchor(g,'pdt',sl/2+0.0,y0+H-0.35,W/2+0.05);
+      a3Gauge(g,0,y0+H-0.35,W/2+0.03,M,'pdt');
+    } else {
+      var bagM=id==='f7'?M.bag7:M.bag9,len=id==='f7'?0.55:0.62;
+      for(var rr=0;rr<rows;rr++){var hh=(H-0.12)/rows;
+        var hdr=a3Box(0.03,hh-0.02,W-0.12,M.galv,id);hdr.position.set(fx+0.035,y0+0.06+hh*(rr+0.5),0);rem.add(hdr);
+        for(var cc=0;cc<cols;cc++){var tw=(W-0.16)/cols;
+          var bag=a3Mesh(a3Taper(len,hh-0.06,tw*0.92,hh-0.2,0.012),bagM,id);bag.position.set(fx+0.05+len/2,y0+0.06+hh*(rr+0.5),-W/2+0.08+tw*(cc+0.5));rem.add(bag);}}
+      a3Anchor(rem,id,fx+0.3,y0+H-0.2,W/2-0.1);
+      a3Gauge(g,0.05,y0+H-0.35,W/2+0.03,M,'pdt');
+    }
+    A3.removable[id]=rem;
+  }
+  if(id==='heat'||id==='cool'){
+    var isH=id==='heat',ch=H-(isH?0.16:0.36),cyc=y0+(isH?H/2:0.28+ch/2);
+    var core=a3Box(0.22,ch,W-0.16,isH?M.finHeat:M.finCool,id);core.position.set(-0.02,cyc,0);g.add(core);
+    var cf=a3Box(0.26,ch+0.06,0.04,M.galv,id);cf.position.set(-0.02,cyc,W/2-0.08);g.add(cf);var cf2=cf.clone();cf2.material=cf.material.clone();cf2.position.z=-W/2+0.08;g.add(cf2);
+    // kolektörler ve bağlantılar
+    [[-0.08,1],[0.06,-1]].forEach(function(o,i){var hdr=a3Cyl(0.035,0.035,ch,M.copper,id);hdr.position.set(o[0],cyc,W/2-0.13);g.add(hdr);
+      var stub=a3Cyl(0.03,0.03,0.4,isH?M.red:M.blue,isH?'hvalve':id);stub.rotation.x=Math.PI/2;stub.position.set(o[0],cyc+(i?-ch/2+0.15:ch/2-0.15),W/2+0.12);g.add(stub);
+      var fl=a3Cyl(0.06,0.06,0.025,M.steel,isH?'hvalve':id);fl.rotation.x=Math.PI/2;fl.position.set(o[0],cyc+(i?-ch/2+0.15:ch/2-0.15),W/2+0.3);g.add(fl);});
+    // vana grubu
+    var vg=new THREE.Group();vg.position.set(-0.01,cyc+ch/2-0.15,W/2+0.42);g.add(vg);
+    var body=a3Box(0.12,0.1,0.1,M.steel,isH?'hvalve':id);vg.add(body);
+    var actv=a3Box(0.11,0.14,0.11,isH?M.act:M.act,isH?'hvalve':id);actv.position.y=0.14;vg.add(actv);
+    var pp=a3Cyl(0.028,0.028,0.4,isH?M.red:M.blue,isH?'hvalve':id);pp.rotation.z=Math.PI/2;pp.position.x=0.25;vg.add(pp);
+    if(isH){a3Anchor(g,'heat',-0.02,cyc+0.3,W/2-0.2);a3Anchor(vg,'hvalve',0,0.24,0.06);}
+    else{
+      a3Anchor(g,'cool',-0.02,cyc+0.25,W/2-0.2);
+      var pan=a3Box(sl-0.06,0.06,W-0.1,M.steel,'drain');pan.position.set(0,y0+0.1,0);g.add(pan);
+      var de=new THREE.Group();de.position.set(0.2,cyc,0);g.add(de);A3.removable.cool=de;
+      for(k=0;k<9;k++){var zz=a3Box(0.09,ch,0.008,M.dark,'drain');zz.position.set(0,0,-W/2+0.12+k*(W-0.24)/8);zz.rotation.y=k%2?0.6:-0.6;de.add(zz);}
+      // sifon
+      var path=new THREE.CurvePath();
+      var pts=[new THREE.Vector3(0,y0+0.08,W/2-0.1),new THREE.Vector3(0,y0+0.08,W/2+0.2),new THREE.Vector3(0,y0-0.1,W/2+0.22),new THREE.Vector3(0,y0-0.12,W/2+0.4),new THREE.Vector3(0,y0+0.0,W/2+0.42),new THREE.Vector3(0,y0-0.05,W/2+0.6)];
+      var tube=a3Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),40,0.022,10,false),M.dark,'drain');tube.position.x=0.15;g.add(tube);
+      a3Anchor(g,'drain',0.15,y0+0.05,W/2+0.4);
+    }
+  }
+  if(id==='hum'){
+    var lg=new THREE.Group();g.add(lg);
+    var hdr2=a3Cyl(0.04,0.04,H-0.3,M.steam,'hum');hdr2.position.set(-0.1,cy,W/2-0.12);lg.add(hdr2);
+    for(k=0;k<3;k++){var ln=a3Cyl(0.03,0.03,W-0.2,M.steam,'hum');ln.rotation.x=Math.PI/2;ln.position.set(-0.1,y0+0.35+k*0.45,0);lg.add(ln);
+      for(var j=0;j<7;j++){var nz=a3Cyl(0.008,0.008,0.05,M.steel,'hum',6);nz.position.set(-0.07,y0+0.35+k*0.45,-W/2+0.2+j*(W-0.4)/6);nz.rotation.z=Math.PI/2;lg.add(nz);}}
+    var sp=a3Cyl(0.04,0.04,0.5,M.steam,'hum');sp.rotation.x=Math.PI/2;sp.position.set(-0.1,y0+H-0.2,W/2+0.2);lg.add(sp);
+    A3.removable.hum=lg;a3Anchor(lg,'hum',-0.1,y0+H-0.3,W/2-0.1);
+    A3.steamPts=[];
+  }
+  if(id==='fan'){
+    // emme duvarı (dairesel açıklıklı) + emme konisi
+    var R=0.36,wall=new THREE.Shape();wall.moveTo(-W/2+0.04,-H/2+0.04);wall.lineTo(W/2-0.04,-H/2+0.04);wall.lineTo(W/2-0.04,H/2-0.04);wall.lineTo(-W/2+0.04,H/2-0.04);wall.lineTo(-W/2+0.04,-H/2+0.04);
+    var hole2=new THREE.Path();hole2.absarc(0,0,R+0.05,0,Math.PI*2,true);wall.holes.push(hole2);
+    var wg=a3Mesh(new THREE.ExtrudeGeometry(wall,{depth:0.04,bevelEnabled:false,curveSegments:40}),M.panelIn,'fan');
+    wg.rotation.y=Math.PI/2;wg.position.set(-sl/2+0.06,cy,0);g.add(wg);
+    var prof=[];for(k=0;k<=12;k++){var t=k/12;prof.push(new THREE.Vector2(R+0.05-0.12*Math.sqrt(t)+0.0,t*0.2));}
+    var cone=a3Mesh(new THREE.LatheGeometry(prof,48),M.steel,'fan');cone.material.side=THREE.DoubleSide;cone.rotation.z=-Math.PI/2;cone.position.set(-sl/2+0.06,cy,0);g.add(cone);
+    // fan ünitesi (sökülebilir)
+    var fu=new THREE.Group();g.add(fu);A3.removable.fan=fu;fu.userData.ex={y:0};
+    var imp=new THREE.Group();imp.position.set(-sl/2+0.36,cy,0);fu.add(imp);A3.impeller=imp;
+    var bp=a3Cyl(R+0.02,R+0.02,0.02,M.blade,'fan',48);bp.rotation.z=Math.PI/2;bp.position.x=0.17;imp.add(bp);
+    var shr=a3Mesh(new THREE.TorusGeometry(R-0.02,0.025,10,48),M.blade,'fan');shr.rotation.y=Math.PI/2;shr.position.x=-0.02;imp.add(shr);
+    for(k=0;k<9;k++){var bld=a3Box(0.18,0.012,0.15,M.blade,'fan');var a=k/9*Math.PI*2;
+      var bg=new THREE.Group();bg.rotation.x=a;imp.add(bg);bld.position.set(0.08,R*0.72,0);bld.rotation.x=0.55;bg.add(bld);}
+    var hub=a3Cyl(0.07,0.07,0.12,M.steel,'fan');hub.rotation.z=Math.PI/2;hub.position.x=0.2;imp.add(hub);
+    // motor
+    var mx=-sl/2+0.36+0.4;
+    var mot=a3Cyl(0.17,0.17,0.42,M.motor,'motor',36);mot.rotation.z=Math.PI/2;mot.position.set(mx+0.08,cy,0);fu.add(mot);
+    var cap=a3Cyl(0.15,0.12,0.08,M.motorCap,'motor',36);cap.rotation.z=Math.PI/2;cap.position.set(mx+0.33,cy,0);fu.add(cap);
+    var tb=a3Box(0.14,0.08,0.14,M.motorCap,'motor');tb.position.set(mx+0.08,cy+0.2,0);fu.add(tb);
+    var shaft=a3Cyl(0.025,0.025,0.25,M.steel,'motor');shaft.rotation.z=Math.PI/2;shaft.position.set(mx-0.2,cy,0);fu.add(shaft);
+    a3Anchor(fu,'motor',mx+0.08,cy+0.26,0.1);
+    // ayak + kaide + yaylar
+    var foot=a3Box(0.3,cy-y0-0.17-0.12,0.24,M.base,'iso');foot.position.set(mx+0.08,(cy-0.17+y0+0.12)/2,0);fu.add(foot);
+    var foot2=a3Box(0.08,cy-y0-0.12-R,0.2,M.base,'iso');foot2.position.set(-sl/2+0.36+0.2,(cy-R+y0+0.12)/2,0);fu.add(foot2);
+    [-0.35,0.35].forEach(function(z){var rail=a3Box(sl-0.3,0.06,0.08,M.base,'iso');rail.position.set(0.05,y0+0.12,z);fu.add(rail);});
+    var hel=new THREE.Curve();hel.getPoint=function(t){return new THREE.Vector3(Math.cos(t*Math.PI*10)*0.035,t*0.08,Math.sin(t*Math.PI*10)*0.035);};
+    [[-sl/2+0.25,-0.35],[-sl/2+0.25,0.35],[sl/2-0.2,-0.35],[sl/2-0.2,0.35]].forEach(function(p){var spg=a3Mesh(new THREE.TubeGeometry(hel,60,0.006,6,false),M.spring,'iso');spg.position.set(p[0],y0+0.01,p[1]);fu.add(spg);});
+    a3Anchor(fu,'iso',sl/2-0.2,y0+0.06,0.4);
+    a3Anchor(imp,'fan',0,R+0.06,0.2);
+  }
+  if(id==='sil'){
+    for(k=0;k<4;k++){var bf=a3Box(sl-0.12,H-0.08,0.18,M.perf,'sil');bf.position.set(0,cy,-W/2+0.2+k*(W-0.4)/3);g.add(bf);
+      var rc=a3Cyl(0.09,0.09,H-0.08,M.perf,'sil',16);rc.position.set(-sl/2+0.06,cy,-W/2+0.2+k*(W-0.4)/3);g.add(rc);}
+    a3Anchor(g,'sil',0,y0+H-0.2,W/2-0.2);
+  }
+}
+function a3Gauge(g,x,y,z,M,part){
+  var gg=new THREE.Group();gg.position.set(x,y,z+0.03);g.add(gg);
+  var body=a3Cyl(0.07,0.07,0.04,M.dark,part,32);body.rotation.x=Math.PI/2;gg.add(body);
+  var face=a3Cyl(0.06,0.06,0.042,M.gauge,part,32);face.rotation.x=Math.PI/2;face.position.z=0.002;gg.add(face);
+  var nd=a3Box(0.004,0.05,0.004,M.red,part);nd.position.set(0.01,0.012,0.025);nd.rotation.z=-0.6;gg.add(nd);
+  A3.cutMeshes.push(body,face,nd);
+}
+
+// ── Ölçüler ────────────────────────────────────────────────────
+function a3Dims(){
+  var g=new THREE.Group(),mat=new THREE.LineBasicMaterial({color:0x7dd3fc}),L=A3.L,W=A3_W,H=A3_H+A3_B;
+  var line=function(a,b){var geo=new THREE.BufferGeometry().setFromPoints([a,b]);g.add(new THREE.Line(geo,mat));};
+  var V=function(x,y,z){return new THREE.Vector3(x,y,z);};
+  var zf=W/2+0.45;line(V(-L/2,0.02,zf),V(L/2,0.02,zf));line(V(-L/2,0.02,W/2),V(-L/2,0.02,zf+0.1));line(V(L/2,0.02,W/2),V(L/2,0.02,zf+0.1));
+  var xl=-L/2-0.35;line(V(xl,0,W/2),V(xl,H,W/2));line(V(-L/2,0,W/2),V(xl-0.1,0,W/2));line(V(-L/2,H,W/2),V(xl-0.1,H,W/2));
+  line(V(-L/2-0.35,H+0.05,-W/2),V(-L/2-0.35,H+0.05,W/2));
+  g.visible=false;A3.scene.add(g);A3.dimG=g;
+  A3.dimLabels=[{p:V(0,0.02,zf),t:Math.round(L*1000)+' mm'},{p:V(xl,H/2,W/2),t:Math.round(H*1000)+' mm'},{p:V(-L/2-0.35,H+0.05,0),t:Math.round(W*1000)+' mm'}];
+}
+// ── Hava akışı parçacıkları ────────────────────────────────────
+function a3Flow(){
+  var N=900,pos=new Float32Array(N*3),col=new Float32Array(N*3),L=A3.L;
+  for(var i=0;i<N;i++){pos[i*3]=-L/2-1.2+Math.random()*(L+2.9);pos[i*3+1]=A3_B+0.2+Math.random()*(A3_H-0.4);pos[i*3+2]=(Math.random()-0.5)*(A3_W-0.4);}
+  var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  var mat=new THREE.PointsMaterial({size:0.035,vertexColors:true,transparent:true,opacity:0.9,depthWrite:false});
+  var pts=new THREE.Points(geo,mat);A3.scene.add(pts);A3.flow=pts;
+  // bölüm sınırları
+  var x=-L/2;A3.bounds={};A3_SECS.forEach(function(s){A3.bounds[s.id]=[x,x+s.L];x+=s.L;});
+}
+
+// ── Komutlar ───────────────────────────────────────────────────
+function a3Cmd(c,btn){
+  var k=c.split(':');
+  if(k[0]==='v'){a3SetView(k[1]);a3SegOn(btn);}
+  if(k[0]==='t'){A3.opt[k[1]]=!A3.opt[k[1]];btn.classList.toggle('on',A3.opt[k[1]]);a3ApplyVis();}
+  if(k[0]==='m'){if(k[1]==='stop')A3.run=false;else{A3.run=true;A3.mode=k[1];}a3SegOn(btn);a3BMS();}
+}
+function a3SegOn(btn){btn.parentNode.querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b===btn);});}
+function a3SetView(v,instant){
+  var L=A3.L,t=new THREE.Vector3(0,0.85,0),p;
+  if(v==='iso')p=new THREE.Vector3(L*0.62,3.4,6.6);
+  if(v==='front')p=new THREE.Vector3(0,0.95,9.5);
+  if(v==='top')p=new THREE.Vector3(0,10.5,0.02);
+  if(v==='end')p=new THREE.Vector3(-L/2-5.2,1.3,2.2);
+  var asp=A3.camera.aspect||1.6;if(asp<1.6&&v!=='end')p=p.clone().sub(t).multiplyScalar(Math.pow(1.6/asp,0.9)).add(t);
+  if(instant){A3.camera.position.copy(p);A3.controls.target.copy(t);A3.controls.update();return;}
+  A3.camAnim={p0:A3.camera.position.clone(),t0:A3.controls.target.clone(),p1:p,t1:t,k:0};
+}
+function a3Focus(part){
+  var P=A3.parts[part];if(!P||!P.anchors.length)return;
+  var w=new THREE.Vector3();P.anchors[0].getWorldPosition(w);
+  var dir=A3.camera.position.clone().sub(A3.controls.target).normalize();
+  A3.camAnim={p0:A3.camera.position.clone(),t0:A3.controls.target.clone(),t1:w.clone().setY(Math.max(0.6,w.y-0.2)),p1:w.clone().add(dir.multiplyScalar(4.2)).setY(Math.max(1.6,w.y+1.4)),k:0};
+}
+function a3ApplyVis(){
+  var o=A3.opt;
+  A3.cutMeshes.forEach(function(m){m.visible=!o.cut;});
+  A3.casing.forEach(function(m){m.material.transparent=o.xray;m.material.opacity=o.xray?0.14:1;m.material.depthWrite=!o.xray;m.castShadow=!o.xray;});
+  if(A3.dimG)A3.dimG.visible=o.dims;
+  a3Highlight();
+}
+function a3Highlight(){
+  var cnt=compFaultCounts(A3.eq),mx=Math.max.apply(null,Object.keys(cnt).map(function(k){return cnt[k];}).concat([1]));
+  var stepPart=A3.steps?A3.steps.part:null;
+  Object.keys(A3.parts).forEach(function(pid){
+    var P=A3.parts[pid],part=a3Part(pid),em=new THREE.Color(0x000000),ei=0;
+    if(A3.opt.heat&&part&&pid!=='body'){var n=cnt[part.comp]||0;if(n>0){em=new THREE.Color(heatColor(n/mx));ei=0.55;}}
+    if(A3.sel===pid||stepPart===pid||(stepPart&&part&&part.comp===stepPart)){em=new THREE.Color(0x3b82f6);ei=0.6;}
+    P.meshes.forEach(function(m){if(m.material.emissive){m.material.emissive.copy(em);m.material.emissiveIntensity=ei;}});
+  });
+}
+function a3Pick(ev){
+  var r=A3.renderer.domElement.getBoundingClientRect(),m=new THREE.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
+  var rc=new THREE.Raycaster();rc.setFromCamera(m,A3.camera);
+  var hits=rc.intersectObjects(A3.root.children,true).filter(function(h){return h.object.visible&&h.object.userData.part&&!(A3.opt.xray&&h.object.userData.casing);});
+  if(hits.length){a3Select(hits[0].object.userData.part);}
+}
+function a3Select(pid){A3.sel=A3.sel===pid?null:pid;a3Highlight();a3Info(A3.sel);a3BMS();}
+
+// ── Döngü ──────────────────────────────────────────────────────
+function a3Loop(){
+  if(!A3||A3.dead)return;
+  A3.raf=requestAnimationFrame(a3Loop);
+  var dt=Math.min(0.05,A3.clock.getDelta());A3.t+=dt;
+  // kamera geçişi
+  if(A3.camAnim){var a=A3.camAnim;a.k=Math.min(1,a.k+dt*1.8);var e=1-Math.pow(1-a.k,3);
+    A3.camera.position.lerpVectors(a.p0,a.p1,e);A3.controls.target.lerpVectors(a.t0,a.t1,e);if(a.k>=1)A3.camAnim=null;}
+  A3.controls.update();
+  // fan ve damper
+  var target=A3.run?1:0;A3.fanSpeed+=(target-A3.fanSpeed)*dt*0.8;A3.damper+=(target-A3.damper)*dt*1.5;
+  if(A3.impeller)A3.impeller.rotation.x+=dt*A3.fanSpeed*22;
+  (A3.damperBlades||[]).forEach(function(b){b.m.rotation.z=b.top?0.2+0.9*A3.damper:A3.damper*1.1*b.dir;});
+  // patlatma
+  var ex=A3.explode,n=A3.sections.length;
+  A3.sections.forEach(function(s,i){
+    s.g.position.x=s.g.userData.x0+(i-(n-1)/2)*0.55*ex;
+    s.top.position.y=A3_B+A3_H-0.025+0.55*ex;
+    s.inner.position.y=0;
+    var rem=A3.removable[s.id];
+    var stepR=(A3.steps&&A3.steps.comp===s.id)?A3.stepR:0;
+    if(s.door){s.door.position.z=A3_W/2-0.025+0.7*ex;s.door.rotation.y=-Math.min(1,stepR*3)*1.75;}
+    if(rem&&rem.userData.ex&&rem.userData.ex.y)rem.position.y=rem.userData.ex.y*ex;
+    if(rem)rem.position.z=Math.max(0,stepR-0.33)/0.67*1.9;
+  });
+  // hava akışı
+  if(A3.flow){
+    A3.flow.visible=A3.opt.flow&&A3.fanSpeed>0.05;
+    if(A3.flow.visible){
+      var p=A3.flow.geometry.attributes.position,c=A3.flow.geometry.attributes.color,L=A3.L,B=A3.bounds,sp=1.6*A3.fanSpeed;
+      var base=[0.62,0.7,0.8],hot=[1,0.55,0.24],cold=[0.25,0.62,1];
+      for(var i=0;i<p.count;i++){
+        var x=p.getX(i)+dt*sp*(1+(i%7)*0.05);
+        if(x>L/2+1.7){x=-L/2-1.2;}
+        p.setX(i,x);
+        var cc=base;
+        if(A3.mode==='heat'&&x>B.heat[1])cc=hot;
+        if(A3.mode==='cool'&&x>B.cool[1])cc=cold;
+        var wv=x>B.hum[1]?0.25:0;
+        c.setXYZ(i,cc[0]+(1-cc[0])*wv,cc[1]+(1-cc[1])*wv,cc[2]+(1-cc[2])*wv);
+      }
+      p.needsUpdate=true;c.needsUpdate=true;
+    }
+  }
+  // adım animasyonu
+  if(A3.steps){A3.stepR+=(A3.stepT-A3.stepR)*Math.min(1,dt*2.5);}
+  A3.renderer.render(A3.scene,A3.camera);
+  a3Labels();
+  if(Math.floor(A3.t*2)!==A3._lastB){A3._lastB=Math.floor(A3.t*2);a3BMSValues();}
+}
+function a3Labels(){
+  var box=document.getElementById('a3-labels');if(!box)return;
+  var W=A3.view.clientWidth,H=A3.view.clientHeight,v=new THREE.Vector3(),h='';
+  if(A3.opt.nums&&!A3.glb){
+    A3_PARTS.forEach(function(pt){var P=A3.parts[pt.id];if(!P||!P.anchors.length)return;
+      P.anchors[0].getWorldPosition(v);v.project(A3.camera);if(v.z>1)return;
+      var x=(v.x+1)/2*W,y=(1-v.y)/2*H;
+      h+='<button class="a3-num'+(A3.sel===pt.id?' on':'')+'" style="left:'+x.toFixed(1)+'px;top:'+y.toFixed(1)+'px" onclick="a3Select(\''+pt.id+'\')" title="'+esc(pt.name)+'">'+pt.no+'</button>';});
+  }
+  if(A3.opt.dims&&A3.dimLabels)A3.dimLabels.forEach(function(d){v.copy(d.p).project(A3.camera);if(v.z>1)return;h+='<span class="a3-dim" style="left:'+((v.x+1)/2*W).toFixed(1)+'px;top:'+((1-v.y)/2*H).toFixed(1)+'px">'+d.t+'</span>';});
+  if(box._h!==h){box.innerHTML=h;box._h=h;}
+}
+
+// ── Parça bilgisi paneli ───────────────────────────────────────
+function a3Info(pid){
+  var el=document.getElementById('a3-info');if(!el)return;
+  if(A3.steps){el.innerHTML=a3StepsHTML();return;}
+  var e=A3.eq,h='<div class="a3-ch">PARÇA BİLGİSİ</div>';
+  if(!pid){
+    h+='<div class="a3-ihead"><span class="a3-ic">i</span><div><div class="a3-it">Klima santrali (AHU)</div><div class="a3-is">Genel çalışma prensibi</div></div></div>'
+      +'<p>Hava, <b>karışım damperinden</b> girer; <b>G4</b> ve <b>F7</b> filtrelerde süzüldükten sonra <b>ısıtıcı</b> veya <b>soğutucu batarya</b> ile şartlandırılır, gerekirse <b>buharlı nemlendirici</b> ile nemlendirilir.</p>'
+      +'<p><b>Plug fan</b> havayı susturucu üzerinden <b>F9 son filtreye</b> basar; buradan kanal ile temiz alanlardaki terminal HEPA filtrelere gider. Kontrol, BMS tarafından sıcaklık, nem ve kanal basıncı setpointlerine göre yapılır.</p>'
+      +'<ul><li>Kesitte filtre cepleri, batarya lamelleri, nemlendirici lansları ve fan ünitesi görünür.</li>'
+      +'<li>Hava akışı açıkken gri-mavi noktalar giren havayı, turuncu ısıtılmış, mavi soğutulmuş havayı gösterir.</li>'
+      +'<li>Ayrıntı için bir parçaya veya numaraya tıklayın.</li></ul>';
+  } else {
+    var p=a3Part(pid),comp=AHU_COMPS.filter(function(c){return c.id===p.comp;})[0];
+    var ws=mapFaultWOs(e.id,0).filter(function(w){var t=((w.title||'')+' '+(w.desc||'')+' '+(w.root||'')).toLocaleLowerCase('tr');return comp&&comp.kw.some(function(k){return t.indexOf(k)>=0;});});
+    var sps=(DB.spareParts||[]).filter(function(s){var t=((s.name||'')+' '+(s.cat||'')+' '+(s.code||'')).toLocaleLowerCase('tr');return (s.eqId===e.id||!s.eqId)&&comp&&comp.kw.some(function(k){return t.indexOf(k)>=0;});});
+    var steps=mapKB(e).steps.map(function(s,i){return {s:s,i:i};}).filter(function(x){return x.s.comp===p.comp;});
+    h+='<div class="a3-ihead"><span class="a3-ic">'+p.no+'</span><div><div class="a3-it">'+esc(p.name)+'</div><div class="a3-is">'+esc(p.sub)+'</div></div></div>'
+      +p.desc.map(function(d){return '<p>'+esc(d)+'</p>';}).join('')
+      +'<ul>'+p.bullets.map(function(b){return '<li>'+esc(b)+'</li>';}).join('')+'</ul>'
+      +'<div class="a3-sh">Teknik veri</div><table class="a3-tbl">'+p.tech.map(function(t){return '<tr><td>'+esc(t[0])+'</td><td>'+esc(t[1])+'</td></tr>';}).join('')+'</table>'
+      +(comp?'<div class="a3-sh">Tipik arızalar ve çözümler</div>'+comp.faults.map(function(f){return '<div class="a3-fault"><b>'+esc(f[0])+'</b><div><span>Olası neden</span>'+esc(f[1])+'</div><div><span>Çözüm</span>'+esc(f[2])+'</div></div>';}).join(''):'')
+      +'<div class="a3-sh">Bu ekipmandaki kayıtlar</div><div class="a3-kv"><span>Bu komponentle ilgili arıza iş emri</span><b style="color:'+(ws.length?'var(--orl)':'var(--gnl)')+'">'+ws.length+'</b></div>'
+      +(ws.slice(0,3).map(function(w){return '<div class="a3-kv"><span>'+esc(w.date||'')+' · '+esc(w.title)+'</span><b>'+esc(w.id)+'</b></div>';}).join(''))
+      +(sps.length?'<div class="a3-sh">Stoktaki uygun parçalar</div>'+sps.map(function(s){return '<div class="a3-kv"><span>'+esc(s.name)+' ('+esc(s.code||s.id)+')</span><b style="color:'+(s.stock<=s.minStock?'var(--orl)':'var(--gnl)')+'">'+s.stock+' '+esc(s.unit||'')+'</b></div>';}).join(''):'')
+      +(steps.length?'<div class="a3-sh">Bakım talimatları</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+steps.map(function(x){return '<button class="btn bghs bxs" onclick="a3StepsOpen('+x.i+')">▶ '+esc(x.s.title)+'</button>';}).join('')+'</div>':'')
+      +(can('w')?'<div style="margin-top:12px"><button class="btn bpri bsm" onclick="closeAHU3D();openWOModal(null,\''+e.id+'\')">+ Bu parça için iş emri</button></div>':'');
+  }
+  el.innerHTML=h;
+}
+
+// ── Adım adım sökme / takma ────────────────────────────────────
+function a3StepsOpen(idx){
+  var kb=mapKB(A3.eq),list=kb.steps;if(!list.length){toast('Bu ekipman için talimat yok','warn');return;}
+  var si=idx===undefined?0:Math.min(idx,list.length-1),S=list[si];
+  var seq=[{k:'pre',t:'Güvenlik ve enerji izolasyonu (LOTO)',items:LOTO_PRE}];
+  (S.sokme||[]).forEach(function(x){seq.push({k:'sok',t:x});});
+  (S.takma||[]).forEach(function(x){seq.push({k:'tak',t:x});});
+  seq.push({k:'post',t:'Devreye alma ve kayıt',items:LOTO_POST});
+  var comp=S.comp||'',part=A3_PARTS.filter(function(p){return p.comp===comp;})[0];
+  A3.steps={si:si,S:S,seq:seq,comp:comp,part:part?part.id:null,list:list};A3.stepIdx=0;A3.sel=null;
+  a3StepGo(0);
+}
+function a3StepGo(i){
+  var st=A3.steps;if(!st)return;i=Math.max(0,Math.min(st.seq.length-1,i));A3.stepIdx=i;
+  var nS=st.seq.filter(function(x){return x.k==='sok';}).length,nT=st.seq.filter(function(x){return x.k==='tak';}).length,cur=st.seq[i];
+  var before=st.seq.slice(0,i+1),ds=before.filter(function(x){return x.k==='sok';}).length,dt=before.filter(function(x){return x.k==='tak';}).length;
+  A3.stepT=cur.k==='pre'?0:cur.k==='post'?0:(cur.k==='sok'?(nS?ds/nS:1):(nT?1-dt/nT:0));
+  if(st.part)a3Focus(st.part);
+  a3Highlight();a3Info(null);
+}
+function a3StepsClose(){A3.steps=null;A3.stepT=0;a3Highlight();a3Info(A3.sel);}
+function a3StepsHTML(){
+  var st=A3.steps,cur=st.seq[st.stepIdx===undefined?A3.stepIdx:A3.stepIdx],i=A3.stepIdx,n=st.seq.length;
+  var lbl={pre:['ÖNCE','var(--orl)'],sok:['SÖKME','var(--rdl)'],tak:['TAKMA','var(--gnl)'],post:['SONRA','var(--bll)']};
+  return '<div class="a3-ch" style="display:flex;justify-content:space-between;align-items:center">SÖKME ADIMLARI<button class="btn bghs bxs" onclick="a3StepsClose()">✕ Kapat</button></div>'
+    +'<select class="inp isml" style="margin-bottom:10px" onchange="a3StepsOpen(+this.value)">'+st.list.map(function(s,k){return '<option value="'+k+'"'+(k===st.si?' selected':'')+'>'+esc(s.title)+'</option>';}).join('')+'</select>'
+    +'<div class="a3-prog"><div style="width:'+((i+1)/n*100)+'%"></div></div>'
+    +'<div class="a3-stepno">Adım '+(i+1)+' / '+n+' · <span style="color:'+lbl[cur.k][1]+'">'+lbl[cur.k][0]+'</span></div>'
+    +'<div class="a3-stept">'+esc(cur.t)+'</div>'
+    +(cur.items?'<ol class="a3-ol">'+cur.items.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>':'')
+    +'<div style="display:flex;gap:8px;margin:12px 0"><button class="btn bghs bsm" onclick="a3StepGo('+(i-1)+')"'+(i===0?' disabled':'')+'>← Önceki</button><button class="btn bpri bsm" onclick="a3StepGo('+(i+1)+')"'+(i===n-1?' disabled':'')+'>Sonraki →</button></div>'
+    +'<div class="a3-sh">Tüm adımlar</div><ol class="a3-ol a3-all">'+st.seq.map(function(x,k){return '<li class="'+(k===i?'on':'')+(k<i?' done':'')+'" onclick="a3StepGo('+k+')"><span style="color:'+lbl[x.k][1]+'">'+lbl[x.k][0]+'</span> '+esc(x.t)+'</li>';}).join('')+'</ol>';
+}
+
+// ── BMS kontrol şeması ─────────────────────────────────────────
+var A3_IO=[
+ {tag:'TT-01',d:'Taze hava sıcaklığı',t:'AI',a:'AI-01',part:'damper'},
+ {tag:'PDT-01',d:'G4 filtre fark basıncı',t:'AI',a:'AI-02',part:'pdt'},
+ {tag:'PDT-02',d:'F7 filtre fark basıncı',t:'AI',a:'AI-03',part:'pdt'},
+ {tag:'PDT-03',d:'F9 filtre fark basıncı',t:'AI',a:'AI-04',part:'pdt'},
+ {tag:'TT-02',d:'Üfleme sıcaklığı',t:'AI',a:'AI-05',part:'heat'},
+ {tag:'MT-01',d:'Üfleme bağıl nemi',t:'AI',a:'AI-06',part:'hum'},
+ {tag:'FT-01',d:'Hava debisi (k-faktör)',t:'AI',a:'AI-07',part:'fan'},
+ {tag:'Y4',d:'Karışım damperi',t:'AO',a:'AO-01',part:'damper'},
+ {tag:'Y1',d:'Isıtma vanası',t:'AO',a:'AO-02',part:'hvalve'},
+ {tag:'Y2',d:'Soğutma vanası',t:'AO',a:'AO-03',part:'cool'},
+ {tag:'Y3',d:'Nemlendirici',t:'AO',a:'AO-04',part:'hum'},
+ {tag:'SC-01',d:'Fan hızı (VFD)',t:'AO',a:'AO-05',part:'motor'},
+ {tag:'DO-01',d:'Fan start komutu',t:'DO',a:'DO-01',part:'motor'},
+ {tag:'DI-01',d:'Fan çalışıyor',t:'DI',a:'DI-01',part:'motor'},
+ {tag:'DI-02',d:'VFD arıza',t:'DI',a:'DI-02',part:'motor'},
+ {tag:'TS-01',d:'Donma termostatı',t:'DI',a:'DI-03',part:'heat'}
+];
+function a3BMS(){
+  var el=document.getElementById('a3-bms');if(!el)return;
+  var sel=A3.sel?a3Part(A3.sel):null,hl=function(p){return A3.sel===p?' class="hl"':'';};
+  // sembolik şema
+  var s='<svg viewBox="0 0 400 190" class="a3-sch">'
+    +'<defs><marker id="a3ar" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7z" fill="#64748b"/></marker></defs>'
+    +'<rect x="20" y="70" width="360" height="60" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>'
+    +'<line x1="2" y1="100" x2="18" y2="100" stroke="#64748b" marker-end="url(#a3ar)"/><line x1="382" y1="100" x2="398" y2="100" stroke="#64748b" marker-end="url(#a3ar)"/>';
+  var cells=[['damper',20,40],['g4',60,30],['f7',90,36],['heat',126,32],['cool',158,36],['hum',194,34],['fan',228,58],['sil',286,40],['f9',326,54]];
+  cells.forEach(function(c){var id=c[0],x=c[1],w=c[2],on=(A3.sel&&(A3.sel===id||(sel&&sel.comp===id)));
+    s+='<g'+(on?' class="hl"':'')+' onclick="a3Select(\''+(id==='heat'?'heat':id)+'\')" style="cursor:pointer"><rect x="'+x+'" y="70" width="'+w+'" height="60" fill="'+(on?'rgba(59,130,246,.18)':'transparent')+'" stroke="#475569" stroke-width="1"/>';
+    var mx=x+w/2;
+    if(id==='damper')s+='<line x1="'+(x+8)+'" y1="120" x2="'+(x+32)+'" y2="80" stroke="#cbd5e1" stroke-width="1.5"/><circle cx="'+mx+'" cy="100" r="2" fill="#cbd5e1"/>';
+    if(id==='g4'||id==='f7'||id==='f9'){s+='<path d="M'+(x+6)+' 76 L'+(x+w-6)+' 100 L'+(x+6)+' 124" fill="none" stroke="#cbd5e1" stroke-width="1.3"/>'+(id!=='g4'?'<path d="M'+(x+12)+' 76 L'+(x+w-6)+' 100 L'+(x+12)+' 124" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="2 2"/>':'')+'<text x="'+mx+'" y="144" class="t">'+id.toUpperCase()+'</text>';}
+    if(id==='heat'||id==='cool'){s+='<line x1="'+(x+4)+'" y1="128" x2="'+(x+w-4)+'" y2="72" stroke="#cbd5e1" stroke-width="1.3"/><text x="'+mx+'" y="94" class="t" style="font-size:14px">'+(id==='heat'?'+':'−')+'</text>';}
+    if(id==='hum'){for(var k=0;k<3;k++)s+='<circle cx="'+(x+9+k*8)+'" cy="'+(86+k*12)+'" r="2.2" fill="#cbd5e1"/>';}
+    if(id==='fan')s+='<circle cx="'+mx+'" cy="100" r="18" fill="none" stroke="#cbd5e1" stroke-width="1.5"/><path d="M'+(mx-14)+' 89 L'+(mx+16)+' 100 L'+(mx-14)+' 111" fill="none" stroke="#cbd5e1" stroke-width="1.3"/>';
+    if(id==='sil')for(var q=0;q<3;q++)s+='<rect x="'+(x+7+q*10)+'" y="78" width="6" height="44" fill="#475569"/>';
+    s+='</g>';});
+  // sensörler / aktüatörler
+  var inst=function(x,y,tag,part,lineTo){return '<g'+hl(part)+' onclick="a3Select(\''+part+'\')" style="cursor:pointer"><line x1="'+x+'" y1="'+(y>100?y-11:y+11)+'" x2="'+x+'" y2="'+lineTo+'" stroke="#64748b" stroke-dasharray="2 2"/><circle cx="'+x+'" cy="'+y+'" r="11" fill="#0f172a" stroke="#94a3b8"/><text x="'+x+'" y="'+(y+3)+'" class="ts">'+tag+'</text></g>';};
+  s+=inst(10,40,'TT','damper',100)+inst(40,40,'M','damper',70)+inst(75,40,'ΔP','pdt',70)+inst(108,40,'ΔP','pdt',70)+inst(142,40,'M','hvalve',70)+inst(176,40,'M','cool',70)
+    +inst(211,40,'M','hum',70)+inst(257,40,'FT','fan',70)+inst(257,165,'VFD','motor',130)+inst(353,40,'ΔP','pdt',70)+inst(142,165,'TS','heat',130)+inst(392,165,'TT','heat',100)+inst(370,165,'MT','hum',130);
+  s+='</svg>';
+  var rows=A3_IO.map(function(io,i){return '<div class="a3-io'+(A3.sel===io.part?' hl':'')+'" onclick="a3Select(\''+io.part+'\')"><span class="a3-dot" id="a3io-d'+i+'"></span><span class="a3-tag">'+io.tag+'</span><span class="a3-iod">'+esc(io.d)+'</span><span class="a3-val" id="a3io-v'+i+'">—</span><span class="a3-adr">'+io.a+'</span></div>';}).join('');
+  el.innerHTML='<div class="a3-ch" style="display:flex;justify-content:space-between">HVAC KONTROL ŞEMASI · EN 16484<span>BMS G/Ç</span></div>'+s+'<div class="a3-iolist">'+rows+'</div>';
+  a3BMSValues();
+}
+function a3BMSValues(){
+  if(!A3)return;
+  var r=A3.fanSpeed,heat=A3.mode==='heat'&&A3.run,cool=A3.mode==='cool'&&A3.run,t=A3.t,j=function(a){return (Math.sin(t*0.7+a)*0.5);};
+  var dpk=r*r;
+  var vals=[
+    [(heat?6.5:28.4)+j(1),'°C',1],[Math.round(84*dpk+j(2)*3),'Pa',dpk>.1],[Math.round(146*dpk+j(3)*4),'Pa',dpk>.1],[Math.round(171*dpk+j(4)*4),'Pa',dpk>.1],
+    [(A3.run?(heat?21.0:16.5):(heat?8:26))+j(5)*0.4,'°C',1],[(A3.run?45:38)+j(6),'%',1],[Math.round(18000*r+j(7)*60),'m³/h',r>.1],
+    [Math.round(A3.damper*35),'%',A3.damper>.05],[heat?Math.round(62+j(8)*6):0,'%',heat],[cool?Math.round(71+j(9)*6):0,'%',cool],[A3.run?Math.round(28+j(10)*5):0,'%',A3.run],
+    [(r*47.5).toFixed(1),'Hz',r>.05],[A3.run?'ON':'OFF','',A3.run],[r>0.3?'1':'0','',r>0.3],['0','',false],['0','',false]
+  ];
+  vals.forEach(function(v,i){var ve=document.getElementById('a3io-v'+i),de=document.getElementById('a3io-d'+i);if(!ve)return;
+    var x=v[0];if(typeof x==='number'){if(v[1]!=='°C')x=Math.max(0,x);x=Number.isInteger(x)?x:x.toFixed(1);}ve.textContent=x+(v[1]?' '+v[1]:'');de.className='a3-dot'+(v[2]?' on':'');});
+}
+
+// ── Teknik veri düzenleme, CAD, ekran görüntüsü ────────────────
+function a3EditSpecs(){
+  if(!can('s'))return;
+  var sp=a3Specs(A3.eq),txt=Object.keys(sp).map(function(k){return k+': '+sp[k];}).join('\n');
+  var nv=prompt('Teknik veriler (her satır "Başlık: Değer"):',txt.replace(/\n/g,' ; '));
+  if(nv===null)return;
+  var o={};nv.split(/;|\n/).forEach(function(l){var i=l.indexOf(':');if(i>0)o[l.slice(0,i).trim()]=l.slice(i+1).trim();});
+  if(!DB.eqKnowledge)DB.eqKnowledge={};DB.eqKnowledge[A3.eq.id]=Object.assign({},DB.eqKnowledge[A3.eq.id]||{},{specs:o});
+  dbSave();var id=A3.eq.id;closeAHU3D();openAHU3D(id);toast('Teknik veriler kaydedildi');
+}
+function a3LoadGLB(inp){
+  var f=inp.files&&inp.files[0];if(!f)return;
+  var go=function(){var rd=new FileReader();rd.onload=function(){
+    new THREE.GLTFLoader().parse(rd.result,'',function(g){
+      var obj=g.scene,bx=new THREE.Box3().setFromObject(obj),sz=bx.getSize(new THREE.Vector3()),k=A3.L/Math.max(sz.x,sz.y,sz.z);
+      obj.scale.setScalar(k);bx.setFromObject(obj);var c=bx.getCenter(new THREE.Vector3());obj.position.sub(c);obj.position.y+=-bx.min.y+(bx.min.y-c.y)*0;
+      bx.setFromObject(obj);obj.position.y-=bx.min.y;
+      obj.traverse(function(o){if(o.isMesh){o.castShadow=o.receiveShadow=true;}});
+      A3.root.visible=false;if(A3.glb)A3.scene.remove(A3.glb);A3.glb=obj;A3.scene.add(obj);toast('CAD modeli yüklendi (yalnızca bu oturumda görüntülenir)');
+    },function(){toast('Dosya okunamadı','err');});};rd.readAsArrayBuffer(f);};
+  if(THREE.GLTFLoader)go();else a3LoadScripts([GLTF_URL],go);
+}
+function a3Shot(){
+  try{var a=document.createElement('a');A3.renderer.render(A3.scene,A3.camera);a.href=A3.renderer.domElement.toDataURL('image/png');a.download=A3.eq.id+'_3D_'+today()+'.png';a.click();}catch(e){toast('Görüntü alınamadı','err');}
 }
 
 // BOOT
