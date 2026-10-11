@@ -161,8 +161,69 @@ pre{white-space:pre-wrap;word-break:break-all;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
 
+
+/* TESİS HARİTASI */
+.map-tb{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.map-editing{font-size:12px;color:var(--orl);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:6px 10px}
+.map-seg{display:inline-flex;background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:3px;gap:2px}
+.map-seg button{background:none;border:none;color:var(--sub);font-size:12px;font-weight:600;padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.map-seg button.on{background:var(--bl);color:#fff}
+.map-wrap{display:flex;gap:14px;height:calc(100vh - 150px);min-height:520px}
+.map-canvas{position:relative;flex:1;min-width:0;border:1px solid var(--bd);border-radius:12px;overflow:hidden;background:#0b1322}
+#map-svg{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+#map-svg .me:hover rect:first-child{stroke:#4f8ef7}
+#map-svg .mrs{cursor:nwse-resize}
+.map-blink{animation:pulse 1s infinite}
+.map-zoom{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:4px}
+.map-zoom button{width:34px;height:34px;border-radius:8px;border:1px solid var(--bd);background:rgba(17,24,39,.9);color:var(--tx);font-size:16px;cursor:pointer}
+.map-legend{position:absolute;left:12px;bottom:12px;display:flex;align-items:center;gap:8px;background:rgba(17,24,39,.9);border:1px solid var(--bd);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--sub)}
+.map-lg-bar{width:140px;height:8px;border-radius:4px;background:linear-gradient(90deg,#2563eb,#06b6d4,#10b981,#eab308,#f97316,#ef4444)}
+.map-panel{width:420px;flex-shrink:0;background:var(--bg2);border:1px solid var(--bd);border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
+.mp-head{display:flex;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--bd);background:linear-gradient(180deg,var(--bg3),var(--bg2))}
+.mp-id{font-size:10px;font-family:monospace;color:var(--mt)}
+.mp-name{font-size:17px;font-weight:800;margin-top:2px}
+.mp-tabs{display:flex;border-bottom:1px solid var(--bd);overflow-x:auto}
+.mp-tabs button{flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--sub);font-size:12px;font-weight:700;padding:10px 8px;cursor:pointer;white-space:nowrap}
+.mp-tabs button.on{color:var(--bll);border-bottom-color:var(--bll)}
+.mp-body{flex:1;overflow-y:auto;padding:14px 16px}
+.mp-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.mp-kpis div{background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:10px;text-align:center}
+.mp-kpis b{display:block;font-size:20px}.mp-kpis span{font-size:10px;color:var(--mt)}
+.mp-info{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--bd);border:1px solid var(--bd);border-radius:9px;overflow:hidden}
+.mp-info div{background:var(--bg2);padding:8px 10px}.mp-info span{display:block;font-size:10px;color:var(--mt)}.mp-info b{font-size:12px}
+.mp-note{font-size:12px;color:var(--sub);background:var(--bg3);border-radius:8px;padding:9px 11px;margin-top:10px;line-height:1.5}
+.mp-sec{font-size:11px;font-weight:800;color:var(--mt);text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px}
+.mp-row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd);font-size:12px}
+.mp-sub{font-size:11px;color:var(--mt);font-weight:400}
+.mp-empty{font-size:12px;color:var(--mt);padding:8px 0}
+.mp-fault{background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:9px 11px;margin-bottom:8px;font-size:12px}
+.mp-k{font-size:12px;color:var(--sub);margin-top:5px;line-height:1.45}.mp-k span{display:block;font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.mp-cnt{font-size:11px;font-weight:800;color:#fff;background:var(--rdl);border-radius:10px;padding:1px 8px;white-space:nowrap}
+.mp-view{position:relative;background:radial-gradient(ellipse at 50% 30%,#1b2a44,#0b1322);border:1px solid var(--bd);border-radius:10px;padding:6px;cursor:zoom-in}
+.mp-view-sm{cursor:default;margin-bottom:10px}
+.mp-zoomhint{position:absolute;right:8px;top:8px;font-size:10px;color:var(--sub);background:rgba(0,0,0,.4);border-radius:6px;padding:2px 7px}
+.ahu-svg{width:100%;height:auto;display:block}
+.ahu-sec:hover>rect{filter:brightness(1.08)}
+.mp-comp{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;font-size:12px;cursor:pointer}
+.mp-comp:hover{background:var(--bg3)}.mp-comp.on{background:rgba(37,99,235,.15);color:var(--bll);font-weight:700}
+.mp-num{width:20px;height:20px;border-radius:50%;background:var(--bg3);border:1px solid var(--bdl);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
+.mp-compd{margin:2px 0 8px 28px;padding:8px 10px;border-left:2px solid var(--bl);background:var(--bg1);border-radius:0 8px 8px 0}
+.mp-steps ol{margin:4px 0 10px 18px;font-size:12px;color:var(--sub);line-height:1.6}
+.mp-st-h{font-size:12px;font-weight:800;margin-top:8px}
+.map-full{max-width:1200px!important;width:96vw}
+.map-full-body{display:flex;gap:14px}
+.map-full-svg{flex:1;min-width:0;background:radial-gradient(ellipse at 50% 30%,#1b2a44,#0b1322);border:1px solid var(--bd);border-radius:10px;padding:10px}
+.map-full-side{width:300px;flex-shrink:0;max-height:70vh;overflow-y:auto}
+@media(max-width:900px){
+  .map-wrap{flex-direction:column;height:auto}
+  .map-canvas{height:58vh;min-height:340px;flex:none}
+  .map-panel{width:100%}
+  .map-full-body{flex-direction:column}.map-full-side{width:100%;max-height:none}
+}
 @media(max-width:768px){
   #sidebar{display:none;}
+  #sidebar.mob-open{display:flex;z-index:400;width:min(280px,85vw);box-shadow:4px 0 24px rgba(0,0,0,.5);padding-bottom:60px;}
+  #mob-bd{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:350;}
   #content-area{margin-left:0;}
   #mob-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--bd);z-index:200;padding:4px 0;}
   #mob-nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;background:none;border:none;color:var(--sub);font-size:9px;cursor:pointer;}
@@ -242,7 +303,7 @@ function fbInit() {
       }
       // Gelen veriyi uygula
       var needRender = false;
-      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats','waterPlans','waterStatuses','scores','scoreFormula','capas','sensorData','sensorAlerts','energyLogs','setTargets','setProduction','eqSubComponents','alarmNotify','purchases','purchaseHold'];
+      var keys = ['workOrders','equipment','technicians','users','eqDocs','settings','schedule','kvalData','kvalSteps','logs','spareParts','spareMovements','eqPartHistory','spareCats','waterPlans','waterStatuses','scores','scoreFormula','capas','sensorData','sensorAlerts','energyLogs','setTargets','setProduction','eqSubComponents','alarmNotify','purchases','purchaseHold','mapLayout','eqKnowledge'];
       // Firebase boş listeleri/objeleri hiç saklamaz; alan yoksa o liste boşaltılmış demektir.
       var EMPTY_ARR=['purchases','workOrders','equipment','technicians','schedule','logs','spareParts','spareMovements','waterPlans','capas','sensorAlerts','energyLogs','setProduction'];
       var EMPTY_OBJ=['purchaseHold','eqDocs','kvalData','kvalSteps','eqPartHistory','scores','sensorData','setTargets','eqSubComponents'];
@@ -262,6 +323,11 @@ function fbInit() {
           needRender = true;
         }
       });
+      if(U && DB.users && DB.users.length){
+        var _cu=DB.users.find(function(x){return x.id===U.id;});
+        if(!_cu||!_cu.active){U=null;try{localStorage.removeItem('pharma_autologin');}catch(e){}R();toast('Oturumunuz sonlandırıldı','warn');}
+        else U=_cu;
+      }
       if(needRender && U) {
         // Sayfayı yeniden render et (modal açıksa dokunma)
         var hasModal = Object.values(MODAL).some(function(v){return v;});
@@ -361,6 +427,8 @@ function fbSaveNow() {
     spareCats:    DB.spareCats    || [],
     purchases:    DB.purchases    || [],
     purchaseHold: DB.purchaseHold || {},
+    mapLayout:    DB.mapLayout    || {},
+    eqKnowledge:  DB.eqKnowledge  || {},
     lastUpdated:  new Date().toISOString(),
     updatedBy:    U ? U.name : 'system'
   };
@@ -524,6 +592,8 @@ function dbLoad(){
     if(!d.spareParts)d.spareParts=[];
     if(!d.purchases)d.purchases=[];
     if(!d.purchaseHold)d.purchaseHold={};
+    if(!d.mapLayout)d.mapLayout={};
+    if(!d.eqKnowledge)d.eqKnowledge={};
     if(!d.spareMovements)d.spareMovements=[];
     if(!d.eqPartHistory)d.eqPartHistory={};
     if(!d.waterPlans)d.waterPlans=[];
@@ -550,6 +620,7 @@ function dbLoad(){
 function dbSave(){
   try{ if(typeof autoReconcileClosed==='function') autoReconcileClosed(); }catch(e){ console.warn('Otomasyon:',e); }
   try{ if(typeof purchaseReconcile==='function') purchaseReconcile(); }catch(e){ console.warn('Satınalma:',e); }
+  try{ if(typeof mapEnsurePlaced==='function') mapEnsurePlaced(); }catch(e){ console.warn('Harita:',e); }
   // Yerel kayıt
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   // Firebase kayıt
@@ -587,6 +658,7 @@ function showPendingRedirect(msg){
 
 function R(){
   var app=document.getElementById('app');
+  var _bd=document.getElementById('mob-bd');if(_bd)_bd.remove();
   if(!U){
     app.innerHTML=tplLogin();
     bindLogin();
@@ -633,7 +705,7 @@ function _renderPageInner(){
     var tmp=app2.querySelector('main,[id="main"],[id="main-content"]');
     el=tmp||app2;
   }
-  var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,calibration:pgCalibration,kvalifikasyon:pgKval,watersystem:pgWaterSystem,scoreboard:pgScoreboard,capa:pgCAPA,predictive:pgPredictive,energy:pgEnergy,set:pgSET,spareparts:pgSpareParts,purchasing:pgPurchasing,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings,logs:pgLogs};
+  var map={dashboard:pgDash,workorders:pgWO,equipment:pgEq,schedule:pgSched,calibration:pgCalibration,kvalifikasyon:pgKval,watersystem:pgWaterSystem,scoreboard:pgScoreboard,capa:pgCAPA,predictive:pgPredictive,energy:pgEnergy,set:pgSET,spareparts:pgSpareParts,purchasing:pgPurchasing,map:pgMap,reports:pgReports,technicians:pgTech,users:pgUsers,settings:pgSettings,logs:pgLogs};
   try{
     el.innerHTML=(map[PAGE]||pgDash)();
     bindPage();
@@ -719,8 +791,8 @@ function bindLogin(){
     });
     if(f){
       try{
-        if(rem) localStorage.setItem('pharma_remember',JSON.stringify({u:u,p:p}));
-        else localStorage.removeItem('pharma_remember');
+        if(rem){ localStorage.setItem('pharma_remember',JSON.stringify({u:u,p:p})); localStorage.setItem('pharma_autologin','1'); }
+        else { localStorage.removeItem('pharma_remember'); localStorage.removeItem('pharma_autologin'); }
       }catch(e){}
       U = f;
       addLog('Giriş','Kullanıcı girişi: '+f.name,'','');
@@ -745,7 +817,7 @@ function tplShell(){
   var urgent=DB.equipment.filter(function(e){var d=daysLeft(e.nextMaint);return d!==null&&d<=s.critDays&&d>=0;});
   var openN=DB.workOrders.filter(function(w){return w.status==='acik';}).length;
   var pendN=can('ap')?DB.workOrders.filter(function(w){return w.status==='bekliyor';}).length:0;
-  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'schedule',ico:'📅',lbl:'Planlı Bakım'},{id:'calibration',ico:'📐',lbl:'Kalibrasyon'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'watersystem',ico:'💧',lbl:'Su Sistemi'},{id:'spareparts',ico:'🔩',lbl:'Yedek Parça'},{id:'purchasing',ico:'🛒',lbl:'Satınalma'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Personeller'},{id:'scoreboard',ico:'🏆',lbl:'Puan Sıralaması'},{id:'capa',ico:'🔍',lbl:'CAPA / DÖF'},{id:'predictive',ico:'📡',lbl:'Kestirimci Bakım'},{id:'energy',ico:'⚡',lbl:'Enerji Takibi'},{id:'set',ico:'📐',lbl:'SET Analizi'}];
+  var navDefs=[{id:'dashboard',ico:'▦',lbl:'Gösterge'},{id:'workorders',ico:'📋',lbl:'İş Emirleri'},{id:'equipment',ico:'⚙',lbl:'Ekipmanlar'},{id:'map',ico:'🗺️',lbl:'Tesis Haritası'},{id:'schedule',ico:'📅',lbl:'Planlı Bakım'},{id:'calibration',ico:'📐',lbl:'Kalibrasyon'},{id:'kvalifikasyon',ico:'🔬',lbl:'Kalifikasyon'},{id:'watersystem',ico:'💧',lbl:'Su Sistemi'},{id:'spareparts',ico:'🔩',lbl:'Yedek Parça'},{id:'purchasing',ico:'🛒',lbl:'Satınalma'},{id:'reports',ico:'📊',lbl:'Raporlar'},{id:'technicians',ico:'👷',lbl:'Personeller'},{id:'scoreboard',ico:'🏆',lbl:'Puan Sıralaması'},{id:'capa',ico:'🔍',lbl:'CAPA / DÖF'},{id:'predictive',ico:'📡',lbl:'Kestirimci Bakım'},{id:'energy',ico:'⚡',lbl:'Enerji Takibi'},{id:'set',ico:'📐',lbl:'SET Analizi'}];
   if(can('u'))navDefs.push({id:'users',ico:'👥',lbl:'Kullanıcılar'});
   if(can('s'))navDefs.push({id:'logs',ico:'📜',lbl:'Aktivite Logu'});
   if(can('s'))navDefs.push({id:'settings',ico:'⚙️',lbl:'Ayarlar'});
@@ -766,7 +838,7 @@ function tplShell(){
     +'<button class="'+(PAGE==='workorders'?'on':'')+'" data-p="workorders"><span class="mi">📋</span>İş Em.</button>'
     +'<button onclick="openQRScanner()"><span class="mi">📷</span>QR</button>'
     +'<button class="'+(PAGE==='equipment'?'on':'')+'" data-p="equipment"><span class="mi">⚙</span>Ekipman</button>'
-    +'<button class="'+(PAGE==='reports'?'on':'')+'" data-p="reports"><span class="mi">📊</span>Rapor</button>'
+    +'<button type="button" onclick="toggleMobMenu()"><span class="mi">☰</span>Menü</button>'
     +'</nav>';
 
   return '<div id="wrap">'
@@ -850,7 +922,7 @@ function bindNav(){
   }
   // Logout
   var lb=document.getElementById('b-logout');
-  if(lb)lb.onclick=function(){addLog('Çıkış','Oturum kapatıldı','','');dbSave();U=null;PAGE='dashboard';window._qrSpChecked=false;R();};
+  if(lb)lb.onclick=function(){addLog('Çıkış','Oturum kapatıldı','','');dbSave();try{localStorage.removeItem('pharma_autologin');}catch(e){}U=null;PAGE='dashboard';window._qrSpChecked=false;R();};
   // Mobil nav
   document.querySelectorAll('#mob-nav button[data-p]').forEach(function(b){
     b.className=PAGE===b.dataset.p?'on':'';
@@ -2672,6 +2744,7 @@ function bindPage(){
   var ft=document.getElementById('ft');if(ft)ft.onchange=function(){FLT.type=ft.value;renderPage();};
   var fs=document.getElementById('fs');if(fs)fs.onchange=function(){FLT.sev=fs.value;renderPage();};
   var fst=document.getElementById('fst');if(fst)fst.onchange=function(){FLT.status=fst.value;renderPage();};
+  if(PAGE==='map')bindMap();
 }
 
 // CHARTS
@@ -3467,7 +3540,7 @@ function openQRWorkorderAfterLogin(){
 
 function renderQRLanding() {
   var eq = DB.equipment.find(function(e){ return e.id === QR_EQ_ID; });
-  if(!eq) return '<div id="qr-landing"><div class="qr-body" style="text-align:center;padding-top:60px"><div style="font-size:48px;margin-bottom:16px">❌</div><div style="font-size:18px;font-weight:700;color:var(--rdl)">Ekipman bulunamadı</div><div style="font-size:13px;color:var(--mt);margin-top:8px">ID: '+esc(QR_EQ_ID)+'</div><button class="btn bpri" style="margin-top:24px" onclick="U=null;R()">Ana Sayfaya Dön</button></div></div>';
+  if(!eq) return '<div id="qr-landing"><div class="qr-body" style="text-align:center;padding-top:60px"><div style="font-size:48px;margin-bottom:16px">❌</div><div style="font-size:18px;font-weight:700;color:var(--rdl)">Ekipman bulunamadı</div><div style="font-size:13px;color:var(--mt);margin-top:8px">ID: '+esc(QR_EQ_ID)+'</div><button class="btn bpri" style="margin-top:24px" onclick="R()">Ana Sayfaya Dön</button></div></div>';
 
   var wos = DB.workOrders.filter(function(w){ return w.eqId === eq.id; });
   var openWOs = wos.filter(function(w){ return w.status !== 'kapali'; });
@@ -8632,6 +8705,719 @@ function exportPOExcel(){
 }
 
 
+// "Beni hatırla" ile giriş yapılmışsa uygulama (QR linkiyle açılsa bile) şifre sormadan açılır.
+function toggleMobMenu(force){
+  var sb=document.getElementById('sidebar');if(!sb)return;
+  var open=force!==undefined?force:!sb.classList.contains('mob-open');
+  sb.classList.toggle('mob-open',open);
+  var bd=document.getElementById('mob-bd');
+  if(open&&!bd){bd=document.createElement('div');bd.id='mob-bd';bd.onclick=function(){toggleMobMenu(false);};document.body.appendChild(bd);}
+  if(!open&&bd)bd.remove();
+}
+function tryAutoLogin(){
+  if(U)return true;
+  try{
+    if(localStorage.getItem('pharma_autologin')!=='1')return false;
+    var rd=JSON.parse(localStorage.getItem('pharma_remember')||'null');if(!rd||!rd.u)return false;
+    var list=(DB.users&&DB.users.length?DB.users:null)||SEED.users||[];
+    var f=list.find(function(x){return x.un===rd.u&&(x.pw===rd.p||x.password===rd.p)&&x.active;});
+    if(!f){localStorage.removeItem('pharma_autologin');return false;}
+    U=f;PAGE='dashboard';
+    if(FB_LOADED||!FB_REF)scheduleAutomation();
+    return true;
+  }catch(e){return false;}
+}
+
+// ══════════════════════════════════════════════════════════════
+// TESİS HARİTASI
+// Yerleşim (DB.mapLayout), arıza ısı haritası, ekipman detay paneli,
+// AHU patlatılmış / şeffaf görünüm, arıza bilgi bankası ve sökme-takma adımları.
+// ══════════════════════════════════════════════════════════════
+var MAP_SEL=null, MAP_EDIT=false, MAP_DRAFT=null, MAP_HEAT=true, MAP_PERIOD=12, MAP_TAB='genel',
+    MAP_VIEW='normal', MAP_COMP=null, MAP_COMPHEAT=true, MAP_VB=null, MAP_FULL=false, MAP_KB_EDIT=null, MAP_STEP_SEL=null;
+
+// ── Ekipman modelleri ───────────────────────────────────────────
+var EQ_MODELS={ahu:'Klima Santrali (AHU)',genel:'Genel Ekipman'};
+function mapModelOf(eq){
+  var L=(DB.mapLayout&&DB.mapLayout.eq&&DB.mapLayout.eq[eq.id])||{};
+  if(L.model)return L.model;
+  return /\bahu\b|klima santral|air handling|hvac|santral/i.test((eq.name||'')+' '+(eq.model||'')+' '+(eq.cat||''))?'ahu':'genel';
+}
+
+// ── AHU bilgi bankası ──────────────────────────────────────────
+var AHU_COMPS=[
+  {id:'damper',name:'Karışım Kutusu & Damperler',fn:'Taze hava ve dönüş havasını karıştırır; motorlu damperler oranı BMS üzerinden ayarlar.',
+   kw:['damper','aktüatör','aktuator','servomotor','karışım','taze hava'],
+   faults:[['Damper açılmıyor / kapanmıyor','Aktüatör arızası, 0-10V sinyal kaybı, kanat sıkışması','Aktüatör beslemesini ve sinyali ölç; manuel modda kanadı çevir; mil-kanat bağlantısını sık; aktüatörü değiştir.'],
+           ['Taze hava oranı tutmuyor','Bağlantı çubuğu gevşemiş, kalibrasyon kaymış','Mekanik bağlantıları sık, aktüatör strokunu BMS ile yeniden kalibre et.'],
+           ['Kış aylarında donma alarmı','Taze hava damperi tam açık kalmış, ön ısıtma yetersiz','Damper minimum pozisyonunu kontrol et, donma termostatını test et.']]},
+  {id:'g4',name:'Ön Filtre (G4)',fn:'Kaba tozu tutar, sonraki filtrelerin ömrünü uzatır.',
+   kw:['ön filtre','g4','panel filtre','prefiltre','kaba filtre'],
+   faults:[['Fark basınç (DP) yüksek','Filtre dolmuş','DP > son değer (genelde 150 Pa) ise filtreyi değiştir; DP göstergesini sıfırla.'],
+           ['DP çok düşük','Filtre yerinden kaymış / yırtık, bypass var','Kızak ve contayı kontrol et, filtreyi doğru oturt veya değiştir.']]},
+  {id:'f7',name:'Torba Filtre (F7)',fn:'Bataryalardan önce ince partikülleri tutar; bataryaları ve F9 son filtreyi korur.',
+   kw:['f7','f8','torba filtre','ince filtre'],
+   faults:[['DP yüksek / hava debisi düştü','Torbalar dolmuş','Torba filtre setini değiştir, çerçeve contalarını yenile.'],
+           ['Torba yırtılması','Yüksek hız, nem, montaj hatası','Yırtık torbayı değiştir; nemlendirici ve damla tutucuyu kontrol et.']]},
+  {id:'heat',name:'Isıtıcı Batarya',fn:'Sıcak su veya buhar ile havayı ısıtır.',
+   kw:['ısıtıcı','ısıtma','sıcak su','ön ısıtma','son ısıtma'],
+   faults:[['Üfleme sıcaklığı düşük','3 yollu vana arızası, hava yapmış, pislik','Vana aktüatörünü test et, bataryanın havasını al, filtre/pislik tutucuyu temizle.'],
+           ['Batarya donması / patlaması','Düşük sıcaklıkta taze hava, donma koruması devre dışı','Donma termostatını test et; hasarlı bataryayı basınç testiyle kontrol et, gerekirse değiştir.']]},
+  {id:'cool',name:'Soğutucu Batarya & Damla Tutucu',fn:'Havayı soğutur ve nemini alır; yoğuşan su drenaj tavasından atılır.',
+   kw:['soğutucu','soğutma','batarya','drenaj','damla','yoğuşma','tava','sifon'],
+   faults:[['Drenaj tavasında su birikmesi / taşma','Sifon tıkalı veya sifon yüksekliği yanlış','Sifonu temizle, fan basıncına uygun sifon yüksekliğini kontrol et.'],
+           ['Kanal içine su taşınması','Damla tutucu hasarlı, hava hızı yüksek','Damla tutucuyu temizle/değiştir, debiyi kontrol et.'],
+           ['Kapasite düşük / nem alınmıyor','Lameller kirli, vana arızası','Lamelleri düşük basınçlı su ile temizle, vana ve soğuk su sıcaklığını kontrol et.']]},
+  {id:'hum',name:'Buharlı Nemlendirici',fn:'Buhar lansları ile havaya kontrollü nem verir.',
+   kw:['nem','nemlendirici','buhar','lans'],
+   faults:[['Nem setpoint\'e ulaşmıyor','Silindir kireçlenmiş, buhar vanası arızası','Silindiri temizle/değiştir, vanayı ve nem sensörünü kontrol et.'],
+           ['Lanslardan su damlaması','Kondens tahliyesi tıkalı','Kondens hattını ve kapanları temizle, lans eğimini kontrol et.']]},
+  {id:'fan',name:'Plug Fan & Motor',fn:'Kayışsız (direkt akuple) açık çarklı fan; çark motor miline doğrudan bağlıdır, devir inverter (VFD) veya EC motor ile ayarlanır.',
+   kw:['fan','motor','rulman','titreşim','inverter','vfd','sürücü','balans','çark','plug','ec motor'],
+   faults:[['Yüksek titreşim','Çarkta kir birikmesi, balans bozukluğu, motor rulmanı aşınması, gevşek takoz','Titreşimi ölç (limit < 4.5 mm/s), çarkı temizle, balans kontrolü yap, motor rulmanını dinle/ısısını ölç, titreşim takozlarını kontrol et.'],
+           ['Inverter / EC motor hatası, aşırı akım','Rulman sıkışması, sargı yalıtımı, besleme fazları dengesiz, aşırı ısınma','Hata kodunu oku, akımları ölç, megger testi yap, inverter fanlarını ve soğutmasını kontrol et.'],
+           ['Hava debisi düşük','Filtre DP\'leri yüksek, devir düşük, çark-emme konisi boşluğu bozulmuş','Filtre DP\'lerini ve fan devrini kontrol et; çark ile emme konisi arasındaki boşluğu üretici değerine ayarla.'],
+           ['Motor rulman sıcaklığı yüksek','Yağsızlık / rulman ömrü, hizasızlık','Rulman sıcaklığını ölç, yağlamalı tipse yağla, değilse rulmanı değiştir.']]},
+  {id:'sil',name:'Susturucu',fn:'Fan gürültüsünü kanala geçmeden azaltır.',
+   kw:['susturucu','gürültü','ses'],
+   faults:[['Gürültü artışı','Susturucu dolgu malzemesi dağılmış','Kulisleri kontrol et, hasarlı kulisi değiştir (partikül kaynağı olabilir).']]},
+  {id:'f9',name:'Son Filtre (F9)',fn:'Fan sonrası son filtre kademesi; temiz alanlara giden havayı süzer (terminal HEPA\'lar odalardadır).',
+   kw:['f9','son filtre','final filtre'],
+   faults:[['DP yüksek','Torbalar dolmuş','F9 setini değiştir, sonrasında alanlarda partikül sayımını kontrol et.'],
+           ['Filtre sonrası partikül artışı','Çerçeve conta kaçağı, yırtık torba','Contaları ve torbaları kontrol et; kaçak varsa seti değiştir.']]},
+  {id:'body',name:'Gövde, Kapılar & Contalar',fn:'Çift cidarlı izolasyonlu panel gövde; servis kapıları ve sızdırmazlık contaları.',
+   kw:['kapı','conta','sızdırma','panel','gövde','kasa'],
+   faults:[['Hava kaçağı / yoğuşma','Conta yıpranmış, menteşe ayarı bozuk','Kapı contasını değiştir, menteşe ve kilit ayarını yap.']]}
+];
+var LOTO_PRE=['İş emri / iş izni aç (GMP alanı ise QA\'ya bilgi ver)','Santrali BMS\'den durdur, ilgili alanların basınç kaskadı etkisini değerlendir','Ana şalteri kapat, kilitle ve etiketle (LOTO); sıfır enerji kontrolü yap','Fanın tamamen durmasını bekle (en az 2 dk), servis kapısını aç','KKD: eldiven, gözlük, gerekirse FFP2 maske'];
+var LOTO_POST=['Servis kapılarını kapat, contaların oturduğunu kontrol et','LOTO\'yu kaldır, santrali BMS\'den devreye al','Fark basınçları, debi ve alan basınçlarını kontrol et','İş emrine yapılan işi, değişen parçaları ve ölçümleri kaydet'];
+var AHU_STEPS=[
+  {comp:'fan',title:'Plug fan çark temizliği ve balans kontrolü',
+   sokme:['Fan bölümü servis kapısını aç, çarkın tamamen durduğunu kontrol et','Çarkı elle çevirerek kanatlarda kir, çatlak ve sürtünme izi ara','Emme konisi ile çark arasındaki boşluğu çevre boyunca ölç'],
+   takma:['Kanatları onaylı temizleyici ve tüy bırakmayan bezle temizle (balans ağırlıklarına dokunma)','Boşluk eşit değilse motor/çark konumunu üretici değerine göre ayarla','Kapıyı kapat, fanı devreye al','Titreşimi ölç (< 4.5 mm/s); yüksekse yerinde balans yaptır']},
+  {comp:'fan',title:'Plug fan motor / çark değişimi',
+   sokme:['Motor ve inverter/EC bağlantı kablolarını işaretleyerek sök','Çark ile emme konisi arasındaki boşluğu ölçüp kaydet','Fan-motor ünitesinin titreşim takozu cıvatalarını sök','Üniteyi servis kızağı / kaldırma ekipmanı ile dışarı al (ağır parça, en az 2 kişi)','Çarkı mil göbeğinden (taper-lock) sök, motoru kaideden ayır'],
+   takma:['Yeni motoru kaideye bağla, çarkı taper-lock göbeğe üretici torkunda tak','Üniteyi yerine sür, takozlara oturt ve cıvataları sık','Çark-emme konisi boşluğunu çevre boyunca eşit ve üretici değerinde ayarla','Kabloları işarete göre bağla, dönüş yönünü kısa çalıştırarak kontrol et','Inverter/EC parametrelerini kontrol et, titreşim ve motor akımını ölçüp kaydet']},
+  {comp:'g4',title:'Ön filtre (G4) değişimi',
+   sokme:['DP değerini kayda al','Filtre kızağı kilitlerini aç','Kirli filtreleri torbaya koyarak çıkar (toz yaymadan)'],
+   takma:['Kızak ve contaları temizle','Yeni filtreleri hava yönü okuna dikkat ederek tak','Kilitleri kapat','DP göstergesini kontrol et, filtre etiketine tarih yaz']},
+  {comp:'f7',title:'Torba filtre (F7) değişimi',
+   sokme:['DP değerini kayda al','Kızak kilitlerini aç','Torbaları ağızları yukarı bakacak şekilde katlayıp poşetleyerek çıkar'],
+   takma:['Çerçeve contalarını kontrol et/yenile','Torbaları cepleri dikey olacak şekilde tak','Kilitleri sık, conta sıkışmasını kontrol et','Yeni başlangıç DP değerini kaydet']},
+  {comp:'f9',title:'Son filtre (F9) değişimi',
+   sokme:['QA\'ya bilgi ver, DP değerini kayda al','Kızak kilitlerini aç','Torbaları poşetleyerek, toz yaymadan çıkar'],
+   takma:['Çerçeve contalarını kontrol et/yenile','Yeni F9 setini cepler dikey olacak şekilde tak, filtre etiketine tarih yaz','Kilitleri sık, conta sıkışmasını kontrol et','Yeni başlangıç DP değerini kaydet','Beslenen alanlarda partikül sayımı ve basınç kontrolü yap']},
+  {comp:'cool',title:'Soğutucu batarya ve drenaj temizliği',
+   sokme:['Damla tutucu kasetlerini çıkar','Drenaj tavasını ve sifonu kontrol et'],
+   takma:['Lamelleri düşük basınçlı su veya onaylı kimyasal ile temizle','Tava ve sifonu dezenfekte et, sifonu su ile doldur','Damla tutucuyu yerine tak','Drenajın aktığını çalışma halinde kontrol et']},
+  {comp:'hum',title:'Nemlendirici silindir/lans bakımı',
+   sokme:['Nemlendirici besleme suyu ve elektriğini kapat','Silindirdeki suyu tahliye et, soğumasını bekle','Silindiri/lansı sök'],
+   takma:['Kireci temizle veya yeni silindir tak','Contaları yenile, bağlantıları yap','Kondens hatlarını kontrol et','Nem kontrolünü ve kaçakları test et']},
+  {comp:'damper',title:'Damper aktüatörü değişimi',
+   sokme:['Aktüatör kablosunu işaretleyerek sök','Aktüatörü mil kelepçesinden ve tespit braketinden çıkar'],
+   takma:['Damperi tam kapalı konuma getir','Yeni aktüatörü kapalı konumda mile tak, braketi sabitle','Kabloyu bağla, BMS\'den 0-100% strok testi yap']}
+];
+
+// ── Bilgi bankası erişimi (kullanıcı düzenlemesi öncelikli) ────
+function mapKB(eq){
+  var model=mapModelOf(eq), cust=(DB.eqKnowledge||{})[eq.id]||{};
+  var faults=cust.faults&&cust.faults.length?cust.faults:(model==='ahu'?[].concat.apply([],AHU_COMPS.map(function(c){return c.faults.map(function(f){return {comp:c.name,t:f[0],c:f[1],s:f[2]};});})):[]);
+  if(faults.length&&Array.isArray(faults[0]))faults=faults.map(function(f){return {t:f[0],c:f[1],s:f[2]};});
+  var steps=cust.steps&&cust.steps.length?cust.steps:(model==='ahu'?AHU_STEPS:[]);
+  return {model:model,faults:faults,steps:steps,custom:!!(cust.faults&&cust.faults.length||cust.steps&&cust.steps.length)};
+}
+
+// ── Arıza verisi ───────────────────────────────────────────────
+function mapFaultWOs(eqId,months){
+  var lim=months?addDaysStr(today(),-Math.round(months*30.4)):'';
+  return (DB.workOrders||[]).filter(function(w){return w.eqId===eqId&&(w.type==='ariza'||w.type==='duzeltici')&&(!lim||String(w.date||'')>=lim);});
+}
+function mapHeatData(){
+  var res={},mx=0;
+  (DB.equipment||[]).forEach(function(e){
+    var ws=mapFaultWOs(e.id,MAP_PERIOD);
+    var sc=ws.reduce(function(a,w){return a+(w.sev==='kritik'?2:1)+(w.status!=='kapali'?0.5:0);},0);
+    res[e.id]={n:ws.length,score:sc,open:ws.filter(function(w){return w.status!=='kapali';}).length};
+    mx=Math.max(mx,sc);
+  });
+  Object.keys(res).forEach(function(k){res[k].t=mx>0?res[k].score/mx:0;});
+  return res;
+}
+function heatColor(t){
+  // mavi → camgöbeği → yeşil → sarı → turuncu → kırmızı
+  var st=[[0,[37,99,235]],[.25,[6,182,212]],[.45,[16,185,129]],[.65,[234,179,8]],[.82,[249,115,22]],[1,[239,68,68]]];
+  t=Math.max(0,Math.min(1,t));
+  for(var i=1;i<st.length;i++){if(t<=st[i][0]){var a=st[i-1],b=st[i],k=(t-a[0])/(b[0]-a[0]);
+    return 'rgb('+[0,1,2].map(function(j){return Math.round(a[1][j]+(b[1][j]-a[1][j])*k);}).join(',')+')';}}
+  return 'rgb(239,68,68)';
+}
+function compFaultCounts(eq){
+  var ws=mapFaultWOs(eq.id,0),res={};
+  AHU_COMPS.forEach(function(c){res[c.id]=0;});
+  ws.forEach(function(w){
+    var txt=((w.title||'')+' '+(w.desc||'')+' '+(w.root||'')).toLocaleLowerCase('tr');
+    AHU_COMPS.forEach(function(c){if(c.kw.some(function(k){return txt.indexOf(k)>=0;}))res[c.id]++;});
+  });
+  return res;
+}
+
+// ── Yerleşim ───────────────────────────────────────────────────
+function mapAreas(){
+  var a=((DB.settings&&DB.settings.areas)||[]).slice();
+  (DB.equipment||[]).forEach(function(e){if(e.area&&a.indexOf(e.area)<0)a.push(e.area);});
+  if((DB.equipment||[]).some(function(e){return !e.area;}))a.push('Tanımsız Alan');
+  return a;
+}
+function mapEqSize(e){return mapModelOf(e)==='ahu'?{w:200,h:64}:{w:120,h:70};}
+function mapLayout(){
+  var src=MAP_EDIT&&MAP_DRAFT?MAP_DRAFT:(DB.mapLayout||{});
+  var L={zones:Object.assign({},src.zones||{}),eq:Object.assign({},src.eq||{})};
+  var areas=mapAreas(),cols=3,zw=520,zh=320,gap=40;
+  areas.forEach(function(a,i){
+    if(!L.zones[a])L.zones[a]={x:40+(i%cols)*(zw+gap),y:40+Math.floor(i/cols)*(zh+gap),w:zw,h:zh};
+  });
+  (DB.equipment||[]).forEach(function(e){
+    var cur=L.eq[e.id],a=e.area||'Tanımsız Alan';
+    // Ekipmanın alanı değiştiyse yeni alanına taşı
+    if(cur&&cur.x!==undefined&&(!cur.area||cur.area===a))return;
+    var p=mapFindSpot(L,L.zones[a],mapEqSize(e),e.id);
+    L.eq[e.id]=Object.assign({},cur||{},p,{area:a});
+  });
+  return L;
+}
+function mapFindSpot(L,z,sz,selfId){
+  var hit=function(x,y){return Object.keys(L.eq).some(function(k){var r=L.eq[k];if(k===selfId||!r||r.x===undefined)return false;
+    return x<r.x+r.w+20&&x+sz.w+20>r.x&&y<r.y+r.h+40&&y+sz.h+40>r.y;});};
+  var perRow=Math.max(1,Math.floor((z.w-40)/(sz.w+30)));
+  for(var n=0;n<200;n++){
+    var x=z.x+30+(n%perRow)*(sz.w+30),y=z.y+60+Math.floor(n/perRow)*(sz.h+50);
+    if(!hit(x,y)){if(y+sz.h+40>z.y+z.h)z.h=y+sz.h+40-z.y;return {x:x,y:y,w:sz.w,h:sz.h};}
+  }
+  return {x:z.x+30,y:z.y+60,w:sz.w,h:sz.h};
+}
+// Yeni eklenen / alanı değişen ekipmanı kalıcı olarak haritaya yaz (her kayıtta çalışır)
+function mapEnsurePlaced(){
+  if(MAP_EDIT||!DB.equipment)return;
+  if(!DB.mapLayout)DB.mapLayout={};
+  var ids={};DB.equipment.forEach(function(e){ids[e.id]=1;});
+  var saved=DB.mapLayout.eq||{},need=DB.equipment.some(function(e){var r=saved[e.id];return !r||r.x===undefined||(r.area&&r.area!==(e.area||'Tanımsız Alan'));});
+  var stale=Object.keys(saved).some(function(k){return !ids[k];});
+  if(!need&&!stale)return;
+  var L=mapLayout();
+  Object.keys(L.eq).forEach(function(k){if(!ids[k])delete L.eq[k];});
+  DB.mapLayout=Object.assign({},DB.mapLayout,{zones:L.zones,eq:L.eq});
+}
+function mapBounds(L){
+  var mx=0,my=0;
+  Object.keys(L.zones).forEach(function(k){var z=L.zones[k];mx=Math.max(mx,z.x+z.w);my=Math.max(my,z.y+z.h);});
+  Object.keys(L.eq).forEach(function(k){var z=L.eq[k];if(z.x!==undefined){mx=Math.max(mx,z.x+z.w);my=Math.max(my,z.y+z.h);}});
+  return {w:mx+40,h:my+40};
+}
+
+// ── Üstten görünüş sembolleri (harita için) ────────────────────
+function mapSymbol(e,r){
+  var x=r.x,y=r.y,w=r.w,h=r.h,m=mapModelOf(e),s='';
+  if(m==='ahu'){
+    var secs=[.10,.10,.14,.09,.12,.09,.20,.08,.08],cx=x;
+    secs.forEach(function(p,i){var sw=w*p;
+      if(i>0)s+='<line x1="'+cx+'" y1="'+(y+4)+'" x2="'+cx+'" y2="'+(y+h-4)+'" stroke="#475569" stroke-width="1"/>';
+      if(i===6){s+='<circle cx="'+(cx+sw/2)+'" cy="'+(y+h/2)+'" r="'+Math.min(sw,h)*0.32+'" fill="none" stroke="#94a3b8" stroke-width="1.5"/>'
+        +'<circle cx="'+(cx+sw/2)+'" cy="'+(y+h/2)+'" r="3" fill="#94a3b8"/>';}
+      if(i===1||i===2||i===8){for(var k=1;k<5;k++)s+='<line x1="'+(cx+sw*k/5)+'" y1="'+(y+8)+'" x2="'+(cx+sw*k/5)+'" y2="'+(y+h-8)+'" stroke="#334155" stroke-width="1"/>';}
+      if(i===3||i===4){s+='<rect x="'+(cx+3)+'" y="'+(y+8)+'" width="'+(sw-6)+'" height="'+(h-16)+'" fill="'+(i===3?'rgba(239,68,68,.18)':'rgba(59,130,246,.18)')+'"/>';}
+      cx+=sw;});
+    s+='<path d="M'+(x-14)+' '+(y+h/2)+' l10 0 m-4 -4 l4 4 l-4 4" stroke="#64748b" stroke-width="1.5" fill="none"/>';
+    s+='<path d="M'+(x+w+4)+' '+(y+h/2)+' l10 0 m-4 -4 l4 4 l-4 4" stroke="#64748b" stroke-width="1.5" fill="none"/>';
+  } else {
+    s+='<rect x="'+(x+10)+'" y="'+(y+10)+'" width="'+(w-20)+'" height="'+(h-30)+'" rx="3" fill="none" stroke="#334155" stroke-dasharray="3 3"/>';
+    s+='<circle cx="'+(x+w-16)+'" cy="'+(y+16)+'" r="5" fill="none" stroke="#475569"/>';
+  }
+  return s;
+}
+
+// ── Sayfa ──────────────────────────────────────────────────────
+function pgMap(){
+  var L=mapLayout(),B=mapBounds(L),H=mapHeatData();
+  if(!MAP_VB)MAP_VB={x:0,y:0,w:Math.max(B.w,900),h:Math.max(B.h,560)};
+  var canEdit=can('s');
+  var tb='<div class="map-tb">'
+    +'<div style="font-size:20px;font-weight:800;letter-spacing:-.3px;margin-right:auto">🗺️ Tesis Haritası</div>'
+    +(MAP_EDIT
+      ?'<span class="map-editing">✎ Yerleşim düzenleniyor — ekipmanları ve alanları sürükleyin, köşeden boyutlandırın</span>'
+        +'<button class="btn bghs bsm" onclick="mapResetLayout()">↺ Otomatik Diz</button>'
+        +'<button class="btn bghs bsm" onclick="mapCancelEdit()">İptal</button>'
+        +'<button class="btn bsuc bsm" onclick="mapSaveEdit()">✓ Yerleşimi Kaydet</button>'
+      :'<div class="map-seg"><button class="'+(MAP_HEAT?'on':'')+'" onclick="MAP_HEAT=!MAP_HEAT;renderPage()">🔥 Arıza Isı Haritası</button></div>'
+        +(MAP_HEAT?'<select class="inp isml" style="width:auto" onchange="MAP_PERIOD=+this.value;renderPage()">'+[[3,'Son 3 ay'],[6,'Son 6 ay'],[12,'Son 12 ay'],[0,'Tüm zamanlar']].map(function(o){return '<option value="'+o[0]+'"'+(MAP_PERIOD===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>':'')
+        +(canEdit?'<button class="btn bpri bsm" onclick="mapStartEdit()">✎ Yerleşimi Düzenle</button>':''))
+    +'</div>';
+
+  // SVG
+  var svg='<svg id="map-svg" viewBox="'+[MAP_VB.x,MAP_VB.y,MAP_VB.w,MAP_VB.h].join(' ')+'" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">'
+    +'<defs>'
+    +'<pattern id="mg-s" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#16233a" stroke-width=".6"/></pattern>'
+    +'<pattern id="mg-l" width="100" height="100" patternUnits="userSpaceOnUse"><rect width="100" height="100" fill="url(#mg-s)"/><path d="M100 0H0V100" fill="none" stroke="#1d2f4c" stroke-width="1"/></pattern>'
+    +'<pattern id="mg-floor" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="#1a2740" stroke-width="1"/></pattern>'
+    +'<linearGradient id="mg-eq" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#253248"/><stop offset="1" stop-color="#151f30"/></linearGradient>'
+    +'<filter id="mg-sh" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity=".55"/></filter>'
+    +'<filter id="mg-blur" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="22"/></filter>'
+    +'<filter id="mg-glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
+    +'</defs>'
+    +'<rect x="-5000" y="-5000" width="12000" height="12000" fill="#0b1322" data-bg="1"/>'
+    +'<rect x="-5000" y="-5000" width="12000" height="12000" fill="url(#mg-l)" data-bg="1"/>';
+  // Alanlar (odalar)
+  Object.keys(L.zones).forEach(function(a){
+    if(mapAreas().indexOf(a)<0)return;
+    var z=L.zones[a];
+    svg+='<g class="mz" data-drag="zone" data-id="'+esc(a)+'">'
+      +'<rect x="'+z.x+'" y="'+z.y+'" width="'+z.w+'" height="'+z.h+'" fill="#0f1a2c"/>'
+      +'<rect x="'+z.x+'" y="'+z.y+'" width="'+z.w+'" height="'+z.h+'" fill="url(#mg-floor)" opacity=".7"/>'
+      +'<rect x="'+z.x+'" y="'+z.y+'" width="'+z.w+'" height="'+z.h+'" fill="none" stroke="#3b4d6b" stroke-width="7"/>'
+      +'<rect x="'+(z.x+5)+'" y="'+(z.y+5)+'" width="'+(z.w-10)+'" height="'+(z.h-10)+'" fill="none" stroke="#22324d" stroke-width="1"/>'
+      +'<rect x="'+(z.x+z.w/2-28)+'" y="'+(z.y+z.h-5)+'" width="56" height="10" fill="#0f1a2c"/>'
+      +'<path d="M'+(z.x+z.w/2-28)+' '+(z.y+z.h)+' a56 56 0 0 1 56 -56" fill="none" stroke="#2c3e5c" stroke-width="1" stroke-dasharray="3 3"/>'
+      +'<text x="'+(z.x+16)+'" y="'+(z.y+28)+'" fill="#7f93b3" font-size="13" font-weight="700" letter-spacing="1.5">'+esc(a.toLocaleUpperCase('tr'))+'</text>'
+      +'<text x="'+(z.x+16)+'" y="'+(z.y+44)+'" fill="#4a5d7c" font-size="10">'+(DB.equipment||[]).filter(function(e){return (e.area||'Tanımsız Alan')===a;}).length+' ekipman</text>'
+      +(MAP_EDIT?'<rect class="mrs" data-rs="zone" data-id="'+esc(a)+'" x="'+(z.x+z.w-14)+'" y="'+(z.y+z.h-14)+'" width="14" height="14" fill="#2563eb"/>':'')
+      +'</g>';
+  });
+  // Isı katmanı
+  if(MAP_HEAT&&!MAP_EDIT){
+    svg+='<g filter="url(#mg-blur)" style="pointer-events:none;mix-blend-mode:screen">';
+    (DB.equipment||[]).forEach(function(e){var r=L.eq[e.id],h=H[e.id];if(!r||!h||h.t<=0)return;
+      var rad=50+h.t*110;
+      svg+='<ellipse cx="'+(r.x+r.w/2)+'" cy="'+(r.y+r.h/2)+'" rx="'+(rad+r.w/3)+'" ry="'+rad+'" fill="'+heatColor(h.t)+'" opacity="'+(0.35+h.t*0.45)+'"/>';});
+    svg+='</g>';
+  }
+  // Ekipmanlar
+  (DB.equipment||[]).forEach(function(e){
+    var r=L.eq[e.id];if(!r)return;
+    var st=EQST[e.status]||{col:'#888'},sel=MAP_SEL===e.id,h=H[e.id]||{n:0,t:0};
+    var stroke=sel?'#4f8ef7':(MAP_HEAT&&h.t>0?heatColor(h.t):'#3a4a63');
+    svg+='<g class="me'+(sel?' sel':'')+'" data-drag="eq" data-id="'+e.id+'" style="cursor:'+(MAP_EDIT?'move':'pointer')+'">'
+      +'<rect x="'+r.x+'" y="'+r.y+'" width="'+r.w+'" height="'+r.h+'" rx="6" fill="url(#mg-eq)" stroke="'+stroke+'" stroke-width="'+(sel?3:1.6)+'" filter="url(#mg-sh)"'+(sel?' style="filter:url(#mg-glow)"':'')+'/>'
+      +mapSymbol(e,r)
+      +'<circle cx="'+(r.x+12)+'" cy="'+(r.y+12)+'" r="5" fill="'+st.col+'"'+(e.status==='arizali'?' class="map-blink"':'')+'/>'
+      +'<text x="'+(r.x+r.w/2)+'" y="'+(r.y+r.h+15)+'" text-anchor="middle" fill="#cbd5e1" font-size="13" font-weight="700">'+esc(e.name.length>26?e.name.slice(0,25)+'…':e.name)+'</text>'
+      +'<text x="'+(r.x+r.w/2)+'" y="'+(r.y+r.h+28)+'" text-anchor="middle" fill="#5d7090" font-size="9.5" font-family="monospace">'+esc(e.id)+'</text>'
+      +(MAP_HEAT&&h.n>0&&!MAP_EDIT?'<g><rect x="'+(r.x+r.w-30)+'" y="'+(r.y-9)+'" width="38" height="18" rx="9" fill="'+heatColor(h.t)+'"/><text x="'+(r.x+r.w-11)+'" y="'+(r.y+4)+'" text-anchor="middle" fill="#fff" font-size="10.5" font-weight="800">'+h.n+'</text></g>':'')
+      +(MAP_EDIT?'<rect class="mrs" data-rs="eq" data-id="'+e.id+'" x="'+(r.x+r.w-10)+'" y="'+(r.y+r.h-10)+'" width="10" height="10" fill="#2563eb"/>':'')
+      +'</g>';
+  });
+  svg+='</svg>';
+
+  var legend=MAP_HEAT&&!MAP_EDIT?'<div class="map-legend"><span>Az arıza</span><div class="map-lg-bar"></div><span>Çok arıza</span></div>':'';
+  var zoomCtl='<div class="map-zoom"><button onclick="mapZoom(0.8)" title="Yakınlaştır">＋</button><button onclick="mapZoom(1.25)" title="Uzaklaştır">－</button><button onclick="MAP_VB=null;renderPage()" title="Sığdır">⤢</button></div>';
+  return tb+'<div class="map-wrap'+(MAP_SEL&&!MAP_EDIT?' has-panel':'')+'"><div class="map-canvas">'+svg+zoomCtl+legend+'</div>'
+    +(MAP_SEL&&!MAP_EDIT?'<aside class="map-panel" id="map-panel">'+mapPanelHTML()+'</aside>':'')
+    +'</div>'
+    +(MAP_FULL?mapFullHTML():'')
+    +(MAP_KB_EDIT?mapKBEditHTML():'');
+}
+
+// ── Sürükle / yakınlaştır ──────────────────────────────────────
+function mapZoom(f,cx,cy){
+  if(!MAP_VB)return;
+  cx=cx===undefined?MAP_VB.x+MAP_VB.w/2:cx;cy=cy===undefined?MAP_VB.y+MAP_VB.h/2:cy;
+  var nw=Math.max(250,Math.min(6000,MAP_VB.w*f)),k=nw/MAP_VB.w;
+  MAP_VB={x:cx-(cx-MAP_VB.x)*k,y:cy-(cy-MAP_VB.y)*k,w:nw,h:MAP_VB.h*k};
+  var s=document.getElementById('map-svg');if(s)s.setAttribute('viewBox',[MAP_VB.x,MAP_VB.y,MAP_VB.w,MAP_VB.h].join(' '));
+}
+function bindMap(){
+  var svg=document.getElementById('map-svg');if(!svg)return;
+  var drag=null;
+  function pt(ev){var p=svg.createSVGPoint();p.x=ev.clientX;p.y=ev.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
+  svg.addEventListener('wheel',function(ev){ev.preventDefault();var p=pt(ev);mapZoom(ev.deltaY>0?1.12:0.89,p.x,p.y);},{passive:false});
+  svg.addEventListener('pointerdown',function(ev){
+    var t=ev.target,rs=t.closest('[data-rs]'),g=t.closest('[data-drag]'),p=pt(ev);
+    if(MAP_EDIT&&(rs||g)){
+      var kind=(rs||g).getAttribute(rs?'data-rs':'data-drag'),id=(rs||g).getAttribute('data-id');
+      var L=MAP_DRAFT,o=kind==='zone'?L.zones[id]:L.eq[id];if(!o)return;
+      // Alan taşınırken içindeki ekipmanlar da taşınsın
+      var kids=[];
+      if(kind==='zone'&&!rs){(DB.equipment||[]).forEach(function(e){var r=L.eq[e.id];if(r&&r.x>=o.x&&r.y>=o.y&&r.x<o.x+o.w&&r.y<o.y+o.h)kids.push({r:r,x:r.x,y:r.y});});}
+      drag={mode:rs?'resize':'move',kind:kind,id:id,o:o,sx:p.x,sy:p.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h,kids:kids};
+      svg.setPointerCapture(ev.pointerId);ev.preventDefault();return;
+    }
+    if(!MAP_EDIT&&g&&g.getAttribute('data-drag')==='eq'){drag={mode:'click',id:g.getAttribute('data-id'),cx:ev.clientX,cy:ev.clientY,vb:Object.assign({},MAP_VB),sx:p.x,sy:p.y};svg.setPointerCapture(ev.pointerId);return;}
+    drag={mode:'pan',cx:ev.clientX,cy:ev.clientY,vb:Object.assign({},MAP_VB)};svg.setPointerCapture(ev.pointerId);
+  });
+  svg.addEventListener('pointermove',function(ev){
+    if(!drag)return;
+    if(drag.mode==='pan'||drag.mode==='click'){
+      if(drag.mode==='click'&&Math.abs(ev.clientX-drag.cx)+Math.abs(ev.clientY-drag.cy)<6)return;
+      if(drag.mode==='click')drag.mode='pan';
+      var rc=svg.getBoundingClientRect(),k=Math.max(drag.vb.w/rc.width,drag.vb.h/rc.height);
+      MAP_VB=Object.assign({},drag.vb,{x:drag.vb.x-(ev.clientX-drag.cx)*k,y:drag.vb.y-(ev.clientY-drag.cy)*k});
+      svg.setAttribute('viewBox',[MAP_VB.x,MAP_VB.y,MAP_VB.w,MAP_VB.h].join(' '));return;
+    }
+    var p=pt(ev),dx=p.x-drag.sx,dy=p.y-drag.sy,sn=function(v){return Math.round(v/10)*10;};
+    if(drag.mode==='move'){drag.o.x=sn(drag.ox+dx);drag.o.y=sn(drag.oy+dy);
+      var mx=drag.o.x-drag.ox,my=drag.o.y-drag.oy;drag.kids.forEach(function(k){k.r.x=k.x+mx;k.r.y=k.y+my;});}
+    else{drag.o.w=Math.max(drag.kind==='zone'?160:60,sn(drag.ow+dx));drag.o.h=Math.max(drag.kind==='zone'?120:40,sn(drag.oh+dy));}
+    mapRedrawSvg();
+  });
+  function end(ev){
+    if(!drag)return;var d=drag;drag=null;
+    if(d.mode==='click'){MAP_SEL=MAP_SEL===d.id?null:d.id;MAP_TAB='genel';MAP_COMP=null;MAP_VIEW='normal';renderPage();
+      if(MAP_SEL&&window.innerWidth<900){var mp=document.getElementById('map-panel');if(mp)mp.scrollIntoView({behavior:'smooth',block:'start'});}}
+    else if(d.mode!=='pan')mapRedrawSvg(true);
+  }
+  svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',function(){drag=null;});
+}
+// Sürüklerken sadece SVG'yi yeniden çiz (tüm sayfayı değil)
+function mapRedrawSvg(){
+  var old=document.getElementById('map-svg');if(!old)return;
+  var tmp=document.createElement('div');tmp.innerHTML=pgMap();
+  var nw=tmp.querySelector('#map-svg');if(!nw)return;
+  // pointer capture'ı korumak için içerik değiştirilir
+  old.innerHTML=nw.innerHTML;
+}
+function mapStartEdit(){
+  if(!can('s'))return;
+  var L=mapLayout();MAP_DRAFT=JSON.parse(JSON.stringify(L));
+  // modelleri de taşı
+  Object.keys((DB.mapLayout&&DB.mapLayout.eq)||{}).forEach(function(k){var m=DB.mapLayout.eq[k].model;if(m&&MAP_DRAFT.eq[k])MAP_DRAFT.eq[k].model=m;});
+  MAP_EDIT=true;MAP_SEL=null;renderPage();
+}
+function mapCancelEdit(){MAP_EDIT=false;MAP_DRAFT=null;renderPage();}
+function mapResetLayout(){
+  if(!confirm('Tüm alan ve ekipman yerleşimi otomatik olarak yeniden dizilsin mi?'))return;
+  var models={};Object.keys(MAP_DRAFT.eq||{}).forEach(function(k){if(MAP_DRAFT.eq[k].model)models[k]={model:MAP_DRAFT.eq[k].model};});
+  MAP_DRAFT={zones:{},eq:models};MAP_DRAFT=JSON.parse(JSON.stringify(mapLayout()));renderPage();
+}
+function mapSaveEdit(){
+  if(!can('s'))return;
+  DB.mapLayout=JSON.parse(JSON.stringify(MAP_DRAFT));
+  addLog('Harita Yerleşimi Değişti','Tesis haritası yerleşimi güncellendi','','');
+  MAP_EDIT=false;MAP_DRAFT=null;dbSave();toast('Yerleşim kaydedildi');renderPage();
+}
+function mapSetModel(eqId,model){
+  if(!can('s'))return;
+  if(!DB.mapLayout)DB.mapLayout={zones:{},eq:{}};if(!DB.mapLayout.eq)DB.mapLayout.eq={};
+  DB.mapLayout.eq[eqId]=Object.assign({},DB.mapLayout.eq[eqId]||{},{model:model});
+  var sz=mapEqSize({id:eqId,name:''});var r=DB.mapLayout.eq[eqId];if(r.x!==undefined){r.w=sz.w;r.h=sz.h;}
+  dbSave();renderPage();
+}
+
+// ── Sağ panel ──────────────────────────────────────────────────
+function mapPanelHTML(){
+  var e=(DB.equipment||[]).find(function(x){return x.id===MAP_SEL;});if(!e)return '';
+  var model=mapModelOf(e),tc=(DB.technicians||[]).find(function(t){return t.id===e.techId;});
+  var tabs=[['genel','Bilgi'],['gorunum','Görünüm'],['parca','Parçalar'],['ariza','Arızalar'],['adim','Sökme / Takma']];
+  var h='<div class="mp-head"><div style="min-width:0"><div class="mp-id">'+esc(e.id)+' · '+esc(e.area||'—')+'</div><div class="mp-name">'+esc(e.name)+'</div>'
+    +'<div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap">'+eqLed(e.status)+critBadge(e.crit,true)+(e.val?'<span class="badge bxsm" style="color:var(--cyl);border-color:var(--cyl)">Valide</span>':'')+'</div></div>'
+    +'<button class="mdc" onclick="MAP_SEL=null;renderPage()">✕</button></div>'
+    +'<div class="mp-tabs">'+tabs.map(function(t){return '<button class="'+(MAP_TAB===t[0]?'on':'')+'" onclick="MAP_TAB=\''+t[0]+'\';renderPage()">'+t[1]+'</button>';}).join('')+'</div>'
+    +'<div class="mp-body">';
+  if(MAP_TAB==='genel'){
+    var all=mapFaultWOs(e.id,0),y1=mapFaultWOs(e.id,12),open=(DB.workOrders||[]).filter(function(w){return w.eqId===e.id&&w.status!=='kapali';}).length;
+    var mtbf=y1.length?Math.round(365/y1.length):null;
+    h+='<div class="mp-kpis">'
+      +'<div><b style="color:var(--rdl)">'+y1.length+'</b><span>Arıza (12 ay)</span></div>'
+      +'<div><b style="color:var(--orl)">'+open+'</b><span>Açık iş</span></div>'
+      +'<div><b style="color:var(--bll)">'+(mtbf?mtbf+' g':'—')+'</b><span>Ort. arıza aralığı</span></div></div>'
+      +'<div class="mp-info">'
+      +[['Kategori',e.cat],['Üretici',e.mfr],['Model',e.model],['Seri No',e.sn],['Kurulum',e.instDate],['Son Bakım',e.lastMaint],['Sonraki Bakım',e.nextMaint],['Sorumlu',tc&&tc.name],['Validasyon',e.valDoc||(e.val?'Var':'Yok')]]
+        .map(function(r){return '<div><span>'+r[0]+'</span><b>'+esc(r[1]||'—')+'</b></div>';}).join('')
+      +'</div>'
+      +(e.notes?'<div class="mp-note">📝 '+esc(e.notes)+'</div>':'')
+      +(can('s')?'<div class="fr" style="margin-top:10px"><label class="lbl">Harita modeli</label><select class="inp isml" onchange="mapSetModel(\''+e.id+'\',this.value)">'+Object.keys(EQ_MODELS).map(function(k){return '<option value="'+k+'"'+(model===k?' selected':'')+'>'+EQ_MODELS[k]+'</option>';}).join('')+'</select></div>':'')
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"><button class="btn bghs bsm" onclick="openEqDet(\''+e.id+'\')">📄 Ekipman Kartı</button>'
+      +(can('w')?'<button class="btn bpri bsm" onclick="openWOModal(null,\''+e.id+'\')">+ İş Emri</button>':'')+'</div>';
+  }
+  if(MAP_TAB==='gorunum'){
+    if(model==='ahu'){
+      h+=mapViewToggles()
+        +'<div class="mp-view" onclick="MAP_FULL=true;renderPage()" title="Büyütmek için tıklayın">'+ahuSVG(e,MAP_VIEW,false)+'<span class="mp-zoomhint">⛶ Büyüt</span></div>'
+        +mapCompList(e);
+    } else {
+      h+='<div class="mp-view">'+genericSVG(e)+'</div>'
+        +'<div class="mp-note">Bu ekipman için henüz detaylı (patlatılmış / şeffaf) model yok. '+(can('s')?'Ekipman bir klima santrali ise Bilgi sekmesinden "Harita modeli"ni değiştirin.':'')+'</div>';
+    }
+  }
+  if(MAP_TAB==='parca'){
+    var sps=(DB.spareParts||[]).filter(function(p){return p.eqId===e.id;});
+    var sc=(DB.eqSubComponents||{})[e.id]||{};
+    var hist=((DB.eqPartHistory||{})[e.id]||[]).slice(0,8);
+    h+='<div class="mp-sec">Bağlı Yedek Parçalar</div>'
+      +(sps.length?sps.map(function(p){var lo=p.stock<=p.minStock;return '<div class="mp-row"><div><b>'+esc(p.name)+'</b><div class="mp-sub">'+esc(p.code||p.id)+' · 📍 '+esc(p.location||'—')+'</div></div><div style="text-align:right"><b style="color:'+(lo?'var(--orl)':'var(--gnl)')+'">'+p.stock+'</b><div class="mp-sub">min '+p.minStock+'</div></div></div>';}).join('')
+        :'<div class="mp-empty">Bu ekipmana bağlı yedek parça yok. Yedek Parça kartında "Bağlı ekipman" seçilerek eklenebilir.</div>')
+      +((sc.others||[]).length||(sc.calibrations||[]).length?'<div class="mp-sec">Alt Komponentler</div>'
+        +(sc.others||[]).map(function(o){return '<div class="mp-row"><div><b>'+esc(o.name||o.n||'—')+'</b><div class="mp-sub">'+esc(o.spec||o.desc||o.note||'')+'</div></div></div>';}).join('')
+        +(sc.calibrations||[]).map(function(c){return '<div class="mp-row"><div><b>📐 '+esc(c.name)+'</b><div class="mp-sub">Sonraki kalibrasyon: '+esc(c.nextCal||'—')+'</div></div></div>';}).join(''):'')
+      +'<div class="mp-sec">Son Kullanılan Parçalar</div>'
+      +(hist.length?hist.map(function(x){return '<div class="mp-row"><div><b>'+esc(x.partName)+'</b><div class="mp-sub">'+esc(String(x.ts).slice(0,10))+' · '+esc(x.reason||'')+'</div></div><b>'+x.qty+' '+esc(x.unit||'')+'</b></div>';}).join(''):'<div class="mp-empty">Kayıt yok</div>');
+  }
+  if(MAP_TAB==='ariza'){
+    var ws=mapFaultWOs(e.id,0),grp={};
+    ws.forEach(function(w){var k=String(w.title||'').trim().toLocaleLowerCase('tr');if(!grp[k])grp[k]={t:w.title,n:0,last:'',roots:[],fix:[]};var g=grp[k];g.n++;if(String(w.date)>g.last)g.last=w.date;
+      if(w.root&&g.roots.indexOf(w.root)<0)g.roots.push(w.root);
+      var cm=(w.comments||[]).filter(function(c){return c.type!=='spare_part'&&c.user!=='Sistem';}).slice(-1)[0];if(cm&&g.fix.length<2)g.fix.push(cm.text);});
+    var list=Object.keys(grp).map(function(k){return grp[k];}).sort(function(a,b){return b.n-a.n;});
+    h+='<div class="mp-sec">Bu Ekipmanda En Sık Yaşanan Arızalar</div>'
+      +(list.length?list.slice(0,8).map(function(g){return '<div class="mp-fault"><div style="display:flex;justify-content:space-between;gap:8px"><b>'+esc(g.t)+'</b><span class="mp-cnt">'+g.n+'×</span></div>'
+        +'<div class="mp-sub">Son: '+esc(g.last||'—')+'</div>'
+        +(g.roots.length?'<div class="mp-k"><span>Kök neden</span>'+esc(g.roots.join(' · '))+'</div>':'')
+        +(g.fix.length?'<div class="mp-k"><span>Uygulanan</span>'+esc(g.fix.join(' / '))+'</div>':'')+'</div>';}).join('')
+        :'<div class="mp-empty">Kayıtlı arıza iş emri yok.</div>');
+    var kb=mapKB(e);
+    h+='<div class="mp-sec" style="display:flex;justify-content:space-between;align-items:center">Bilinen Arızalar & Çözümleri'+(can('s')?'<button class="btn bghs bxs" onclick="MAP_KB_EDIT=\'faults\';renderPage()">✏ Düzenle</button>':'')+'</div>'
+      +(kb.faults.length?kb.faults.map(function(f){return '<div class="mp-fault">'+(f.comp?'<div class="mp-sub" style="color:var(--bll)">'+esc(f.comp)+'</div>':'')+'<b>'+esc(f.t)+'</b>'
+        +(f.c?'<div class="mp-k"><span>Olası neden</span>'+esc(f.c)+'</div>':'')+(f.s?'<div class="mp-k"><span>Çözüm</span>'+esc(f.s)+'</div>':'')+'</div>';}).join('')
+        :'<div class="mp-empty">Bu ekipman için bilgi bankası boş.'+(can('s')?' "Düzenle" ile ekleyebilirsiniz.':'')+'</div>');
+  }
+  if(MAP_TAB==='adim'){
+    var kb2=mapKB(e);
+    h+='<div class="mp-sec" style="display:flex;justify-content:space-between;align-items:center">Sökme & Takma Talimatları'+(can('s')?'<button class="btn bghs bxs" onclick="MAP_KB_EDIT=\'steps\';renderPage()">✏ Düzenle</button>':'')+'</div>';
+    if(!kb2.steps.length)h+='<div class="mp-empty">Bu ekipman için talimat yok.'+(can('s')?' "Düzenle" ile ekleyebilirsiniz.':'')+'</div>';
+    else{
+      var si=Math.min(MAP_STEP_SEL||0,kb2.steps.length-1),S=kb2.steps[si];
+      h+='<select class="inp isml" style="margin-bottom:10px" onchange="MAP_STEP_SEL=+this.value;renderPage()">'+kb2.steps.map(function(s,i){return '<option value="'+i+'"'+(i===si?' selected':'')+'>'+esc(s.title)+'</option>';}).join('')+'</select>'
+        +(model==='ahu'&&S.comp?'<div class="mp-view mp-view-sm">'+ahuSVG(e,'exploded',false,S.comp)+'</div>':'')
+        +'<div class="mp-steps"><div class="mp-st-h" style="color:var(--orl)">⚠ Önce — Güvenlik (LOTO)</div><ol>'+LOTO_PRE.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>'
+        +'<div class="mp-st-h" style="color:var(--rdl)">🔧 Sökme</div><ol>'+(S.sokme||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>'
+        +'<div class="mp-st-h" style="color:var(--gnl)">🔩 Takma</div><ol>'+(S.takma||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>'
+        +'<div class="mp-st-h" style="color:var(--bll)">✓ Sonra — Devreye alma</div><ol>'+LOTO_POST.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol></div>';
+    }
+  }
+  return h+'</div>';
+}
+function mapViewToggles(){
+  return '<div class="map-seg" style="margin-bottom:8px">'+[['normal','Normal'],['exploded','Patlatılmış'],['xray','Şeffaf']].map(function(v){return '<button class="'+(MAP_VIEW===v[0]?'on':'')+'" onclick="event.stopPropagation();MAP_VIEW=\''+v[0]+'\';renderPage()">'+v[1]+'</button>';}).join('')
+    +'<button class="'+(MAP_COMPHEAT?'on':'')+'" onclick="event.stopPropagation();MAP_COMPHEAT=!MAP_COMPHEAT;renderPage()" title="Komponent bazlı arıza ısısı">🔥</button></div>';
+}
+function mapCompList(e){
+  var cnt=compFaultCounts(e),mx=Math.max.apply(null,AHU_COMPS.map(function(c){return cnt[c.id];}).concat([1]));
+  var h='<div class="mp-sec">Komponentler <span class="mp-sub">(seçmek için tıklayın)</span></div>';
+  AHU_COMPS.forEach(function(c,i){
+    var sel=MAP_COMP===c.id,n=cnt[c.id];
+    h+='<div class="mp-comp'+(sel?' on':'')+'" onclick="MAP_COMP=MAP_COMP===\''+c.id+'\'?null:\''+c.id+'\';renderPage()"><span class="mp-num">'+(i+1)+'</span><span style="flex:1">'+esc(c.name)+'</span>'
+      +(n?'<span class="mp-cnt" style="background:'+heatColor(n/mx)+'">'+n+'</span>':'')+'</div>';
+    if(sel)h+=mapCompDetail(e,c);
+  });
+  return h;
+}
+function mapCompDetail(e,c){
+  var sps=(DB.spareParts||[]).filter(function(p){var t=((p.name||'')+' '+(p.cat||'')+' '+(p.code||'')).toLocaleLowerCase('tr');return (p.eqId===e.id||!p.eqId)&&c.kw.some(function(k){return t.indexOf(k)>=0;});});
+  var steps=mapKB(e).steps.map(function(s,i){return {s:s,i:i};}).filter(function(x){return x.s.comp===c.id;});
+  return '<div class="mp-compd"><div class="mp-sub" style="margin-bottom:6px">'+esc(c.fn)+'</div>'
+    +c.faults.map(function(f){return '<div class="mp-k"><span>'+esc(f[0])+'</span>'+esc(f[2])+'</div>';}).join('')
+    +(sps.length?'<div class="mp-k"><span>Stoktaki uygun parçalar</span>'+sps.map(function(p){return esc(p.name)+' ('+p.stock+')';}).join(', ')+'</div>':'')
+    +(steps.length?'<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">'+steps.map(function(x){return '<button class="btn bghs bxs" onclick="event.stopPropagation();MAP_TAB=\'adim\';MAP_STEP_SEL='+x.i+';renderPage()">🔧 '+esc(x.s.title)+'</button>';}).join('')+'</div>':'')
+    +'</div>';
+}
+function mapFullHTML(){
+  var e=(DB.equipment||[]).find(function(x){return x.id===MAP_SEL;});if(!e)return '';
+  return '<div class="ov" id="ov-map-full" onclick="if(event.target===this){MAP_FULL=false;renderPage();}"><div class="md map-full">'
+    +'<div class="mdh"><div class="mdt">'+esc(e.name)+' — '+({normal:'Genel Görünüm',exploded:'Patlatılmış Görünüm',xray:'Şeffaf Görünüm'}[MAP_VIEW])+'</div><button class="mdc" onclick="MAP_FULL=false;renderPage()">✕</button></div>'
+    +mapViewToggles()
+    +'<div class="map-full-body"><div class="map-full-svg">'+ahuSVG(e,MAP_VIEW,true)+'</div><div class="map-full-side">'+mapCompList(e)+'</div></div>'
+    +'</div></div>';
+}
+
+// ── Bilgi bankası düzenleme ────────────────────────────────────
+function mapKBEditHTML(){
+  var e=(DB.equipment||[]).find(function(x){return x.id===MAP_SEL;});if(!e)return '';
+  var kb=mapKB(e),isF=MAP_KB_EDIT==='faults',txt;
+  if(isF)txt=kb.faults.map(function(f){return [f.t,f.c||'',f.s||''].join(' | ');}).join('\n');
+  else txt=kb.steps.map(function(s){return '# '+s.title+(s.comp?' @'+s.comp:'')+'\n'+(s.sokme||[]).map(function(x){return '- '+x;}).join('\n')+'\n'+(s.takma||[]).map(function(x){return '+ '+x;}).join('\n');}).join('\n\n');
+  return '<div class="ov" id="ov-map-kb"><div class="md" style="max-width:720px">'
+    +'<div class="mdh"><div class="mdt">'+(isF?'Arızalar & Çözümler':'Sökme / Takma Talimatları')+' — '+esc(e.name)+'</div><button class="mdc" onclick="MAP_KB_EDIT=null;renderPage()">✕</button></div>'
+    +'<div class="mp-note" style="margin-bottom:10px">'+(isF?'Her satır bir arıza: <b>Arıza | Olası neden | Çözüm</b>':'<b># Başlık</b> ile yeni talimat başlatın. <b>- </b> ile başlayan satırlar sökme, <b>+ </b> ile başlayanlar takma adımıdır.')+' Boş kaydederseniz hazır bilgi bankasına dönülür.</div>'
+    +'<textarea class="inp" id="map-kb-txt" style="min-height:340px;font-family:monospace;font-size:12px">'+esc(txt)+'</textarea>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px"><button class="btn bghs" onclick="MAP_KB_EDIT=null;renderPage()">İptal</button><button class="btn bsuc" onclick="mapSaveKB()">Kaydet</button></div>'
+    +'</div></div>';
+}
+function mapSaveKB(){
+  if(!can('s'))return;
+  var txt=v('map-kb-txt'),e=MAP_SEL;
+  if(!DB.eqKnowledge)DB.eqKnowledge={};
+  var cur=Object.assign({},DB.eqKnowledge[e]||{});
+  if(MAP_KB_EDIT==='faults'){
+    cur.faults=txt.split('\n').map(function(l){return l.trim();}).filter(Boolean).map(function(l){var p=l.split('|').map(function(x){return x.trim();});return {t:p[0],c:p[1]||'',s:p.slice(2).join(' | ')};});
+  } else {
+    var steps=[],S=null;
+    txt.split('\n').forEach(function(l){l=l.trim();if(!l)return;
+      if(l.charAt(0)==='#'){var m=/^#\s*(.*?)(?:\s+@(\w+))?$/.exec(l);S={title:m[1]||'Talimat',comp:m[2]||'',sokme:[],takma:[]};steps.push(S);return;}
+      if(!S){S={title:'Talimat',comp:'',sokme:[],takma:[]};steps.push(S);}
+      if(l.charAt(0)==='+')S.takma.push(l.slice(1).trim());else S.sokme.push(l.replace(/^-\s*/,''));});
+    cur.steps=steps;
+  }
+  DB.eqKnowledge[e]=cur;
+  addLog('Bilgi Bankası Güncellendi',e+' — '+(MAP_KB_EDIT==='faults'?'Arızalar':'Sökme/Takma'),'','');
+  MAP_KB_EDIT=null;dbSave();toast('Kaydedildi');renderPage();
+}
+
+// ══════════════════════════════════════════════════════════════
+// AHU ÇİZİMİ (yan görünüş, 2.5D). mode: normal | exploded | xray
+// focus: talimat ekranında vurgulanacak komponent
+// ══════════════════════════════════════════════════════════════
+function ahuSVG(e,mode,big,focus){
+  var cnt=compFaultCounts(e),mx=Math.max.apply(null,AHU_COMPS.map(function(c){return cnt[c.id];}).concat([1]));
+  var secs=[{id:'damper',w:90},{id:'g4',w:60},{id:'f7',w:110},{id:'heat',w:70},{id:'cool',w:100},{id:'hum',w:80},{id:'fan',w:170},{id:'sil',w:90},{id:'f9',w:110}];
+  var H=190,D=46,DY=-28,X0=60,Y0=150,gap=mode==='exploded'?26:0;
+  var tot=secs.reduce(function(a,s){return a+s.w;},0)+gap*(secs.length-1);
+  var W=X0+tot+D+60, VH=Y0+H+110;
+  var uid='a'+Math.random().toString(36).slice(2,7);
+  var xray=mode==='xray',expl=mode==='exploded';
+  var s='<svg viewBox="0 0 '+W+' '+VH+'" class="ahu-svg'+(big?' big':'')+'" xmlns="http://www.w3.org/2000/svg">'
+    +'<defs>'
+    +'<linearGradient id="'+uid+'pf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dfe5ec"/><stop offset=".5" stop-color="#c3ccd7"/><stop offset="1" stop-color="#9eabba"/></linearGradient>'
+    +'<linearGradient id="'+uid+'pt" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#eef2f6"/><stop offset="1" stop-color="#cfd7e1"/></linearGradient>'
+    +'<linearGradient id="'+uid+'ps" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8c9aab"/><stop offset="1" stop-color="#6f7d8f"/></linearGradient>'
+    +'<linearGradient id="'+uid+'cu" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#b45309"/><stop offset=".5" stop-color="#f59e0b"/><stop offset="1" stop-color="#b45309"/></linearGradient>'
+    +'<linearGradient id="'+uid+'mt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#64748b"/><stop offset=".45" stop-color="#cbd5e1"/><stop offset="1" stop-color="#475569"/></linearGradient>'
+    +'<pattern id="'+uid+'pl" width="6" height="10" patternUnits="userSpaceOnUse"><path d="M0 0 L3 10 L6 0" fill="none" stroke="#a8a29e" stroke-width="1"/></pattern>'
+    +'<pattern id="'+uid+'fin" width="3" height="10" patternUnits="userSpaceOnUse"><line x1="1" y1="0" x2="1" y2="10" stroke="#94a3b8" stroke-width=".8"/></pattern>'
+    +'<filter id="'+uid+'sh"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity=".45"/></filter>'
+    +'<filter id="'+uid+'gl" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="8"/></filter>'
+    +'<marker id="'+uid+'ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8z" fill="#38bdf8"/></marker>'
+    +'</defs>';
+  // zemin gölgesi + şase
+  s+='<ellipse cx="'+(X0+tot/2+D/2)+'" cy="'+(Y0+H+26)+'" rx="'+(tot/2+60)+'" ry="14" fill="#000" opacity=".35"/>';
+  // hava akışı okları
+  s+='<g opacity="'+(xray||expl?.9:.55)+'"><line x1="8" y1="'+(Y0+H/2)+'" x2="'+(X0-8)+'" y2="'+(Y0+H/2)+'" stroke="#38bdf8" stroke-width="3" marker-end="url(#'+uid+'ar)"/>'
+    +'<text x="6" y="'+(Y0+H/2-10)+'" fill="#7dd3fc" font-size="11" font-weight="700">TAZE /</text><text x="6" y="'+(Y0+H/2+22)+'" fill="#7dd3fc" font-size="11" font-weight="700">DÖNÜŞ</text>'
+    +'<line x1="'+(X0+tot+D+6)+'" y1="'+(Y0+H/2+DY/2)+'" x2="'+(W-6)+'" y2="'+(Y0+H/2+DY/2)+'" stroke="#38bdf8" stroke-width="3" marker-end="url(#'+uid+'ar)"/>'
+    +'<text x="'+(W-62)+'" y="'+(Y0+H/2+DY/2-10)+'" fill="#7dd3fc" font-size="11" font-weight="700">ÜFLEME</text></g>';
+  if(!expl)s+='<rect x="'+(X0-6)+'" y="'+(Y0+H)+'" width="'+(tot+12)+'" height="14" fill="url(#'+uid+'mt)" stroke="#334155"/>';
+  var cx=X0;
+  secs.forEach(function(sec,i){
+    var c=AHU_COMPS.filter(function(k){return k.id===sec.id;})[0];
+    var w=sec.w,x=cx,y=Y0,n=cnt[sec.id],sel=(MAP_COMP===sec.id)||(focus===sec.id),heat=MAP_COMPHEAT&&n>0;
+    var lift=expl?((i%2)?-18:18):0;
+    var g='<g class="ahu-sec'+(sel?' sel':'')+'" data-comp="'+sec.id+'" onclick="event.stopPropagation();MAP_COMP=MAP_COMP===\''+sec.id+'\'?null:\''+sec.id+'\';renderPage()" style="cursor:pointer" transform="translate(0,'+lift+')">';
+    if(heat)g+='<rect x="'+(x-6)+'" y="'+(y-6)+'" width="'+(w+12)+'" height="'+(H+12)+'" rx="10" fill="'+heatColor(n/mx)+'" opacity=".55" filter="url(#'+uid+'gl)"/>';
+    // arka panel + taban (iç görünür olduğunda)
+    if(xray||expl){g+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+H+'" fill="#1e293b" opacity="'+(expl?.95:.55)+'"/>';}
+    // iç parçalar
+    var inner=ahuInner(sec.id,x,y,w,H,uid);
+    var innerLift=expl&&(sec.id==='g4'||sec.id==='f7'||sec.id==='f9'||sec.id==='fan')?-H*0.62:0;
+    if(xray||expl)g+='<g transform="translate(0,'+innerLift+')">'+inner+'</g>';
+    if(innerLift)g+='<line x1="'+(x+w/2)+'" y1="'+(y+H*0.2)+'" x2="'+(x+w/2)+'" y2="'+(y-8)+'" stroke="#38bdf8" stroke-dasharray="4 4" opacity=".8"/>';
+    // gövde: ön yüz, üst yüz (2.5D)
+    var op=xray?.12:(expl?.0:1);
+    if(!expl){
+      g+='<path d="M'+x+' '+y+' l'+D+' '+DY+' h'+w+' l'+(-D)+' '+(-DY)+'z" fill="url(#'+uid+'pt)" stroke="#64748b" stroke-width="1" opacity="'+(xray?.18:1)+'"/>';
+      g+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+H+'" fill="url(#'+uid+'pf)" stroke="#64748b" stroke-width="1.2" opacity="'+(xray?op:1)+'"/>';
+      if(xray)g+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+H+'" fill="none" stroke="#7dd3fc" stroke-width="1" stroke-dasharray="5 4" opacity=".7"/>';
+      if(!xray){
+        // servis kapısı, menteşe, kol
+        if(w>=70){g+='<rect x="'+(x+8)+'" y="'+(y+14)+'" width="'+(w-16)+'" height="'+(H-28)+'" rx="2" fill="none" stroke="#8796a8" stroke-width="1.2"/>'
+          +'<rect x="'+(x+w-20)+'" y="'+(y+H/2-16)+'" width="6" height="32" rx="2" fill="#475569"/>'
+          +'<rect x="'+(x+10)+'" y="'+(y+30)+'" width="4" height="14" fill="#64748b"/><rect x="'+(x+10)+'" y="'+(y+H-44)+'" width="4" height="14" fill="#64748b"/>';}
+        if(sec.id==='fan')g+='<rect x="'+(x+w/2-22)+'" y="'+(y+H/2-24)+'" width="44" height="34" rx="3" fill="#1e293b" stroke="#475569"/><circle cx="'+(x+w/2)+'" cy="'+(y+H/2-7)+'" r="11" fill="none" stroke="#38bdf8" stroke-width="1.5"/><text x="'+(x+w/2)+'" y="'+(y+H/2+24)+'" text-anchor="middle" fill="#334155" font-size="8" font-weight="700">GÖZETLEME</text>';
+      }
+    } else {
+      // patlatılmış: çerçeve iskeleti
+      g+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+H+'" fill="none" stroke="#94a3b8" stroke-width="1.5"/>'
+        +'<path d="M'+x+' '+y+' l'+D+' '+DY+' h'+w+' l'+(-D)+' '+(-DY)+'" fill="none" stroke="#64748b" stroke-width="1"/>'
+        +'<line x1="'+(x+w)+'" y1="'+(y+H)+'" x2="'+(x+w+D)+'" y2="'+(y+H+DY)+'" stroke="#64748b"/><line x1="'+(x+w+D)+'" y1="'+(y+DY)+'" x2="'+(x+w+D)+'" y2="'+(y+H+DY)+'" stroke="#64748b"/>';
+    }
+    if(sel)g+='<rect x="'+(x-3)+'" y="'+(y-3+(innerLift||0))+'" width="'+(w+6)+'" height="'+(H+6-(innerLift||0))+'" fill="none" stroke="#4f8ef7" stroke-width="3" rx="4"/>';
+    // numara balonu
+    var by=(expl?y+H+28:y+H+30)+(i%2?14:0);
+    g+='<line x1="'+(x+w/2)+'" y1="'+(y+H+(expl?2:16))+'" x2="'+(x+w/2)+'" y2="'+(by-10)+'" stroke="#475569"/>'
+      +'<circle cx="'+(x+w/2)+'" cy="'+by+'" r="10" fill="'+(sel?'#2563eb':(heat?heatColor(n/mx):'#1e293b'))+'" stroke="#94a3b8"/>'
+      +'<text x="'+(x+w/2)+'" y="'+(by+4)+'" text-anchor="middle" fill="#fff" font-size="10.5" font-weight="800">'+(i+1)+'</text>';
+    if(big||expl)g+='<text x="'+(x+w/2)+'" y="'+(by+24)+'" text-anchor="middle" fill="#94a3b8" font-size="9">'+esc(c.name.split(' ')[0].replace(/[()]/g,''))+'</text>';
+    g+='</g>';
+    s+=g;
+    cx+=w+gap;
+  });
+  // sağ yan yüz (son modül)
+  if(!expl){var lx=X0+tot;
+    s+='<path d="M'+lx+' '+Y0+' l'+D+' '+DY+' v'+H+' l'+(-D)+' '+(-DY)+'z" fill="url(#'+uid+'ps)" stroke="#64748b" opacity="'+(xray?.2:1)+'"/>'
+      ;
+    // etiket plakası
+    if(!xray)s+='<rect x="'+(X0+14)+'" y="'+(Y0+H-34)+'" width="70" height="22" rx="2" fill="#f8fafc" stroke="#94a3b8"/><text x="'+(X0+49)+'" y="'+(Y0+H-19)+'" text-anchor="middle" fill="#0f172a" font-size="9" font-weight="800">'+esc(e.id)+'</text>';
+  }
+  s+='</svg>';
+  return s;
+}
+function ahuInner(id,x,y,w,H,u){
+  var s='',k;
+  if(id==='damper'){
+    s+='<rect x="'+(x+8)+'" y="'+(y-2)+'" width="'+(w-16)+'" height="10" fill="#475569"/>';
+    for(k=0;k<6;k++)s+='<rect x="'+(x+14)+'" y="'+(y+18+k*27)+'" width="'+(w-28)+'" height="8" rx="2" fill="url(#'+u+'mt)" transform="rotate(-25 '+(x+w/2)+' '+(y+22+k*27)+')"/>';
+    s+='<rect x="'+(x+w-26)+'" y="'+(y+8)+'" width="18" height="26" rx="2" fill="#f59e0b" stroke="#92400e"/><text x="'+(x+w-17)+'" y="'+(y+25)+'" text-anchor="middle" fill="#451a03" font-size="8" font-weight="800">M</text>';
+  }
+  if(id==='g4'){
+    s+='<rect x="'+(x+10)+'" y="'+(y+10)+'" width="'+(w-20)+'" height="'+(H-20)+'" fill="#e7e5e4" stroke="#78716c" stroke-width="3"/>'
+      ;
+    for(k=0;k<9;k++)s+='<line x1="'+(x+14)+'" y1="'+(y+20+k*18)+'" x2="'+(x+w-14)+'" y2="'+(y+28+k*18)+'" stroke="#a8a29e"/>';
+  }
+  if(id==='f7'||id==='f9'){
+    var bf=id==='f7'?'#fde68a':'#e0f2fe',bs=id==='f7'?'#d97706':'#0284c7';
+    s+='<rect x="'+(x+6)+'" y="'+(y+8)+'" width="10" height="'+(H-16)+'" fill="#94a3b8"/>';
+    for(k=0;k<6;k++){var py=y+14+k*28;s+='<path d="M'+(x+16)+' '+py+' L'+(x+w-10)+' '+(py+6)+' L'+(x+w-10)+' '+(py+18)+' L'+(x+16)+' '+(py+24)+'z" fill="'+bf+'" stroke="'+bs+'" stroke-width="1" opacity=".95"/>'
+      +'<line x1="'+(x+30)+'" y1="'+(py+12)+'" x2="'+(x+w-16)+'" y2="'+(py+12)+'" stroke="'+bs+'" stroke-dasharray="3 4" opacity=".6"/>';}
+    s+='<rect x="'+(x+18)+'" y="'+(y+H-22)+'" width="30" height="13" rx="2" fill="'+bs+'"/><text x="'+(x+33)+'" y="'+(y+H-12)+'" text-anchor="middle" fill="#fff" font-size="9" font-weight="800">'+(id==='f7'?'F7':'F9')+'</text>';
+  }
+  if(id==='heat'||id==='cool'){
+    var col=id==='heat'?'rgba(239,68,68,.35)':'rgba(59,130,246,.35)';
+    s+='<rect x="'+(x+10)+'" y="'+(y+12)+'" width="'+(w-20)+'" height="'+(H-(id==='cool'?44:24))+'" fill="'+col+'" stroke="#64748b"/>'
+      +'<rect x="'+(x+10)+'" y="'+(y+12)+'" width="'+(w-20)+'" height="'+(H-(id==='cool'?44:24))+'" fill="url(#'+u+'fin)"/>';
+    for(k=0;k<7;k++)s+='<circle cx="'+(x+18)+'" cy="'+(y+24+k*(id==='cool'?20:23))+'" r="4" fill="url(#'+u+'cu)"/><circle cx="'+(x+w-18)+'" cy="'+(y+24+k*(id==='cool'?20:23))+'" r="4" fill="url(#'+u+'cu)"/>';
+    s+='<rect x="'+(x+w-14)+'" y="'+(y-14)+'" width="8" height="30" fill="url(#'+u+'cu)"/><rect x="'+(x+6)+'" y="'+(y-14)+'" width="8" height="30" fill="url(#'+u+'cu)"/>';
+    if(id==='cool'){s+='<path d="M'+(x+4)+' '+(y+H-28)+' h'+(w-8)+' l-6 18 h'+(-(w-20))+'z" fill="#64748b" stroke="#334155"/>'
+      +'<path d="M'+(x+w/2)+' '+(y+H-10)+' v18 h14 v-8" fill="none" stroke="#38bdf8" stroke-width="3"/>';
+      for(k=0;k<8;k++)s+='<path d="M'+(x+w-8)+' '+(y+16+k*16)+' l-6 6 l6 6" fill="none" stroke="#cbd5e1" stroke-width="1.2"/>';}
+  }
+  if(id==='hum'){
+    s+='<rect x="'+(x+w/2-6)+'" y="'+(y-30)+'" width="12" height="'+(H*0.75+30)+'" fill="url(#'+u+'mt)"/>';
+    for(k=0;k<4;k++){var ly=y+30+k*38;s+='<rect x="'+(x+8)+'" y="'+ly+'" width="'+(w-16)+'" height="7" rx="3" fill="url(#'+u+'mt)"/>';
+      for(var j=0;j<5;j++)s+='<circle cx="'+(x+16+j*(w-32)/4)+'" cy="'+(ly-6)+'" r="3.5" fill="#e0f2fe" opacity=".7"/>';}
+  }
+  if(id==='fan'){
+    // Plug fan (yandan): emme konisi → açık çark → direkt akuple motor → kaide + yay takozlar
+    var cy=y+H*0.46,ih=H*0.62;
+    s+='<rect x="'+(x+4)+'" y="'+(y+6)+'" width="8" height="'+(H-12)+'" fill="#475569"/>'
+      +'<path d="M'+(x+12)+' '+(cy-ih*0.5)+' Q'+(x+26)+' '+(cy-ih*0.5)+' '+(x+36)+' '+(cy-ih*0.3)+' L'+(x+36)+' '+(cy+ih*0.3)+' Q'+(x+26)+' '+(cy+ih*0.5)+' '+(x+12)+' '+(cy+ih*0.5)+'z" fill="url(#'+u+'mt)" stroke="#334155"/>';
+    // çark: ön kapak (shroud), kanatlar, arka disk
+    var ix=x+38,iw=w*0.26;
+    s+='<path d="M'+ix+' '+(cy-ih*0.3)+' Q'+(ix+6)+' '+(cy-ih*0.48)+' '+(ix+iw*0.35)+' '+(cy-ih*0.5)+' L'+(ix+iw*0.35)+' '+(cy+ih*0.5)+' Q'+(ix+6)+' '+(cy+ih*0.48)+' '+ix+' '+(cy+ih*0.3)+'" fill="none" stroke="#e2e8f0" stroke-width="3"/>';
+    for(k=0;k<8;k++){var by=cy-ih*0.46+k*ih*0.13;s+='<line x1="'+(ix+iw*0.35)+'" y1="'+by+'" x2="'+(ix+iw-6)+'" y2="'+(by+ih*0.06)+'" stroke="#cbd5e1" stroke-width="2.5"/>';}
+    s+='<rect x="'+(ix+iw-6)+'" y="'+(cy-ih*0.5)+'" width="7" height="'+ih+'" rx="2" fill="url(#'+u+'mt)" stroke="#334155"/>';
+    // mil + göbek
+    var mx=ix+iw+14;
+    s+='<rect x="'+(ix+iw)+'" y="'+(cy-5)+'" width="16" height="10" fill="#94a3b8"/><rect x="'+(ix+iw-14)+'" y="'+(cy-9)+'" width="12" height="18" rx="2" fill="#64748b"/>';
+    // motor
+    var mw=x+w-12-mx,mh=ih*0.5;
+    s+='<rect x="'+mx+'" y="'+(cy-mh/2)+'" width="'+mw+'" height="'+mh+'" rx="8" fill="#1d4ed8" stroke="#1e3a8a"/>';
+    for(k=1;k<7;k++)s+='<line x1="'+(mx+k*mw/7)+'" y1="'+(cy-mh/2+4)+'" x2="'+(mx+k*mw/7)+'" y2="'+(cy+mh/2-4)+'" stroke="#1e40af" stroke-width="2"/>';
+    s+='<rect x="'+(mx+mw*0.3)+'" y="'+(cy-mh/2-14)+'" width="'+(mw*0.4)+'" height="14" rx="2" fill="#334155"/>'
+      +'<text x="'+(mx+mw/2)+'" y="'+(cy+4)+'" text-anchor="middle" fill="#bfdbfe" font-size="9" font-weight="800">MOTOR</text>';
+    // kaide, ayak, yay takozlar
+    var fy2=y+H-30;
+    s+='<rect x="'+(ix+iw*0.5)+'" y="'+(cy+mh/2)+'" width="10" height="'+(fy2-cy-mh/2)+'" fill="#475569"/><rect x="'+(mx+mw*0.4)+'" y="'+(cy+mh/2)+'" width="12" height="'+(fy2-cy-mh/2)+'" fill="#475569"/>'
+      +'<rect x="'+(x+30)+'" y="'+fy2+'" width="'+(w-36)+'" height="8" fill="url(#'+u+'mt)" stroke="#334155"/>';
+    [x+44,x+w/2+10,x+w-24].forEach(function(sx){s+='<path d="M'+(sx-6)+' '+(fy2+9)+' l12 3 l-12 3 l12 3 l-12 3 l12 3" fill="none" stroke="#f59e0b" stroke-width="2"/>';});
+  }
+  if(id==='sil'){
+    for(k=0;k<4;k++)s+='<rect x="'+(x+10+k*(w-20)/4)+'" y="'+(y+8)+'" width="'+((w-20)/4-8)+'" height="'+(H-16)+'" rx="4" fill="#d6d3d1" stroke="#78716c"/>'
+      +'<rect x="'+(x+10+k*(w-20)/4)+'" y="'+(y+8)+'" width="'+((w-20)/4-8)+'" height="'+(H-16)+'" rx="4" fill="url(#'+u+'pl)" opacity=".35"/>';
+  }
+  return s;
+}
+function genericSVG(e){
+  var st=EQST[e.status]||{col:'#888'};
+  return '<svg viewBox="0 0 400 230" class="ahu-svg" xmlns="http://www.w3.org/2000/svg"><defs>'
+    +'<linearGradient id="gq1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dfe5ec"/><stop offset="1" stop-color="#9eabba"/></linearGradient>'
+    +'<linearGradient id="gq2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#eef2f6"/><stop offset="1" stop-color="#cfd7e1"/></linearGradient></defs>'
+    +'<ellipse cx="200" cy="205" rx="150" ry="10" fill="#000" opacity=".35"/>'
+    +'<path d="M70 60 l40 -26 h220 l-40 26z" fill="url(#gq2)" stroke="#64748b"/>'
+    +'<rect x="70" y="60" width="220" height="140" fill="url(#gq1)" stroke="#64748b"/>'
+    +'<path d="M290 60 l40 -26 v140 l-40 26z" fill="#7d8b9c" stroke="#64748b"/>'
+    +'<rect x="88" y="78" width="96" height="62" rx="3" fill="#0f172a" stroke="#334155"/>'
+    +'<text x="136" y="104" text-anchor="middle" fill="#38bdf8" font-size="11" font-family="monospace">'+esc(e.id)+'</text>'
+    +'<text x="136" y="122" text-anchor="middle" fill="#64748b" font-size="9">'+esc((e.model||'').slice(0,16))+'</text>'
+    +'<circle cx="220" cy="96" r="9" fill="'+st.col+'"/><circle cx="250" cy="96" r="9" fill="#ef4444" stroke="#7f1d1d" stroke-width="3"/>'
+    +'<rect x="88" y="152" width="184" height="34" rx="3" fill="none" stroke="#8796a8"/>'
+    +'<text x="200" y="224" text-anchor="middle" fill="#94a3b8" font-size="11">'+esc(e.name)+'</text></svg>';
+}
+
 // BOOT
 // Firebase başlat
 fbInit();
@@ -8654,6 +9440,9 @@ qrCaptureTarget();
   var st=sessionStorage.getItem('pendingQRTab'); if(st) QR_PENDING_TAB = st;
   if(!spParam) { var ss=sessionStorage.getItem('pendingSP'); if(ss)window._pendingSP=ss; }
 })();
+// QR bilgisi saklandı; adresi temizle ki ana sayfaya dönünce veya sayfa yenilenince QR ekranı tekrar açılmasın
+try{ if(/[?&](eq|sp|part|spare|code|tab|page)=/.test(location.search)||/^#(qr|sp|part)=/.test(location.hash)) history.replaceState(null,'',location.pathname); }catch(e){}
+tryAutoLogin();
 R();
 </script>
 </body>
